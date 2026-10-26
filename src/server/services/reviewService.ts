@@ -98,25 +98,28 @@ export const reviewService = {
   async submit(token: string, input: SubmitReviewsInput, ip: string) {
     const invite = await openInvite(token, ip);
     const items = new Map(invite.order.items.map((i) => [i.id, i]));
-    const unknown = input.items.filter((i) => !items.has(i.orderItemId)).map((i) => i.orderItemId);
-    if (unknown.length > 0) {
-      throw unprocessable("ITEM_NOT_IN_ORDER", "Only items from this order can be reviewed.", { orderItemIds: unknown });
-    }
     const authorName = reviewAuthorName(invite.order.customerName);
-    const reviews = input.items.map((i) => ({
-      productId: items.get(i.orderItemId)!.variant.productId,
-      orderItemId: i.orderItemId,
-      rating: i.rating,
-      comment: i.comment,
-      authorName,
-    }));
-    await transaction(async (tx) => {
+    return transaction(async (tx) => {
       // Conditional on usedAt being empty: of two concurrent submits only one gets past here.
       if (!(await reviewRepo.claimInvite(tx, invite.shopId, invite.id))) throw linkUsed();
+      // Checked after the claim: the item list was read in a separate query and may
+      // already be empty if another submit committed in between. Throwing rolls the
+      // claim back, so the link stays usable.
+      const unknown = input.items.filter((i) => !items.has(i.orderItemId)).map((i) => i.orderItemId);
+      if (unknown.length > 0) {
+        throw unprocessable("ITEM_NOT_IN_ORDER", "Only items from this order can be reviewed.", { orderItemIds: unknown });
+      }
+      const reviews = input.items.map((i) => ({
+        productId: items.get(i.orderItemId)!.variant.productId,
+        orderItemId: i.orderItemId,
+        rating: i.rating,
+        comment: i.comment,
+        authorName,
+      }));
       await reviewRepo.createReviews(tx, invite.shopId, reviews);
       await reviewRepo.refreshRatings(tx, invite.shopId, [...new Set(reviews.map((r) => r.productId))]);
+      return { reviewed: reviews.length };
     });
-    return { reviewed: reviews.length };
   },
 
   /** Published reviews of an active product, for its public page. */
