@@ -12,3 +12,8 @@ export const PATCH = withRoute(
   { access: { kind: "shop", action: "product.write" }, params: IdParam, body: UpdateProductBody },
   ({ actor, params, body }) => productService.update(actor, params.id, body),
 );
+
+export const DELETE = withRoute(
+  { access: { kind: "shop", action: "product.write" }, params: IdParam },
+  ({ actor, params }) => productService.archive(actor, params.id),
+);
