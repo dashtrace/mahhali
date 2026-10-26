@@ -1,0 +1,472 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id
+  name            String
+  email           String
+  emailVerified   Boolean         @default(false)
+  image           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  role            String?
+  banned          Boolean?        @default(false)
+  banReason       String?
+  banExpires      DateTime?
+  sessions        Session[]
+  accounts        Account[]
+  memberships     Membership[]
+  invitations     Invitation[]
+  deliveredOrders Order[]         @relation("DeliveredBy")
+  adminActions    AdminAuditLog[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeShopId   String?
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// Better Auth's "organization", renamed. Fields below metadata are Shop Link's own.
+model Shop {
+  id              String           @id
+  name            String
+  slug            String
+  logo            String?
+  createdAt       DateTime         @default(now())
+  metadata        String?
+  currency        Currency         @default(USD)
+  /// Pounds per dollar, set by the owner. Frozen onto each order.
+  usdLbpRate      Decimal?         @db.Decimal(14, 2)
+  /// Next order number; incremented inside the order transaction.
+  nextOrderSeq    Int              @default(1001)
+  plan            String           @default("free")
+  theme           Json?
+  suspended       Boolean          @default(false)
+  memberships     Membership[]
+  invitations     Invitation[]
+  products        Product[]
+  variants        Variant[]
+  productImages   ProductImage[]
+  customers       Customer[]
+  orders          Order[]
+  orderItems      OrderItem[]
+  orderEvents     OrderEvent[]
+  stockMovements  StockMovement[]
+  couriers        Courier[]
+  remittances     Remittance[]
+  remittanceLines RemittanceLine[]
+  reviewInvites   ReviewInvite[]
+  reviews         Review[]
+
+  @@unique([slug])
+  @@map("shop")
+}
+
+model Membership {
+  id        String   @id
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// owner, manager, staff or delivery
+  role      String   @default("staff")
+  /// For delivery users: the courier they act for.
+  courierId String?
+  courier   Courier? @relation(fields: [courierId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@unique([shopId, userId])
+  @@index([userId])
+  @@map("membership")
+}
+
+model Invitation {
+  id        String   @id
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  email     String
+  role      String?
+  status    String   @default("pending")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  inviterId String
+  user      User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([email])
+  @@map("invitation")
+}
+
+// ---------------------------------------------------------------------------
+// Shop Link domain. Every tenant table carries shopId; repositories always
+// filter by it. Money is BigInt: USD in cents, LBP in whole pounds.
+// ---------------------------------------------------------------------------
+
+enum Currency {
+  USD
+  LBP
+}
+
+enum ProductStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  PACKED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum OrderEventType {
+  STATUS
+  COURIER
+}
+
+enum StockReason {
+  RESERVE
+  RELEASE
+  SHIP
+  RESTOCK
+  ADJUST
+}
+
+enum CourierType {
+  COMPANY
+  INDIVIDUAL
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+model Product {
+  id          String         @id @default(cuid())
+  shopId      String
+  shop        Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  status      ProductStatus  @default(ACTIVE)
+  ratingAvg   Decimal        @default(0) @db.Decimal(3, 2)
+  ratingCount Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  variants    Variant[]
+  images      ProductImage[]
+  reviews     Review[]
+
+  @@index([shopId, status])
+  @@map("product")
+}
+
+model Variant {
+  id             String          @id @default(cuid())
+  shopId         String
+  shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size           String?
+  colour         String?
+  sku            String?
+  /// In the shop's currency: cents for USD, whole pounds for LBP.
+  priceMinor     BigInt
+  /// Can still be ordered. CHECK (available >= 0) in the migration.
+  available      Int             @default(0)
+  /// Promised to open orders. CHECK (reserved >= 0) in the migration.
+  reserved       Int             @default(0)
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+
+  @@unique([productId, size, colour])
+  @@index([shopId])
+  @@map("variant")
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  shopId    String
+  shop      Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  colour    String?
+  position  Int     @default(0)
+
+  @@index([productId])
+  @@map("product_image")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String
+  /// E.164, e.g. +96171123456
+  phone     String
+  email     String?
+  createdAt DateTime @default(now())
+  orders    Order[]
+
+  @@unique([shopId, phone])
+  @@map("customer")
+}
+
+model Order {
+  id                String          @id @default(cuid())
+  shopId            String
+  shop              Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  /// Per shop, never reused.
+  number            Int
+  /// Customer's private tracking link.
+  publicToken       String          @unique
+  idempotencyKey    String?
+  status            OrderStatus     @default(NEW)
+  customerId        String
+  customer          Customer        @relation(fields: [customerId], references: [id])
+  governorate       String
+  district          String
+  area              String
+  addressLine       String
+  landmark          String?
+  notes             String?
+  courierId         String?
+  courier           Courier?        @relation(fields: [courierId], references: [id])
+  currency          Currency
+  usdLbpRate        Decimal?        @db.Decimal(14, 2)
+  subtotalMinor     BigInt
+  deliveryFeeMinor  BigInt          @default(0)
+  totalMinor        BigInt
+  /// Cash the courier must collect, in the order currency.
+  codMinor          BigInt
+  reportedUsdCents  BigInt?
+  reportedLbp       BigInt?
+  deliveredByUserId String?
+  deliveredBy       User?           @relation("DeliveredBy", fields: [deliveredByUserId], references: [id])
+  firstContactAt    DateTime        @default(now())
+  confirmedAt       DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  items             OrderItem[]
+  events            OrderEvent[]
+  stockMovements    StockMovement[]
+  remittanceLine    RemittanceLine?
+  reviewInvite      ReviewInvite?
+
+  @@unique([shopId, number])
+  @@unique([shopId, idempotencyKey])
+  @@index([shopId, status, createdAt])
+  @@index([shopId, courierId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  shopId         String
+  shop           Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId        String
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId      String
+  variant        Variant @relation(fields: [variantId], references: [id])
+  /// Product name, size and colour at order time.
+  nameSnapshot   String
+  unitPriceMinor BigInt
+  qty            Int
+  review         Review?
+
+  @@index([orderId])
+  @@map("order_item")
+}
+
+model OrderEvent {
+  id          String         @id @default(cuid())
+  shopId      String
+  shop        Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId     String
+  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type        OrderEventType
+  fromValue   String?
+  toValue     String
+  /// Empty when the customer placed the order.
+  actorUserId String?
+  at          DateTime       @default(now())
+
+  @@index([orderId, at])
+  @@map("order_event")
+}
+
+model StockMovement {
+  id          String      @id @default(cuid())
+  shopId      String
+  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  variantId   String
+  variant     Variant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  orderId     String?
+  order       Order?      @relation(fields: [orderId], references: [id])
+  delta       Int
+  reason      StockReason
+  actorUserId String?
+  at          DateTime    @default(now())
+
+  @@index([variantId, at])
+  @@map("stock_movement")
+}
+
+model Courier {
+  id          String       @id @default(cuid())
+  shopId      String
+  shop        Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  type        CourierType
+  name        String
+  phone       String?
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  orders      Order[]
+  remittances Remittance[]
+  memberships Membership[]
+
+  @@index([shopId])
+  @@map("courier")
+}
+
+model Remittance {
+  id             String           @id @default(cuid())
+  shopId         String
+  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  courierId      String
+  courier        Courier          @relation(fields: [courierId], references: [id])
+  amountUsdCents BigInt           @default(0)
+  amountLbp      BigInt           @default(0)
+  receivedAt     DateTime
+  reference      String?
+  createdAt      DateTime         @default(now())
+  lines          RemittanceLine[]
+
+  @@index([shopId, courierId])
+  @@map("remittance")
+}
+
+model RemittanceLine {
+  id                String     @id @default(cuid())
+  shopId            String
+  shop              Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  remittanceId      String
+  remittance        Remittance @relation(fields: [remittanceId], references: [id], onDelete: Cascade)
+  /// An order's cash is settled once.
+  orderId           String     @unique
+  order             Order      @relation(fields: [orderId], references: [id])
+  collectedUsdCents BigInt     @default(0)
+  collectedLbp      BigInt     @default(0)
+  /// Courier fee deducted, in the order currency.
+  feeMinor          BigInt     @default(0)
+
+  @@map("remittance_line")
+}
+
+model ReviewInvite {
+  id          String    @id @default(cuid())
+  shopId      String
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId     String    @unique
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Only a hash of the link token is stored.
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  emailSentAt DateTime?
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("review_invite")
+}
+
+model Review {
+  id             String       @id @default(cuid())
+  shopId         String
+  shop           Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// One review per purchased item.
+  orderItemId    String       @unique
+  orderItem      OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  /// 1 to 5. CHECK in the migration.
+  rating         Int
+  comment        String?
+  authorName     String
+  status         ReviewStatus @default(PUBLISHED)
+  hiddenByUserId String?
+  createdAt      DateTime     @default(now())
+
+  @@index([productId, status])
+  @@map("review")
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String
+  admin       User     @relation(fields: [adminUserId], references: [id])
+  shopId      String?
+  action      String
+  at          DateTime @default(now())
+
+  @@index([at])
+  @@map("admin_audit_log")
+}
