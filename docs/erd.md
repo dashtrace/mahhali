@@ -20,6 +20,7 @@ erDiagram
   COURIER |o--o{ MEMBERSHIP : "courierId"
   SHOP ||--o{ INVITATION : "shopId"
   USER ||--o{ INVITATION : "inviterId"
+  COURIER |o--o{ INVITATION : "courierId"
   SHOP ||--o{ PRODUCT : "shopId"
   SHOP ||--o{ VARIANT : "shopId"
   PRODUCT ||--o{ VARIANT : "productId"
@@ -111,6 +112,15 @@ erDiagram
     string plan
     json theme
     boolean suspended
+    string language
+    bigint deliveryFeeMinor
+    bigint codToleranceMinor
+    int autoCancelHours
+    string whatsappPhone
+    int baselineOrdersPerDay
+    int baselineConfirmMinutes
+    string stripeCustomerId
+    string stripeSubscriptionId
   }
   MEMBERSHIP {
     string id PK
@@ -129,6 +139,7 @@ erDiagram
     datetime expiresAt
     datetime createdAt
     string inviterId FK
+    string courierId FK
   }
   PRODUCT {
     string id PK
@@ -151,6 +162,7 @@ erDiagram
     bigint priceMinor
     int available
     int reserved
+    boolean archived
   }
   PRODUCT_IMAGE {
     string id PK
@@ -175,7 +187,12 @@ erDiagram
     string publicToken UK
     string idempotencyKey
     enum status
+    enum source
+    string createdByUserId
     string customerId FK
+    string customerName
+    string customerPhone
+    string customerEmail
     string governorate
     string district
     string area
@@ -191,6 +208,7 @@ erDiagram
     bigint codMinor
     bigint reportedUsdCents
     bigint reportedLbp
+    string failureReason
     string deliveredByUserId FK
     datetime firstContactAt
     datetime confirmedAt
@@ -214,6 +232,7 @@ erDiagram
     enum type
     string fromValue
     string toValue
+    string note
     string actorUserId
     datetime at
   }
@@ -224,6 +243,7 @@ erDiagram
     string orderId FK
     int delta
     enum reason
+    string note
     string actorUserId
     datetime at
   }
@@ -244,6 +264,7 @@ erDiagram
     bigint amountLbp
     datetime receivedAt
     string reference
+    string recordedByUserId
     datetime createdAt
   }
   REMITTANCE_LINE {
@@ -275,6 +296,7 @@ erDiagram
     string authorName
     enum status
     string hiddenByUserId
+    datetime hiddenAt
     datetime createdAt
   }
   ADMIN_AUDIT_LOG {

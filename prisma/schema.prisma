@@ -82,35 +82,50 @@ model Verification {
 
 // Better Auth's "organization", renamed. Fields below metadata are Shop Link's own.
 model Shop {
-  id              String           @id
-  name            String
-  slug            String
-  logo            String?
-  createdAt       DateTime         @default(now())
-  metadata        String?
-  currency        Currency         @default(USD)
+  id                     String           @id
+  name                   String
+  slug                   String
+  logo                   String?
+  createdAt              DateTime         @default(now())
+  metadata               String?
+  currency               Currency         @default(USD)
   /// Pounds per dollar, set by the owner. Frozen onto each order.
-  usdLbpRate      Decimal?         @db.Decimal(14, 2)
+  usdLbpRate             Decimal?         @db.Decimal(14, 2)
   /// Next order number; incremented inside the order transaction.
-  nextOrderSeq    Int              @default(1001)
-  plan            String           @default("free")
-  theme           Json?
-  suspended       Boolean          @default(false)
-  memberships     Membership[]
-  invitations     Invitation[]
-  products        Product[]
-  variants        Variant[]
-  productImages   ProductImage[]
-  customers       Customer[]
-  orders          Order[]
-  orderItems      OrderItem[]
-  orderEvents     OrderEvent[]
-  stockMovements  StockMovement[]
-  couriers        Courier[]
-  remittances     Remittance[]
-  remittanceLines RemittanceLine[]
-  reviewInvites   ReviewInvite[]
-  reviews         Review[]
+  nextOrderSeq           Int              @default(1001)
+  plan                   String           @default("free")
+  theme                  Json?
+  suspended              Boolean          @default(false)
+  /// "en" or "ar": the language customers see on the public pages.
+  language               String           @default("en")
+  /// Default delivery fee added to catalogue orders, in the shop currency.
+  deliveryFeeMinor       BigInt           @default(0)
+  /// Reconciliation ignores differences up to this much (change given in pounds).
+  codToleranceMinor      BigInt           @default(0)
+  /// Orders left in New this long are cancelled and their stock released. Null = never.
+  autoCancelHours        Int?
+  /// Shown on the catalogue as a WhatsApp button, E.164.
+  whatsappPhone          String?
+  /// Pilot baseline from sign-up: the "before" numbers for the outcome metrics.
+  baselineOrdersPerDay   Int?
+  baselineConfirmMinutes Int?
+  stripeCustomerId       String?
+  stripeSubscriptionId   String?
+  memberships            Membership[]
+  invitations            Invitation[]
+  products               Product[]
+  variants               Variant[]
+  productImages          ProductImage[]
+  customers              Customer[]
+  orders                 Order[]
+  orderItems             OrderItem[]
+  orderEvents            OrderEvent[]
+  stockMovements         StockMovement[]
+  couriers               Courier[]
+  remittances            Remittance[]
+  remittanceLines        RemittanceLine[]
+  reviewInvites          ReviewInvite[]
+  reviews                Review[]
 
   @@unique([slug])
   @@map("shop")
@@ -145,6 +160,9 @@ model Invitation {
   createdAt DateTime @default(now())
   inviterId String
   user      User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  /// For delivery invites: the courier the new user will act for.
+  courierId String?
+  courier   Courier? @relation(fields: [courierId], references: [id], onDelete: SetNull)
 
   @@index([shopId])
   @@index([email])
@@ -179,6 +197,11 @@ enum OrderStatus {
 enum OrderEventType {
   STATUS
   COURIER
+}
+
+enum OrderSource {
+  CATALOGUE
+  MANUAL
 }
 
 enum StockReason {
@@ -233,6 +256,8 @@ model Variant {
   available      Int             @default(0)
   /// Promised to open orders. CHECK (reserved >= 0) in the migration.
   reserved       Int             @default(0)
+  /// Hidden from the catalogue; kept because old orders point at it.
+  archived       Boolean         @default(false)
   orderItems     OrderItem[]
   stockMovements StockMovement[]
 
@@ -280,8 +305,15 @@ model Order {
   publicToken       String          @unique
   idempotencyKey    String?
   status            OrderStatus     @default(NEW)
+  source            OrderSource     @default(CATALOGUE)
+  /// Staff member who entered a manual order.
+  createdByUserId   String?
   customerId        String
   customer          Customer        @relation(fields: [customerId], references: [id])
+  /// Name, phone and email as given on this order.
+  customerName      String
+  customerPhone     String
+  customerEmail     String?
   governorate       String
   district          String
   area              String
@@ -297,8 +329,10 @@ model Order {
   totalMinor        BigInt
   /// Cash the courier must collect, in the order currency.
   codMinor          BigInt
+  /// Cash the courier said they collected at the door.
   reportedUsdCents  BigInt?
   reportedLbp       BigInt?
+  failureReason     String?
   deliveredByUserId String?
   deliveredBy       User?           @relation("DeliveredBy", fields: [deliveredByUserId], references: [id])
   firstContactAt    DateTime        @default(now())
@@ -346,7 +380,9 @@ model OrderEvent {
   type        OrderEventType
   fromValue   String?
   toValue     String
-  /// Empty when the customer placed the order.
+  /// e.g. why a delivery failed or an order was cancelled.
+  note        String?
+  /// Empty when the customer or the system made the change.
   actorUserId String?
   at          DateTime       @default(now())
 
@@ -364,6 +400,8 @@ model StockMovement {
   order       Order?      @relation(fields: [orderId], references: [id])
   delta       Int
   reason      StockReason
+  /// Why stock was adjusted by hand, e.g. "damaged" or "recount".
+  note        String?
   actorUserId String?
   at          DateTime    @default(now())
 
@@ -383,23 +421,25 @@ model Courier {
   orders      Order[]
   remittances Remittance[]
   memberships Membership[]
+  invitations Invitation[]
 
   @@index([shopId])
   @@map("courier")
 }
 
 model Remittance {
-  id             String           @id @default(cuid())
-  shopId         String
-  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  courierId      String
-  courier        Courier          @relation(fields: [courierId], references: [id])
-  amountUsdCents BigInt           @default(0)
-  amountLbp      BigInt           @default(0)
-  receivedAt     DateTime
-  reference      String?
-  createdAt      DateTime         @default(now())
-  lines          RemittanceLine[]
+  id               String           @id @default(cuid())
+  shopId           String
+  shop             Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  courierId        String
+  courier          Courier          @relation(fields: [courierId], references: [id])
+  amountUsdCents   BigInt           @default(0)
+  amountLbp        BigInt           @default(0)
+  receivedAt       DateTime
+  reference        String?
+  recordedByUserId String?
+  createdAt        DateTime         @default(now())
+  lines            RemittanceLine[]
 
   @@index([shopId, courierId])
   @@map("remittance")
@@ -453,6 +493,7 @@ model Review {
   authorName     String
   status         ReviewStatus @default(PUBLISHED)
   hiddenByUserId String?
+  hiddenAt       DateTime?
   createdAt      DateTime     @default(now())
 
   @@index([productId, status])
@@ -464,6 +505,7 @@ model AdminAuditLog {
   adminUserId String
   admin       User     @relation(fields: [adminUserId], references: [id])
   shopId      String?
+  /// e.g. "GET /api/admin/shops/abc/orders"
   action      String
   at          DateTime @default(now())
 
