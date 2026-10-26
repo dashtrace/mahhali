@@ -10,6 +10,21 @@ export const ORDER_STATUSES = [
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+export const STATUS_LABELS: Record<OrderStatus, string> = {
+  NEW: "New",
+  CONFIRMED: "Confirmed",
+  PACKED: "Packed",
+  OUT_FOR_DELIVERY: "Out for delivery",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+  RETURNED: "Returned",
+};
+
+/** Address and notes can change until the parcel leaves the shop. */
+export function isEditable(status: OrderStatus): boolean {
+  return status === "NEW" || status === "CONFIRMED" || status === "PACKED";
+}
+
 const NEXT: Record<OrderStatus, readonly OrderStatus[]> = {
   NEW: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["PACKED", "CANCELLED"],
@@ -52,4 +67,12 @@ export function stockEffect(to: OrderStatus): StockEffect | null {
     default:
       return null;
   }
+}
+
+/**
+ * The StockMovement delta for an effect: units back into available stock are
+ * positive, units leaving the shop with the courier are negative.
+ */
+export function movementDelta(effect: StockEffect, qty: number): number {
+  return (effect.available !== 0 ? effect.available : effect.reserved) * qty;
 }
