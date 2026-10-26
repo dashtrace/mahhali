@@ -4,8 +4,29 @@
 :root {
   --brand: #0f766e;
   --brand-ink: #ffffff;
+  --accent: #f59e0b;
+  --accent-ink: #1c1917;
+  --surface: #fafaf9;
+  --radius: 0.75rem;
+  --font-shop: var(--font-inter), var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   @apply bg-stone-50 text-stone-900 antialiased;
+  font-family: var(--font-inter), var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+}
+
+:lang(ar) body,
+[lang="ar"] {
+  font-family: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Numbers in tables and totals line up. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Room for the phone bottom bar and the iPhone home indicator. */
+.pb-safe {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
