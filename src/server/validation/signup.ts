@@ -1,5 +1,6 @@
 import { isValidSlug } from "../domain/slug";
 import { Currency, Rate } from "./common";
+import { BaselineConfirmMinutes, BaselineOrdersPerDay } from "./shop";
 import { z } from "./zod";
 
 export const SignupBody = z
@@ -15,6 +16,9 @@ export const SignupBody = z
       .refine(isValidSlug, "Use 3 to 40 lowercase letters, digits or single dashes"),
     currency: Currency.default("USD"),
     usdLbpRate: Rate.optional(),
+    // "How many orders a day? How long to confirm one?" before using Shop Link.
+    baselineOrdersPerDay: BaselineOrdersPerDay.optional(),
+    baselineConfirmMinutes: BaselineConfirmMinutes.optional(),
   })
   .openapi("SignupBody");
 
