@@ -14,7 +14,7 @@
     "test:integration": "vitest run --project integration",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "openapi": "tsx scripts/generate-openapi.ts",
     "erd": "tsx scripts/generate-erd.ts",
     "postinstall": "prisma generate"
