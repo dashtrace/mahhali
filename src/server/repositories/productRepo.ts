@@ -15,6 +15,17 @@ export type VariantInput = {
   available: number;
 };
 
+/** Storefront fields of a product; undefined leaves a field as it is. */
+export type ProductFields = {
+  categoryId?: string | null;
+  featured?: boolean;
+  specs?: { label: string; value: string }[];
+  customLabel?: string | null;
+  customPlaceholder?: string | null;
+  customRequired?: boolean;
+  customMaxLength?: number;
+};
+
 export const productRepo = {
   list(shopId: string, opts: { includeArchived?: boolean } = {}, client: Db = db) {
     return client.product.findMany({
@@ -31,15 +42,15 @@ export const productRepo = {
   async create(
     tx: Db,
     shopId: string,
-    input: { name: string; description: string | null; variants: VariantInput[] },
+    input: { name: string; description: string | null; variants: VariantInput[] } & ProductFields,
     actorUserId: string,
   ) {
+    const { variants, ...fields } = input;
     const product = await tx.product.create({
       data: {
+        ...fields,
         shopId,
-        name: input.name,
-        description: input.description,
-        variants: { create: input.variants.map((v) => ({ ...v, shopId })) },
+        variants: { create: variants.map((v) => ({ ...v, shopId })) },
       },
       include: { variants: true },
     });
@@ -61,7 +72,7 @@ export const productRepo = {
   async update(
     shopId: string,
     id: string,
-    data: { name?: string; description?: string | null; status?: "ACTIVE" | "ARCHIVED" },
+    data: { name?: string; description?: string | null; status?: "ACTIVE" | "ARCHIVED" } & ProductFields,
     client: Db = db,
   ) {
     const { count } = await client.product.updateMany({ where: { id, shopId }, data });
@@ -73,8 +84,21 @@ export const productRepo = {
     return client.product.findMany({
       where: { shopId, status: "ACTIVE", variants: { some: { archived: false } } },
       include: { ...withVariants, variants: { ...withVariants.variants, where: { archived: false } } },
-      orderBy: { createdAt: "desc" },
+      // id breaks createdAt ties so listing pages never repeat or skip a product.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
+  },
+
+  /** Units sold per product: order lines of every order that was not cancelled or returned. */
+  async soldCounts(shopId: string, client: Db = db) {
+    const rows = await client.$queryRaw<{ productId: string; sold: bigint }[]>`
+      SELECT v."productId", SUM(oi.qty)::bigint AS sold
+      FROM "order_item" oi
+      JOIN "variant" v ON v.id = oi."variantId" AND v."shopId" = ${shopId}
+      JOIN "orders" o ON o.id = oi."orderId" AND o."shopId" = ${shopId}
+      WHERE oi."shopId" = ${shopId} AND o.status NOT IN ('CANCELLED', 'RETURNED')
+      GROUP BY v."productId"`;
+    return new Map(rows.map((r) => [r.productId, Number(r.sold)]));
   },
 
   async addVariant(tx: Db, shopId: string, productId: string, input: VariantInput, actorUserId: string) {

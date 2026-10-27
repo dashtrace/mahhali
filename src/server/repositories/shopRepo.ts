@@ -65,4 +65,12 @@ export type ShopChanges = Partial<{
   baselineConfirmMinutes: number | null;
   theme: Theme;
   logo: string | null;
+  tagline: string | null;
+  about: string | null;
+  shippingInfo: string | null;
+  instagramUrl: string | null;
+  facebookUrl: string | null;
+  logoMode: string;
+  homeSection: string;
+  showTestimonials: boolean;
 }>;

@@ -20,11 +20,25 @@ export const VariantBody = z
   })
   .openapi("VariantInput");
 
+const Spec = z.object({ label: z.string().trim().min(1).max(40), value: z.string().trim().min(1).max(200) });
+
+// Optional in both create and PATCH; null clears. customLabel set = customization on.
+const storefrontFields = {
+  categoryId: z.string().min(1).max(64).nullable().optional(),
+  featured: z.boolean().optional(),
+  specs: z.array(Spec).max(12).optional(),
+  customLabel: z.string().trim().max(80).nullable().optional().transform((v) => (v === "" ? null : v)),
+  customPlaceholder: z.string().trim().max(120).nullable().optional().transform((v) => (v === "" ? null : v)),
+  customRequired: z.boolean().optional(),
+  customMaxLength: z.number().int().min(1).max(500).optional(),
+};
+
 export const CreateProductBody = z
   .object({
     name: z.string().trim().min(1).max(120),
     description: z.string().trim().max(2000).nullable().optional(),
     variants: z.array(VariantBody).min(1).max(100),
+    ...storefrontFields,
   })
   .refine(
     (p) => new Set(p.variants.map((v) => `${v.size ?? ""}|${v.colour ?? ""}`)).size === p.variants.length,
@@ -37,8 +51,9 @@ export const UpdateProductBody = z
     name: z.string().trim().min(1).max(120).optional(),
     description: z.string().trim().max(2000).nullable().optional(),
     status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
+    ...storefrontFields,
   })
-  .refine((b) => Object.keys(b).length > 0, "Send at least one field to change")
+  .refine((b) => Object.values(b).some((v) => v !== undefined), "Send at least one field to change")
   .openapi("UpdateProductBody");
 
 export const ListProductsQuery = z.object({
@@ -86,6 +101,7 @@ export const ImageFields = z.object({ colour: optionalText });
 
 export const ImageParams = z.object({ id: z.string().min(1).max(64), imageId: z.string().min(1).max(64) });
 
+export type ProductSpec = z.infer<typeof Spec>;
 export type CreateProductInput = z.infer<typeof CreateProductBody>;
 export type UpdateProductInput = z.infer<typeof UpdateProductBody>;
 export type VariantInput = z.infer<typeof VariantBody>;

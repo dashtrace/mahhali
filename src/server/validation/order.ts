@@ -15,6 +15,8 @@ const optionalText = (max: number) =>
 export const OrderLine = z.object({
   variantId: z.string().min(1).max(64),
   qty: z.number().int().min(1).max(20),
+  /** Customization text, for products that ask for one; dropped otherwise. */
+  note: optionalText(500),
 });
 
 export const Address = z
@@ -33,7 +35,17 @@ const orderFields = {
     .array(OrderLine)
     .min(1)
     .max(20)
-    .refine((lines) => new Set(lines.map((l) => l.variantId)).size === lines.length, "List each variant once"),
+    // One variant may appear on several lines with different notes.
+    .refine(
+      (lines) => new Set(lines.map((l) => JSON.stringify([l.variantId, l.note]))).size === lines.length,
+      "List each variant and note once",
+    )
+    // Split lines must not lift the per-variant cap of 20 (notes are dropped for plain products).
+    .refine((lines) => {
+      const qty = new Map<string, number>();
+      for (const l of lines) qty.set(l.variantId, (qty.get(l.variantId) ?? 0) + l.qty);
+      return [...qty.values()].every((n) => n <= 20);
+    }, "Order at most 20 of each variant"),
   customer: z.object({
     name: text(80),
     phone: Phone,

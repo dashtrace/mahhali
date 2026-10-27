@@ -1,13 +1,16 @@
 import { badRequest, notFound, unprocessable } from "../http/errors";
 import type { Actor } from "../http/withRoute";
 import { toMinor, type Currency } from "../domain/money";
+import { browseProducts, type BrowseOptions, type HomeSection, type LogoMode } from "../domain/storefront";
 import { productRepo } from "../repositories/productRepo";
 import { shopRepo } from "../repositories/shopRepo";
+import { categoryRepo, slideRepo, testimonialRepo } from "../repositories/storefrontRepo";
 import { isUniqueViolation, transaction } from "../repositories/tx";
 import { deleteUpload, saveUpload } from "../storage/uploads";
 import {
   ImageFields,
   type CreateProductInput,
+  type ProductSpec,
   type StockAdjustmentInput,
   type UpdateProductInput,
   type UpdateVariantInput,
@@ -31,6 +34,11 @@ async function currencyOf(actor: Actor) {
   return shop.currency;
 }
 
+/** A product may only be filed under a category of its own shop. */
+async function checkCategory(actor: Actor, categoryId: string | null | undefined) {
+  if (categoryId && !(await categoryRepo.findById(actor.shopId, categoryId))) throw notFound("Category");
+}
+
 export const productService = {
   list(actor: Actor, opts: { includeArchived: boolean }) {
     return productRepo.list(actor.shopId, opts);
@@ -44,7 +52,9 @@ export const productService = {
 
   async create(actor: Actor, input: CreateProductInput) {
     const currency = await currencyOf(actor);
-    const variants = input.variants.map((v) => ({
+    await checkCategory(actor, input.categoryId);
+    const { variants: lines, description, ...fields } = input;
+    const variants = lines.map((v) => ({
       size: v.size,
       colour: v.colour,
       sku: v.sku,
@@ -53,7 +63,7 @@ export const productService = {
     }));
     try {
       return await transaction((tx) =>
-        productRepo.create(tx, actor.shopId, { name: input.name, description: input.description ?? null, variants }, actor.userId),
+        productRepo.create(tx, actor.shopId, { ...fields, description: description ?? null, variants }, actor.userId),
       );
     } catch (error) {
       if (isUniqueViolation(error)) throw duplicateVariant();
@@ -61,7 +71,8 @@ export const productService = {
     }
   },
 
-  async update(actor: Actor, id: string, input: UpdateProductInput) {
+  async update(actor: Actor, id: string, input: Partial<UpdateProductInput>) {
+    await checkCategory(actor, input.categoryId);
     const updated = await productRepo.update(actor.shopId, id, input);
     if (!updated) throw notFound("Product");
     return this.get(actor, id);
@@ -146,11 +157,59 @@ export const productService = {
   },
 };
 
+async function publicShop(slug: string) {
+  const shop = await shopRepo.findBySlug(slug);
+  if (!shop || shop.suspended) throw notFound("Shop");
+  return shop;
+}
+
+/** The public product list with sales counts and category names, newest first. */
+async function publicProducts(shopId: string) {
+  const [products, sold, categories] = await Promise.all([
+    productRepo.catalogue(shopId),
+    productRepo.soldCounts(shopId),
+    categoryRepo.list(shopId),
+  ]);
+  const names = new Map(categories.map((c) => [c.id, c.name]));
+  return {
+    categories,
+    products: products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      categoryId: p.categoryId,
+      categoryName: p.categoryId ? (names.get(p.categoryId) ?? null) : null,
+      featured: p.featured,
+      specs: (p.specs as ProductSpec[] | null) ?? [],
+      customization: p.customLabel
+        ? { label: p.customLabel, placeholder: p.customPlaceholder, required: p.customRequired, maxLength: p.customMaxLength }
+        : null,
+      soldCount: sold.get(p.id) ?? 0,
+      createdAt: p.createdAt.toISOString(),
+      rating: { average: Number(p.ratingAvg), count: p.ratingCount },
+      images: p.images.map((i) => ({ url: i.url, colour: i.colour })),
+      // Customers see whether a variant can be ordered, not the stock count.
+      variants: p.variants.map((v) => ({
+        id: v.id,
+        size: v.size,
+        colour: v.colour,
+        priceMinor: v.priceMinor,
+        inStock: v.available > 0,
+      })),
+    })),
+  };
+}
+
+export type CatalogueProduct = Awaited<ReturnType<typeof publicProducts>>["products"][number];
+
 export const catalogueService = {
   async forShop(slug: string) {
-    const shop = await shopRepo.findBySlug(slug);
-    if (!shop || shop.suspended) throw notFound("Shop");
-    const products = await productRepo.catalogue(shop.id);
+    const shop = await publicShop(slug);
+    const [{ products, categories }, slides, testimonials] = await Promise.all([
+      publicProducts(shop.id),
+      slideRepo.list(shop.id),
+      shop.showTestimonials ? testimonialRepo.approved(shop.id, 12) : [],
+    ]);
     return {
       shop: {
         name: shop.name,
@@ -161,22 +220,29 @@ export const catalogueService = {
         language: shop.language,
         whatsappPhone: shop.whatsappPhone,
         deliveryFeeMinor: shop.deliveryFeeMinor,
-      },
-      products: products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        rating: { average: Number(p.ratingAvg), count: p.ratingCount },
-        images: p.images.map((i) => ({ url: i.url, colour: i.colour })),
-        // Customers see whether a variant can be ordered, not the stock count.
-        variants: p.variants.map((v) => ({
-          id: v.id,
-          size: v.size,
-          colour: v.colour,
-          priceMinor: v.priceMinor,
-          inStock: v.available > 0,
+        tagline: shop.tagline,
+        about: shop.about,
+        shippingInfo: shop.shippingInfo,
+        instagramUrl: shop.instagramUrl,
+        facebookUrl: shop.facebookUrl,
+        logoMode: shop.logoMode as LogoMode,
+        homeSection: shop.homeSection as HomeSection,
+        showTestimonials: shop.showTestimonials,
+        slides: slides.map((s) => ({ id: s.id, imageUrl: s.imageUrl, kicker: s.kicker, title: s.title, body: s.body })),
+        categories: categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          productCount: products.filter((p) => p.categoryId === c.id).length,
         })),
-      })),
+      },
+      products,
+      testimonials: testimonials.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() })),
     };
+  },
+
+  /** The shop listing page: search, category, collection, price range and one page of results. */
+  async browse(slug: string, opts: BrowseOptions = {}) {
+    const shop = await publicShop(slug);
+    return browseProducts((await publicProducts(shop.id)).products, opts);
   },
 };
