@@ -1,20 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Card } from "@/components/ui";
+import { WishButton } from "@/app/_storefront/wishlist";
+import { Icon } from "@/components/Icon";
+import { Card, SectionHeader, Stars } from "@/components/ui";
 import { fill } from "@/i18n/locale";
+import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 import { plain } from "@/server/http/json";
 import { reviewService } from "@/server/services/reviewService";
-import { loadCatalogue } from "../../../../_storefront/data";
-import { ShopFrame, Stars } from "../../../../_storefront/ShopFrame";
-import { VariantPicker } from "./VariantPicker";
+import { ShopFrame } from "../../../../_storefront/ShopFrame";
+import { loadStore } from "../../_components/load";
+import { ProductTile } from "../../_components/tiles";
+import { Gallery, ProductBar, ProductOptions, ProductProvider } from "./ProductClient";
 
 type Params = { params: Promise<{ slug: string; id: string }> };
 
+const RELATED = 4;
+
 async function load(slug: string, id: string) {
-  const data = await loadCatalogue(slug);
+  const data = await loadStore(slug);
   const product = data.products.find((p) => p.id === id);
   if (!product) notFound();
   return { ...data, product };
@@ -23,79 +29,152 @@ async function load(slug: string, id: string) {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug, id } = await params;
   const { shop, product } = await load(slug, id);
-  return { title: `${product.name} · ${shop.name}` };
+  return { title: `${product.name} · ${shop.name}`, description: product.description?.slice(0, 160) || undefined };
 }
 
 export default async function ProductPage({ params }: Params) {
   const { slug, id } = await params;
-  const { shop, product } = await load(slug, id);
+  const { shop, products, product } = await load(slug, id);
   const reviews = plain(await reviewService.forProduct(slug, id));
   const locale = shop.locale;
   const m = storeMessages[locale];
+  const t = common[locale];
+  const base = `/s/${slug}`;
+
+  // Same category first, then the newest of the rest.
+  const others = products.filter((p) => p.id !== product.id);
+  const related = [...others.filter((p) => product.categoryId && p.categoryId === product.categoryId), ...others.filter((p) => !product.categoryId || p.categoryId !== product.categoryId)].slice(
+    0,
+    RELATED,
+  );
+  const specs = product.specs.length
+    ? product.specs
+    : [
+        { label: m.specCategory, value: product.categoryName ?? m.products },
+        { label: m.specSoldBy, value: shop.name },
+      ];
+  const average = formatNumber(reviews.average, locale, 1);
 
   return (
-    <ShopFrame shop={shop} locale={locale} cart>
-      <Link href={`/s/${slug}`} className="mb-2 inline-flex min-h-11 items-center text-sm opacity-80 hover:opacity-100">
-        <span aria-hidden className="me-1 rtl:rotate-180">←</span>
-        {m.backToShop}
-      </Link>
-      <div className="grid gap-6 md:grid-cols-2">
-        {product.images.length > 0 ? (
-          <ul className="-mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
-            {product.images.map((img, i) => (
-              <li key={img.url} className="w-[85%] shrink-0 snap-center md:w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is */}
-                <img
-                  src={img.url}
-                  alt={fill(m.photoOf, { name: product.name, n: i + 1 })}
-                  loading={i === 0 ? "eager" : "lazy"}
-                  className="aspect-square w-full rounded-[var(--radius)] bg-stone-100 object-cover"
-                />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="aspect-square rounded-[var(--radius)] bg-stone-100" />
-        )}
+    <ProductProvider
+      product={{ id: product.id, name: product.name, images: product.images, variants: product.variants, customization: product.customization }}
+      slug={slug}
+      locale={locale}
+    >
+      <ShopFrame
+        shop={shop}
+        locale={locale}
+        back={{ href: `${base}/shop`, label: m.backToShop }}
+        wish={<WishButton slug={slug} productId={product.id} locale={locale} variant="icon" />}
+        bar={<ProductBar />}
+      >
+        <nav aria-label={m.breadcrumb} className="mb-2 text-[13px] font-semibold text-sl-muted">
+          <ol className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <li>
+              <Link href={base} className="inline-flex min-h-11 items-center hover:text-sl-accent">
+                {shop.name}
+              </Link>
+            </li>
+            <li aria-hidden>/</li>
+            <li className="min-w-0">
+              <Link
+                href={product.categoryId ? `${base}/shop?cat=${encodeURIComponent(product.categoryId)}` : `${base}/shop`}
+                className="inline-flex min-h-11 items-center truncate hover:text-sl-accent"
+              >
+                {product.categoryName ?? m.products}
+              </Link>
+            </li>
+          </ol>
+        </nav>
 
-        <div className="flex flex-col gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">{product.name}</h1>
-            {reviews.count > 0 && (
-              <Stars
-                average={reviews.average}
-                count={reviews.count}
-                label={fill(m.rated, { avg: reviews.average.toFixed(1), n: reviews.count })}
-              />
-            )}
+        <div className="grid gap-5 md:grid-cols-2 md:gap-8">
+          <Gallery />
+          <div className="min-w-0">
+            <h1 className="sl-heading text-[26px] leading-tight">{product.name}</h1>
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[13px] text-sl-muted">
+              {reviews.count > 0 ? (
+                <>
+                  <Stars average={reviews.average} label={fill(t.ratingLabel, { n: average })} />
+                  <span aria-hidden>{fill(m.reviewSummary, { avg: average, n: reviews.count })}</span>
+                  <a href="#reviews" className="inline-flex min-h-11 items-center font-bold text-sl-accent hover:underline">
+                    {m.readReviews}
+                  </a>
+                </>
+              ) : (
+                <span className="inline-flex min-h-11 items-center">{m.notReviewed}</span>
+              )}
+            </p>
+            <ProductOptions currency={shop.currency} />
           </div>
-          {product.description && <p className="whitespace-pre-line text-sm opacity-80">{product.description}</p>}
-          <VariantPicker slug={slug} variants={product.variants} currency={shop.currency} locale={locale} m={m} />
         </div>
-      </div>
 
-      <section className="mt-8" aria-labelledby="reviews">
-        <h2 id="reviews" className="mb-3 text-lg font-semibold">
-          {m.reviewsTitle}
-        </h2>
-        {reviews.reviews.length === 0 ? (
-          <p className="text-sm opacity-70">{m.noReviews}</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {reviews.reviews.map((r, i) => (
-              <li key={i}>
-                <Card className="flex flex-col gap-1">
-                  <Stars average={r.rating} label={fill(m.starsLabel, { n: r.rating })} />
-                  {r.comment && <p className="whitespace-pre-line text-sm">{r.comment}</p>}
-                  <p className="text-xs text-stone-500">
-                    {r.authorName} · <span className="text-emerald-700">{m.verifiedBuyer}</span> · {formatDate(r.createdAt, locale)}
-                  </p>
-                </Card>
-              </li>
-            ))}
-          </ul>
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          <Card className="rounded-[14px]">
+            <h2 className="sl-heading mb-2 text-lg">{m.descriptionTitle}</h2>
+            <p className="whitespace-pre-line break-words text-sm leading-relaxed text-sl-muted">
+              {product.description || fill(m.descriptionFallback, { name: product.name, shop: shop.name })}
+            </p>
+          </Card>
+
+          <Card className="rounded-[14px]">
+            <h2 className="sl-heading mb-2.5 text-lg">{m.specsTitle}</h2>
+            <dl className="grid grid-cols-2 gap-2.5">
+              {specs.map((s, i) => (
+                <div key={i} className="min-w-0 rounded-sl bg-sl-cat p-3">
+                  <dt className="text-[13px] font-bold">{s.label}</dt>
+                  <dd className="mt-1 break-words text-xs leading-snug text-sl-muted">{s.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
+
+          <Card className="flex gap-3 rounded-[14px] md:col-span-2">
+            <Icon name="truck" className="size-6 shrink-0 text-sl-accent" />
+            <div className="min-w-0 text-sm leading-normal">
+              <p>
+                <strong>{m.shippingTitle}</strong> · <span className="text-sl-muted">{m.shippingLine}</span>
+              </p>
+              <Link href={`${base}/info/shipping`} className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-extrabold text-sl-accent hover:underline">
+                {fill(m.shippingLink, { shop: shop.name })}
+                <Icon name="arrow" className="size-3.5" />
+              </Link>
+            </div>
+          </Card>
+
+          <Card id="reviews" className="scroll-mt-24 rounded-[14px] md:col-span-2">
+            <h2 className="sl-heading mb-1 text-lg">{fill(m.reviewsHeading, { n: reviews.count })}</h2>
+            <p className="mb-3 text-xs leading-normal text-sl-muted">{m.reviewsNote}</p>
+            {reviews.reviews.length === 0 ? (
+              <p className="text-sm text-sl-muted">{m.noReviews}</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {reviews.reviews.map((r, i) => (
+                  <li key={i} className="rounded-sl bg-sl-cat p-3">
+                    <Stars average={r.rating} label={fill(m.starsLabel, { n: r.rating })} />
+                    {r.comment && <p className="mt-1 whitespace-pre-line break-words text-sm italic leading-relaxed rtl:not-italic">{r.comment}</p>}
+                    <p className="mt-1.5 text-xs text-sl-muted">
+                      <bdi>{r.authorName}</bdi> · <span className="font-bold text-sl-ok">{m.verifiedBuyer}</span> · {formatDate(r.createdAt, locale)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+
+        {related.length > 0 && (
+          <section aria-labelledby="related" className="mt-6">
+            <SectionHeader id="related" title={m.relatedTitle} />
+            <ul className="sl-scroll-row -mx-4 gap-2.5 px-4 pb-3">
+              {related.map((p) => (
+                <li key={p.id} className="flex">
+                  <ProductTile slug={slug} product={p} currency={shop.currency} locale={locale} layout="strip" />
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
-      </section>
-    </ShopFrame>
+      </ShopFrame>
+    </ProductProvider>
   );
 }

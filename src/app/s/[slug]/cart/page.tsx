@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
-import { common } from "@/i18n/messages/common";
-import { storeMessages } from "@/i18n/messages/store";
+import { checkoutMessages } from "@/i18n/messages/checkout";
 import { loadCatalogue } from "../../../_storefront/data";
 import { ShopFrame } from "../../../_storefront/ShopFrame";
 import { Checkout } from "./Checkout";
 
-type Params = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ step?: string }> };
 
-export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const { shop } = await loadCatalogue((await params).slug);
-  return { title: `${storeMessages[shop.locale].cartTitle} · ${shop.name}` };
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  const [{ slug }, { step }] = await Promise.all([params, searchParams]);
+  const { shop } = await loadCatalogue(slug);
+  const m = checkoutMessages[shop.locale];
+  return { title: `${step === "checkout" ? m.checkoutTitle : m.cartTitle} · ${shop.name}`, robots: { index: false } };
 }
 
-export default async function CartPage({ params }: Params) {
-  const { slug } = await params;
+// Cart and checkout share one route: ?step=checkout shows the form, so the back button returns to the cart.
+export default async function CartPage({ params, searchParams }: Props) {
+  const [{ slug }, { step }] = await Promise.all([params, searchParams]);
   const { shop, products } = await loadCatalogue(slug);
   const locale = shop.locale;
   return (
@@ -24,8 +26,8 @@ export default async function CartPage({ params }: Params) {
         currency={shop.currency}
         deliveryFeeMinor={shop.deliveryFeeMinor}
         locale={locale}
-        m={storeMessages[locale]}
-        t={common[locale]}
+        step={step === "checkout" ? "checkout" : "cart"}
+        m={checkoutMessages[locale]}
       />
     </ShopFrame>
   );
