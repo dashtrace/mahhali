@@ -16,7 +16,7 @@ export function LanguageToggle({ locale, className }: { locale: Locale; classNam
         document.cookie = `lang=${next}; path=/; max-age=31536000; samesite=lax`;
         router.refresh();
       }}
-      className={cx("inline-flex min-h-11 items-center rounded-[var(--radius)] px-3 text-sm text-stone-700 hover:bg-stone-100", className)}
+      className={cx("inline-flex min-h-11 items-center rounded-sl px-3 text-sm font-semibold text-sl-fg hover:bg-sl-cat", className)}
     >
       {next === "ar" ? "العربية" : "English"}
     </button>

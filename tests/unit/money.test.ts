@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { formatMoney } from "@/lib/format";
 import { collectedInOrderCurrency, fromMinor, rateToHundredths, toMinor } from "@/server/domain/money";
+
+describe("formatMoney", () => {
+  it("ends Arabic amounts with a left-to-right mark so 'US$' does not show as '$US'", () => {
+    expect(formatMoney(4500, "USD", "ar").endsWith("US$‎")).toBe(true);
+    expect(formatMoney(4500, "USD", "en")).toBe("$45.00");
+  });
+});
 
 describe("toMinor / fromMinor", () => {
   it("stores dollars as cents", () => {

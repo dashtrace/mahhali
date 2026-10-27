@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Shop themes override these per page (see the build plan: Shop branding). */
+/* Legacy shop variables, still read by pages not yet moved to the sl-* tokens. */
 :root {
   --brand: #0f766e;
   --brand-ink: #ffffff;
@@ -11,14 +11,169 @@
   --font-shop: var(--font-inter), var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
 }
 
-body {
-  @apply bg-stone-50 text-stone-900 antialiased;
-  font-family: var(--font-inter), var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+/*
+ * Design tokens (see spec-foundation.md). The platform (dashboard, admin, auth,
+ * marketing) uses the slate/blue owner-panel palette below. A storefront sets
+ * --sl-bg, --sl-fg, --sl-accent, --sl-accent-ink and --sl-r inline from the
+ * shop's validated theme (themeVars) and gets the rest derived in .sl-shop, so
+ * any palette, including the dark "night" preset, keeps its contrast.
+ */
+:root {
+  --sl-bg: #eef0f1;
+  --sl-panel: #ffffff;
+  --sl-fg: #152329;
+  --sl-muted: #5b6974;
+  --sl-accent: #2570a9;
+  --sl-accent-ink: #ffffff;
+  --sl-cat: #e8f0f5;
+  --sl-border: #dbe2e7;
+  --sl-control: #aebbc4;
+  --sl-nav: #ffffff;
+  --sl-hero: #dcecf6;
+  --sl-hero-ink: #15557c;
+  --sl-soft: #dcecf6;
+  --sl-soft-ink: #15557c;
+  --sl-r: 12px;
+  --sl-heading-font: inherit;
+  --sl-heading-weight: 750;
+  --sl-heading-tracking: -0.02em;
+}
+
+/* Declared again on .sl-shop so they follow the shop's inline base tokens. */
+:root,
+.sl-shop {
+  --sl-r-sm: max(0px, calc(var(--sl-r) - 2px));
+  --sl-r-lg: calc(var(--sl-r) + 2px);
+  --sl-danger: color-mix(in srgb, #c34538 80%, var(--sl-fg));
+  --sl-ok: color-mix(in srgb, #3f9f70 80%, var(--sl-fg));
+  --sl-warn: color-mix(in srgb, #b9852f 80%, var(--sl-fg));
+}
+
+/* Light shops: warm panels, serif display headings. */
+.sl-shop {
+  --sl-panel: color-mix(in srgb, #ffffff 55%, var(--sl-bg));
+  --sl-muted: color-mix(in srgb, var(--sl-fg) 62%, var(--sl-bg));
+  --sl-cat: color-mix(in srgb, var(--sl-accent) 10%, var(--sl-bg));
+  --sl-border: color-mix(in srgb, var(--sl-fg) 11%, var(--sl-bg));
+  --sl-control: color-mix(in srgb, var(--sl-fg) 30%, var(--sl-bg));
+  --sl-nav: color-mix(in srgb, var(--sl-panel) 50%, var(--sl-bg));
+  --sl-hero: color-mix(in srgb, var(--sl-accent) 18%, var(--sl-bg));
+  --sl-hero-ink: var(--sl-fg);
+  --sl-soft: color-mix(in srgb, var(--sl-accent) 13%, var(--sl-panel));
+  --sl-soft-ink: color-mix(in srgb, var(--sl-accent) 65%, var(--sl-fg));
+  --sl-heading-font: Georgia, "Times New Roman", var(--font-cairo), serif;
+  --sl-heading-weight: 600;
+  --sl-heading-tracking: -0.025em;
+}
+
+/* Dark shops: panels lift towards the ink instead of white; bold sans headings. */
+.sl-shop[data-tone="dark"] {
+  --sl-panel: color-mix(in srgb, var(--sl-fg) 6%, var(--sl-bg));
+  --sl-border: color-mix(in srgb, var(--sl-fg) 15%, var(--sl-bg));
+  --sl-heading-font: var(--font-shop);
+  --sl-heading-weight: 850;
+  --sl-heading-tracking: -0.03em;
+}
+
+/* Georgia has no Arabic glyphs, and letter-spacing breaks cursive joining. */
+.sl-shop:lang(ar) {
+  --sl-heading-font: var(--font-cairo), sans-serif;
+  --sl-heading-tracking: 0;
+}
+
+@theme inline {
+  --color-sl-bg: var(--sl-bg);
+  --color-sl-panel: var(--sl-panel);
+  --color-sl-fg: var(--sl-fg);
+  --color-sl-muted: var(--sl-muted);
+  --color-sl-accent: var(--sl-accent);
+  --color-sl-accent-ink: var(--sl-accent-ink);
+  --color-sl-cat: var(--sl-cat);
+  --color-sl-border: var(--sl-border);
+  --color-sl-control: var(--sl-control);
+  --color-sl-nav: var(--sl-nav);
+  --color-sl-hero: var(--sl-hero);
+  --color-sl-hero-ink: var(--sl-hero-ink);
+  --color-sl-soft: var(--sl-soft);
+  --color-sl-soft-ink: var(--sl-soft-ink);
+  --color-sl-danger: var(--sl-danger);
+  --color-sl-ok: var(--sl-ok);
+  --color-sl-warn: var(--sl-warn);
+  --color-sl-star: #dc9b35;
+  --color-sl-heart: #d76263;
+  --color-sl-whatsapp: #25d366;
+  --radius-sl-sm: var(--sl-r-sm);
+  --radius-sl: var(--sl-r);
+  --radius-sl-lg: var(--sl-r-lg);
+}
+
+/* Display headings: serif on light shops, heavy sans on dark ones and the platform. */
+@utility sl-heading {
+  font-family: var(--sl-heading-font);
+  font-weight: var(--sl-heading-weight);
+  letter-spacing: var(--sl-heading-tracking);
+}
+
+/* Stacked layers that crossfade (hero slides): toggle data-active on each. */
+@utility sl-fade {
+  opacity: 0;
+  transition: opacity 480ms ease;
+  &[data-active="true"] {
+    opacity: 1;
+  }
+}
+
+/* A horizontal scroll row without a scrollbar (category tiles, product strips). */
+@utility sl-scroll-row {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  /* Rows bleed to the screen edge (-mx-4 px-4); without this, snapping pulls the first item flush to the edge. */
+  scroll-padding-inline: 1rem;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  body {
+    background: var(--sl-bg);
+    color: var(--sl-fg);
+    -webkit-font-smoothing: antialiased;
+    font-family: var(--font-inter), var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--sl-accent);
+    outline-offset: 2px;
+  }
+
+  /* An open sheet (dialog) stops the page behind it from scrolling. */
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
 }
 
 :lang(ar) body,
 [lang="ar"] {
   font-family: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* One off-switch for every transition: crossfades, sheets, dots. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 /* Numbers in tables and totals line up. */
