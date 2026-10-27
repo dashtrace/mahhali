@@ -152,7 +152,16 @@ export const catalogueService = {
     if (!shop || shop.suspended) throw notFound("Shop");
     const products = await productRepo.catalogue(shop.id);
     return {
-      shop: { name: shop.name, slug: shop.slug, logo: shop.logo, currency: shop.currency, theme: shop.theme },
+      shop: {
+        name: shop.name,
+        slug: shop.slug,
+        logo: shop.logo,
+        currency: shop.currency,
+        theme: shop.theme,
+        language: shop.language,
+        whatsappPhone: shop.whatsappPhone,
+        deliveryFeeMinor: shop.deliveryFeeMinor,
+      },
       products: products.map((p) => ({
         id: p.id,
         name: p.name,
