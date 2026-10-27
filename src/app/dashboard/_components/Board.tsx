@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, type DragEvent } from "react";
-import { Alert, Badge, Button, ButtonLink, Card, EmptyState, Select, STATUS_TONES, cx } from "@/components/ui";
+import { Icon } from "@/components/Icon";
+import { Alert, Badge, Button, ButtonLink, Card, EmptyState, FilterChip, STATUS_TONES, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { OrderMessages } from "@/i18n/messages/orders";
 import { api, errorMessage } from "@/lib/api";
 import { formatDateTime, formatMoney } from "@/lib/format";
+import { age } from "../orders/_components/labels";
 
 type Status = "NEW" | "CONFIRMED" | "PACKED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "RETURNED";
 
@@ -23,7 +25,7 @@ export type BoardOrder = {
   totalMinor: number;
   createdAt: string;
   courier: { id: string; name: string } | null;
-  items: { nameSnapshot: string; qty: number }[];
+  items: { nameSnapshot: string; qty: number; note?: string | null }[];
   allowedNext: Status[];
 };
 
@@ -41,7 +43,7 @@ type Props = {
 };
 
 /**
- * Phones: status tabs and a big "Move to …" button on each card.
+ * Phones: status chips and a big "Move to …" button on each card.
  * Wide screens: four columns with drag and drop.
  */
 export function BoardClient({ columns, searchResults, counts, selected, locale, m, t }: Props) {
@@ -69,13 +71,13 @@ export function BoardClient({ columns, searchResults, counts, selected, locale, 
     }
   }
 
-  const card = (o: BoardOrder) => <OrderCard key={o.id} order={o} busy={busy === o.id} onMove={move} locale={locale} m={m} t={t} label={label} />;
+  const card = (o: BoardOrder) => <OrderCard key={o.id} order={o} busy={busy === o.id} onMove={move} locale={locale} m={m} label={label} />;
 
   if (searchResults) {
     return (
       <section className="flex flex-col gap-3">
         {error && <Alert tone="error">{error}</Alert>}
-        {searchResults.length ? searchResults.map(card) : <EmptyState title={m.noOrders} />}
+        {searchResults.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{searchResults.map(card)}</div> : <EmptyState title={m.noOrders} />}
       </section>
     );
   }
@@ -85,6 +87,12 @@ export function BoardClient({ columns, searchResults, counts, selected, locale, 
     next.set("status", s);
     return `?${next.toString()}`;
   };
+  const chipText = (s: Status) => (
+    <>
+      {label(s)}
+      <span className="tabular-nums opacity-75">{counts[s] ?? 0}</span>
+    </>
+  );
 
   return (
     <>
@@ -92,37 +100,24 @@ export function BoardClient({ columns, searchResults, counts, selected, locale, 
 
       {/* Phones and tablets */}
       <div className="lg:hidden">
-        <div role="tablist" className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
-          {[...ACTIVE, ...DONE].map((s) => {
-            const active = tab === s;
-            const className = cx(
-              "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-medium",
-              active ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-ink)]" : "border-stone-300 bg-white text-stone-700",
-            );
-            const content = (
-              <>
-                {label(s)}
-                <span className="tabular-nums opacity-80">{counts[s] ?? 0}</span>
-              </>
-            );
-            return ACTIVE.includes(s) ? (
-              <button key={s} role="tab" aria-selected={active} className={className} onClick={() => setTab(s)}>
-                {content}
-              </button>
+        <div role="group" aria-label={m.statusFilter} className="sl-scroll-row -mx-4 mb-3 gap-2 px-4 pb-1">
+          {[...ACTIVE, ...DONE].map((s) =>
+            ACTIVE.includes(s) ? (
+              <FilterChip key={s} selected={tab === s} onClick={() => setTab(s)} className="snap-start">
+                {chipText(s)}
+              </FilterChip>
             ) : (
-              <Link key={s} role="tab" aria-selected={active} href={doneHref(s)} className={className}>
-                {content}
-              </Link>
-            );
-          })}
-        </div>
-        <div className="flex flex-col gap-3">
-          {columns[tab]?.length ? (
-            columns[tab].map(card)
-          ) : (
-            <EmptyState title={m.noOrders} body={tab === "NEW" ? m.noOrdersHint : undefined} />
+              <FilterChip key={s} href={doneHref(s)} selected={tab === s} className="snap-start">
+                {chipText(s)}
+              </FilterChip>
+            ),
           )}
         </div>
+        {columns[tab]?.length ? (
+          <div className="grid gap-3 sm:grid-cols-2">{columns[tab].map(card)}</div>
+        ) : (
+          <EmptyState title={m.noOrders} body={tab === "NEW" ? m.noOrdersHint : undefined} />
+        )}
       </div>
 
       {/* Wide screens */}
@@ -133,15 +128,19 @@ export function BoardClient({ columns, searchResults, counts, selected, locale, 
       </div>
       <nav className="mt-4 hidden flex-wrap gap-2 lg:flex" aria-label={m.done}>
         {DONE.map((s) => (
-          <Link key={s} href={doneHref(s)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-stone-300 bg-white px-4 text-sm">
-            {label(s)} <span className="tabular-nums text-stone-500">{counts[s] ?? 0}</span>
-          </Link>
+          <FilterChip key={s} href={doneHref(s)} selected={selected === s}>
+            {chipText(s)}
+          </FilterChip>
         ))}
       </nav>
       {DONE.includes(selected) && (
-        <section className="mt-4 hidden flex-col gap-3 lg:flex">
-          <h2 className="font-semibold">{label(selected)}</h2>
-          {(columns[selected] ?? []).length ? (columns[selected] ?? []).map(card) : <EmptyState title={m.noOrders} />}
+        <section className="mt-4 hidden lg:block">
+          <h2 className="sl-heading mb-3 text-lg">{label(selected)}</h2>
+          {(columns[selected] ?? []).length ? (
+            <div className="grid grid-cols-3 gap-3">{(columns[selected] ?? []).map(card)}</div>
+          ) : (
+            <EmptyState title={m.noOrders} />
+          )}
         </section>
       )}
     </>
@@ -178,10 +177,14 @@ function Column({
         const data = e.dataTransfer.getData("application/json");
         if (data) onDrop(JSON.parse(data) as BoardOrder, status);
       }}
-      className={cx("flex min-h-64 flex-col gap-3 rounded-[var(--radius)] bg-stone-100 p-2", over && "ring-2 ring-[var(--brand)]")}
+      className={cx(
+        "flex min-h-64 flex-col gap-2.5 rounded-sl-lg border border-sl-border bg-sl-cat/50 p-2",
+        over && "outline-2 outline-offset-2 outline-dashed outline-sl-accent",
+      )}
     >
-      <h2 className="flex items-center justify-between px-1 pt-1 text-sm font-semibold text-stone-700">
-        {title} <span className="tabular-nums text-stone-500">{count}</span>
+      <h2 className="flex items-center justify-between gap-2 px-1.5 pt-1 text-[13px] font-extrabold">
+        {title}
+        <span className="rounded-full bg-sl-panel px-2 py-0.5 text-xs tabular-nums text-sl-muted">{count}</span>
       </h2>
       {orders.map(render)}
     </section>
@@ -201,7 +204,6 @@ function OrderCard({
   onMove: (o: BoardOrder, to: Status) => void;
   locale: Locale;
   m: OrderMessages;
-  t: CommonMessages;
   label: (s: Status) => string;
 }) {
   const next = order.allowedNext.find((s) => s !== "CANCELLED" && s !== "RETURNED");
@@ -222,67 +224,89 @@ function OrderCard({
     <Card
       draggable={order.allowedNext.length > 0}
       onDragStart={(e: DragEvent) => e.dataTransfer.setData("application/json", JSON.stringify(order))}
-      className={cx("flex flex-col gap-3 p-3", busy && "opacity-60")}
+      className={cx("flex flex-col gap-3 p-3.5", busy && "opacity-60")}
     >
-      <Link href={`/dashboard/orders/${order.id}`} className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-semibold tabular-nums">#{order.number}</span>
-          <Badge tone={STATUS_TONES[order.status]}>{label(order.status)}</Badge>
+      <Link href={`/dashboard/orders/${order.id}`} className="flex flex-col gap-2 rounded-sl-sm">
+        <div>
+          {/* flex-wrap: in a narrow board column a long badge drops under the number instead of squeezing it */}
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <p className="text-[15px] font-extrabold tabular-nums">#{order.number}</p>
+            <Badge tone={STATUS_TONES[order.status]}>{label(order.status)}</Badge>
+          </div>
+          {/* Relative time drifts between server and browser render. */}
+          <time dateTime={order.createdAt} title={formatDateTime(order.createdAt, locale)} className="text-xs text-sl-muted" suppressHydrationWarning>
+            {age(order.createdAt, locale)}
+          </time>
         </div>
-        <span className="truncate text-sm font-medium">{order.customerName}</span>
-        <span className="truncate text-xs text-stone-500">
-          {order.area}, {order.district}
-        </span>
-        <span className="truncate text-xs text-stone-600">
-          {order.items[0]?.nameSnapshot}
-          {order.items.length > 1 ? ` +${order.items.length - 1}` : ""} · {fill(m.items, { n: units })}
-        </span>
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-semibold tabular-nums">{formatMoney(order.totalMinor, order.currency, locale)}</span>
-          <span className="truncate text-xs text-stone-500">{order.courier?.name ?? m.unassigned}</span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold">{order.customerName}</p>
+          <p className="flex items-center gap-1 text-xs text-sl-muted">
+            <Icon name="pin" className="size-3.5 shrink-0" />
+            <span className="truncate">
+              {order.area}, {order.district}
+            </span>
+          </p>
         </div>
-        <time className="text-xs text-stone-400" dateTime={order.createdAt}>
-          {formatDateTime(order.createdAt, locale)}
-        </time>
+        <p className="truncate text-xs text-sl-muted">
+          {/* bdi: a Latin product name must not reorder the Arabic count around it */}
+          <bdi>
+            {order.items[0]?.nameSnapshot}
+            {order.items.length > 1 ? ` +${order.items.length - 1}` : ""}
+          </bdi>
+          {" · "}
+          {units === 1 ? m.oneItem : fill(m.items, { n: units })}
+        </p>
+        {order.items.some((i) => i.note) && (
+          <Badge tone="violet" className="self-start">
+            <Icon name="info" className="size-3.5" />
+            {m.hasNote}
+          </Badge>
+        )}
+        <div className="flex items-center justify-between gap-2 border-t border-sl-border pt-2">
+          <span className="text-[15px] font-extrabold tabular-nums">{formatMoney(order.totalMinor, order.currency, locale)}</span>
+          <span className={cx("inline-flex min-w-0 items-center gap-1 text-xs font-semibold", order.courier ? "text-sl-fg" : "text-sl-muted")}>
+            <Icon name="truck" className="size-4 shrink-0" />
+            <span className="truncate">{order.courier?.name ?? m.unassigned}</span>
+          </span>
+        </div>
       </Link>
       {action}
     </Card>
   );
 }
 
+/** Courier filter chips; keeps the other query params. */
 export function CourierFilter({ couriers, value, label, allLabel }: { couriers: { id: string; name: string }[]; value: string; label: string; allLabel: string }) {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const href = (id: string) => {
+    const next = new URLSearchParams(params.toString());
+    if (id) next.set("courierId", id);
+    else next.delete("courierId");
+    return `${pathname}?${next.toString()}`;
+  };
   return (
-    <Select
-      aria-label={label}
-      value={value}
-      className="sm:w-56"
-      onChange={(e) => {
-        const next = new URLSearchParams(params.toString());
-        if (e.target.value) next.set("courierId", e.target.value);
-        else next.delete("courierId");
-        router.push(`${pathname}?${next.toString()}`);
-      }}
-    >
-      <option value="">{allLabel}</option>
+    <nav aria-label={label} className="sl-scroll-row -mx-4 gap-2 px-4 pb-1">
+      <FilterChip href={href("")} selected={!value} className="snap-start">
+        <Icon name="truck" className="size-4" />
+        {allLabel}
+      </FilterChip>
       {couriers.map((c) => (
-        <option key={c.id} value={c.id}>
+        <FilterChip key={c.id} href={href(c.id)} selected={value === c.id} className="snap-start">
           {c.name}
-        </option>
+        </FilterChip>
       ))}
-    </Select>
+    </nav>
   );
 }
 
 export function CopyLink({ url, label, copy, copied }: { url: string; label: string; copy: string; copied: string }) {
   const [done, setDone] = useState(false);
   return (
-    <Card className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
+    <Card className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-stone-500">{label}</p>
-        <a href={url} className="block truncate text-sm text-[var(--brand)] underline-offset-4 hover:underline" dir="ltr">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-sl-muted rtl:tracking-normal">{label}</p>
+        <a href={url} className="block truncate text-sm font-bold text-sl-accent underline-offset-4 hover:underline" dir="ltr">
           {url}
         </a>
       </div>
@@ -293,7 +317,8 @@ export function CopyLink({ url, label, copy, copied }: { url: string; label: str
           setDone(true);
         }}
       >
-        {done ? copied : copy}
+        <Icon name={done ? "check" : "orders"} className="size-[18px]" />
+        <span aria-live="polite">{done ? copied : copy}</span>
       </Button>
     </Card>
   );

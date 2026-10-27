@@ -1,4 +1,4 @@
-import { Card, PageHeader, Stat } from "@/components/ui";
+import { Alert, Card, PageHeader, Stat } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { common, type CommonMessages } from "@/i18n/messages/common";
 import { cashMessages, metricsMessages, type MetricsMessages } from "@/i18n/messages/money";
@@ -22,16 +22,18 @@ function duration(minutes: number, m: MetricsMessages, locale: Locale) {
 function Bars({ rows }: { rows: { label: string; value: number; text: string; muted?: boolean }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="flex flex-col gap-2.5">
       {rows.map((r) => (
-        <li key={r.label} className="grid grid-cols-[6.5rem_1fr] items-center gap-2 text-sm">
-          <span className="truncate text-stone-600">{r.label}</span>
-          <span className="flex items-center gap-2">
-            <span
-              className={`h-3 rounded-full ${r.muted ? "bg-stone-300" : "bg-[var(--brand)]"}`}
-              style={{ width: `${(r.value / max) * 100}%`, minWidth: r.value > 0 ? "0.25rem" : 0 }}
-            />
-            <span className="shrink-0 tabular-nums">{r.text}</span>
+        <li key={r.label} className="grid grid-cols-[7rem_1fr] items-center gap-3 text-sm">
+          <span className="truncate text-sl-muted">{r.label}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-sl-cat">
+              <span
+                className={`block h-full rounded-full ${r.muted ? "bg-sl-control" : "bg-sl-accent"}`}
+                style={{ width: `${(r.value / max) * 100}%`, minWidth: r.value > 0 ? "0.4rem" : 0 }}
+              />
+            </span>
+            <span className="w-20 shrink-0 whitespace-nowrap text-end font-bold tabular-nums">{r.text}</span>
           </span>
         </li>
       ))}
@@ -76,15 +78,15 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <Card>
-          <h2 className="mb-3 font-semibold">{m.compare}</h2>
+        <Card className="p-5">
+          <h2 className="sl-heading mb-4 text-lg">{m.compare}</h2>
           {baseline.ordersPerDay === null && baseline.confirmMinutes === null ? (
-            <p className="text-sm text-stone-600">{m.noBaseline}</p>
+            <Alert tone="note">{m.noBaseline}</Alert>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
               {baseline.confirmMinutes !== null && (
                 <div>
-                  <h3 className="mb-1 text-sm font-medium">{m.confirmTime}</h3>
+                  <h3 className="mb-2 text-sm font-bold">{m.confirmTime}</h3>
                   <Bars
                     rows={[
                       { label: m.before, value: baseline.confirmMinutes, text: duration(baseline.confirmMinutes, m, locale), muted: true },
@@ -95,7 +97,7 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
               )}
               {baseline.ordersPerDay !== null && (
                 <div>
-                  <h3 className="mb-1 text-sm font-medium">{m.perDay}</h3>
+                  <h3 className="mb-2 text-sm font-bold">{m.perDay}</h3>
                   <Bars
                     rows={[
                       { label: m.before, value: baseline.ordersPerDay, text: formatNumber(baseline.ordersPerDay, locale), muted: true },
@@ -107,8 +109,8 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
             </div>
           )}
         </Card>
-        <Card>
-          <h2 className="mb-3 font-semibold">{m.byStatus}</h2>
+        <Card className="p-5">
+          <h2 className="sl-heading mb-4 text-lg">{m.byStatus}</h2>
           <Bars
             rows={ORDER_STATUSES.map((s) => ({
               label: t[`status${s}` as keyof CommonMessages],

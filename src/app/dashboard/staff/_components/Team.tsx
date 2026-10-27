@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/Icon";
 import { Alert, Badge, Button, Card, EmptyState, Field, Input, Select } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
@@ -17,6 +18,15 @@ type Invitation = { id: string; email: string; role: string | null; expiresAt: s
 type Msgs = { m: ShopMessages; t: CommonMessages };
 
 const INVITABLE = ["manager", "staff", "delivery"] as const;
+
+/** A round initial tile, the dashboard's stand-in for an avatar. */
+function Initial({ name }: { name: string }) {
+  return (
+    <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-full bg-sl-cat text-base font-extrabold text-sl-accent">
+      {name.trim().slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
 
 function roleLabel(role: string | null, t: CommonMessages) {
   return { owner: t.roleOwner, manager: t.roleManager, staff: t.roleStaff, delivery: t.roleDelivery }[role as Role] ?? role ?? "";
@@ -60,15 +70,19 @@ function RoleFields({ role, courierId, couriers, m, t, onRole }: { role: string;
 export function Team({ members, invitations, couriers, meId, locale, m, t }: { members: Member[]; invitations: Invitation[]; couriers: Ref[]; meId: string; locale: Locale } & Msgs) {
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-3">
-        <h2 className="font-semibold">{m.members}</h2>
+      <section aria-labelledby="members" className="flex flex-col gap-3">
+        <h2 id="members" className="sl-heading text-lg">
+          {m.members} <span className="text-sl-muted tabular-nums">({members.length})</span>
+        </h2>
         {members.map((mem) => (
           <MemberCard key={mem.id} member={mem} isMe={mem.userId === meId} couriers={couriers} m={m} t={t} />
         ))}
       </section>
       <InviteForm couriers={couriers} m={m} t={t} />
-      <section className="flex flex-col gap-3">
-        <h2 className="font-semibold">{m.pending}</h2>
+      <section aria-labelledby="pending" className="flex flex-col gap-3">
+        <h2 id="pending" className="sl-heading text-lg">
+          {m.pending}
+        </h2>
         {invitations.length === 0 ? (
           <EmptyState title={m.noPending} />
         ) : (
@@ -88,17 +102,21 @@ function MemberCard({ member, isMe, couriers, m, t }: { member: Member; isMe: bo
 
   return (
     <Card className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-3">
+        <Initial name={member.name} />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">
-            {member.name} {isMe && <span className="text-sm text-stone-500">({m.you})</span>}
+          <p className="truncate font-extrabold">
+            {member.name} {isMe && <span className="text-sm font-semibold text-sl-muted">({m.you})</span>}
           </p>
-          <p className="truncate text-sm text-stone-600" dir="ltr">
-            {member.email}
+          <p className="truncate text-sm text-sl-muted">
+            <bdi dir="ltr">{member.email}</bdi>
           </p>
+          {/* Under the email, not beside it, so two badges never squeeze the name on a phone */}
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <Badge tone={member.role === "owner" ? "violet" : "neutral"}>{roleLabel(member.role, t)}</Badge>
+            {member.courier && <Badge tone="blue">{member.courier.name}</Badge>}
+          </div>
         </div>
-        <Badge tone={member.role === "owner" ? "violet" : "neutral"}>{roleLabel(member.role, t)}</Badge>
-        {member.courier && <Badge tone="blue">{member.courier.name}</Badge>}
       </div>
       {!locked && (
         <form
@@ -111,7 +129,7 @@ function MemberCard({ member, isMe, couriers, m, t }: { member: Member; isMe: bo
               }),
             ),
           )}
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-3 border-t border-sl-border pt-3"
         >
           {action.error && <Alert tone="error">{action.error}</Alert>}
           <div className="grid gap-3 sm:grid-cols-2">
@@ -123,7 +141,7 @@ function MemberCard({ member, isMe, couriers, m, t }: { member: Member; isMe: bo
             </Button>
             <Button
               tone="ghost"
-              className="text-red-700"
+              className="text-sl-danger"
               disabled={action.busy}
               onClick={() => confirm(fill(m.removeConfirm, { name: member.name })) && action.run(() => api(`/api/staff/${member.id}`, { method: "DELETE" }))}
             >
@@ -154,8 +172,13 @@ function InviteForm({ couriers, m, t }: { couriers: Ref[] } & Msgs) {
   }
 
   return (
-    <Card>
-      <h2 className="mb-3 font-semibold">{m.inviteTitle}</h2>
+    <Card className="p-5">
+      <h2 className="sl-heading mb-3 flex items-center gap-2.5 text-lg">
+        <span aria-hidden className="grid size-9 place-items-center rounded-full bg-sl-cat text-sl-accent">
+          <Icon name="plus" className="size-[18px]" />
+        </span>
+        {m.inviteTitle}
+      </h2>
       <form onSubmit={submitWith(submit)} className="flex flex-col gap-3">
         {action.error && <Alert tone="error">{action.error}</Alert>}
         <div className="grid gap-3 sm:grid-cols-3">
@@ -186,14 +209,14 @@ function InviteRow({ invite, locale, m, t }: { invite: Invitation; locale: Local
     <Card className="flex flex-col gap-2">
       {action.error && <Alert tone="error">{action.error}</Alert>}
       <div className="flex flex-wrap items-center gap-2">
-        <p className="min-w-0 flex-1 truncate font-medium" dir="ltr">
-          {invite.email}
+        <p className="min-w-0 flex-1 truncate font-bold">
+          <bdi dir="ltr">{invite.email}</bdi>
         </p>
-        <Badge>{roleLabel(invite.role, t)}</Badge>
+        <Badge tone="amber">{roleLabel(invite.role, t)}</Badge>
         {invite.courier && <Badge tone="blue">{invite.courier.name}</Badge>}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm text-stone-600">{fill(m.expires, { date: formatDate(invite.expiresAt, locale) })}</span>
+        <span className="text-sm text-sl-muted">{fill(m.expires, { date: formatDate(invite.expiresAt, locale) })}</span>
         <Button
           tone="ghost"
           disabled={action.busy}

@@ -1,4 +1,4 @@
-import { ButtonLink, Alert, Input, PageHeader } from "@/components/ui";
+import { ButtonLink, Alert, PageHeader } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { common } from "@/i18n/messages/common";
 import { orderMessages } from "@/i18n/messages/orders";
@@ -58,12 +58,25 @@ export default async function OrdersBoardPage({
         }
       />
       {sp.welcome && <Alert tone="success" className="mb-4">{m.welcome}</Alert>}
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <form className="flex flex-1 gap-2" role="search">
+      <div className="mb-4 flex flex-col gap-3">
+        <form
+          role="search"
+          className="flex h-11 items-center gap-2.5 rounded-full border border-sl-border bg-sl-panel px-3.5 shadow-[0_4px_15px_#15181d05] focus-within:outline-2 focus-within:outline-sl-accent sm:max-w-md"
+        >
           {courierId && <input type="hidden" name="courierId" value={courierId} />}
-          <Input name="q" defaultValue={q} placeholder={m.searchPlaceholder} aria-label={t.search} type="search" />
+          <Icon name="search" className="size-[18px] shrink-0 text-sl-muted" />
+          <input
+            name="q"
+            type="search"
+            defaultValue={q}
+            placeholder={m.searchPlaceholder}
+            aria-label={t.search}
+            className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-sl-muted sm:text-sm"
+          />
         </form>
-        <CourierFilter couriers={couriers.map((c) => ({ id: c.id, name: c.name }))} value={courierId ?? ""} label={m.filterCourier} allLabel={m.allCouriers} />
+        {couriers.length > 0 && (
+          <CourierFilter couriers={couriers.map((c) => ({ id: c.id, name: c.name }))} value={courierId ?? ""} label={m.filterCourier} allLabel={m.allCouriers} />
+        )}
       </div>
       <BoardClient
         // Remount on navigation so the phone tab follows ?status=

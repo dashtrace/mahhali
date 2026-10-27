@@ -25,8 +25,8 @@ export function ModerateButton({ id, hidden, labels }: { id: string; hidden: boo
   }
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <Button tone={hidden ? "secondary" : "ghost"} onClick={toggle} disabled={busy}>
+    <div className="flex flex-col items-start gap-2">
+      <Button tone="secondary" onClick={toggle} disabled={busy}>
         {hidden ? labels.unhide : labels.hide}
       </Button>
       {error && <Alert tone="error">{error}</Alert>}

@@ -20,7 +20,16 @@ export default async function NewOrderPage() {
   const variants = products.flatMap((p) =>
     p.variants
       .filter((v) => !v.archived)
-      .map((v) => ({ id: v.id, label: itemLabel(p.name, v.size, v.colour), priceMinor: Number(v.priceMinor), available: v.available })),
+      .map((v) => ({
+        id: v.id,
+        label: itemLabel(p.name, v.size, v.colour),
+        priceMinor: Number(v.priceMinor),
+        available: v.available,
+        // The same customization rules the storefront enforces (the API checks them too).
+        custom: p.customLabel
+          ? { label: p.customLabel, placeholder: p.customPlaceholder, required: p.customRequired, maxLength: p.customMaxLength }
+          : null,
+      })),
   );
 
   return (

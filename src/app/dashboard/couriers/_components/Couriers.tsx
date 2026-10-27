@@ -41,14 +41,14 @@ export function Couriers({ couriers, canWrite, m, t }: { couriers: Courier[]; ca
     <div className="flex flex-col gap-3">
       {canWrite &&
         (adding ? (
-          <Card>
+          <Card className="p-5">
             <form
               onSubmit={submitWith(async (f) => {
                 if (await create.run(() => api("/api/couriers", { body: fields(f) }))) setAdding(false);
               })}
               className="flex flex-col gap-3"
             >
-              <h2 className="font-semibold">{m.addCourier}</h2>
+              <h2 className="sl-heading text-lg">{m.addCourier}</h2>
               {create.error && <Alert tone="error">{create.error}</Alert>}
               <CourierFields m={m} />
               <div className="flex gap-2">
@@ -113,21 +113,26 @@ function CourierRow({ courier: c, canWrite, m, t }: { courier: Courier; canWrite
   }
 
   return (
-    <Card className={cx("flex flex-col gap-2", !c.active && "bg-stone-50")}>
+    <Card className={cx("flex flex-col gap-2", !c.active && "border-dashed")}>
       {action.error && <Alert tone="error">{action.error}</Alert>}
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-semibold">{c.name}</h2>
-        <Badge tone={c.type === "COMPANY" ? "blue" : "violet"}>{c.type === "COMPANY" ? m.typeCOMPANY : m.typeINDIVIDUAL}</Badge>
-        {!c.active && <Badge>{m.inactive}</Badge>}
+      <div className="flex items-center gap-3">
+        <span aria-hidden className={cx("grid size-11 shrink-0 place-items-center rounded-full bg-sl-cat text-sl-accent", !c.active && "opacity-60")}>
+          <Icon name={c.type === "COMPANY" ? "truck" : "users"} />
+        </span>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+          <h2 className="truncate font-extrabold">{c.name}</h2>
+          <Badge tone={c.type === "COMPANY" ? "blue" : "violet"}>{c.type === "COMPANY" ? m.typeCOMPANY : m.typeINDIVIDUAL}</Badge>
+          {!c.active && <Badge>{m.inactive}</Badge>}
+        </div>
       </div>
       {c.phone && (
-        <a href={`tel:${c.phone}`} dir="ltr" className="inline-flex min-h-11 items-center gap-2 self-start text-sm text-stone-700">
+        <a href={`tel:${c.phone}`} dir="ltr" className="inline-flex min-h-11 items-center gap-2 self-start text-sm font-semibold text-sl-accent">
           <Icon name="phone" className="size-4" />
           {c.phone}
         </a>
       )}
       {canWrite && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 border-t border-sl-border pt-3">
           <Button tone="secondary" onClick={() => setEditing(true)}>
             {t.edit}
           </Button>

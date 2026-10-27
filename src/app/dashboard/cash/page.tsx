@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
+import { Icon } from "@/components/Icon";
+import { Badge, Card, EmptyState, PageHeader, SectionHeader, Stat, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common, type CommonMessages } from "@/i18n/messages/common";
 import { cashMessages, type CashMessages } from "@/i18n/messages/money";
@@ -48,7 +49,7 @@ function problemsOf(c: CourierRecon, money: (v: bigint) => string, m: CashMessag
       tone: "amber" as const,
       orderId: r.orderId,
       number: r.number,
-      text: fill(m.unpaidFor, { amount: money(r.dueMinor), days: r.daysOutstanding }),
+      text: fill(r.daysOutstanding < 1 ? m.unpaidToday : r.daysOutstanding === 1 ? m.unpaidOneDay : r.daysOutstanding >= 3 && r.daysOutstanding <= 10 ? m.unpaidFewDays : m.unpaidFor, { amount: money(r.dueMinor), days: r.daysOutstanding }),
     })),
     ...c.doorstepGaps.map((r) => ({
       key: `ds${r.orderId}`,
@@ -122,41 +123,54 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
           const reported = c.expectedMinor + c.doorstepGaps.reduce((sum, r) => sum + r.diffMinor, 0n);
           return (
             <Card key={c.courierId}>
-              <h2 className="mb-3 text-lg font-semibold">{c.courierName ?? m.noCourierName}</h2>
-              <dl className="mb-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div className="mb-3 flex items-center gap-3">
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-sl-cat text-sl-accent">
+                  <Icon name="truck" className="size-5" />
+                </span>
+                <h2 className="sl-heading min-w-0 flex-1 truncate text-lg">{c.courierName ?? m.noCourierName}</h2>
+                {problems.length > 0 && <Badge tone="red">{fill(m.gapsHint, { n: problems.length })}</Badge>}
+              </div>
+              {/* The mockup's track-summary tiles: four figures on the soft background. */}
+              <dl className="mb-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                 {[
                   { label: m.due, value: money(c.expectedMinor) },
                   { label: m.reported, value: money(reported) },
                   { label: m.remitted, value: money(c.receivedMinor), hint: cash(c.received, locale) },
                   { label: m.gap, value: money(c.gaps.sumMinor), hint: fill(m.gapsHint, { n: c.gaps.count }), bad: c.gaps.count > 0 },
                 ].map((s) => (
-                  <div key={s.label}>
-                    <dt className="text-xs text-stone-500">{s.label}</dt>
-                    <dd className={`text-base font-semibold tabular-nums ${s.bad ? "text-red-700" : ""}`}>{s.value}</dd>
-                    {s.hint && <dd className="text-xs text-stone-500">{s.hint}</dd>}
+                  <div key={s.label} className="min-w-0 rounded-sl bg-sl-bg px-3 py-2.5">
+                    <dt className="truncate text-xs text-sl-muted">{s.label}</dt>
+                    <dd className={cx("text-base font-extrabold tabular-nums", s.bad && "text-sl-danger")}>
+                      <bdi>{s.value}</bdi>
+                    </dd>
+                    {s.hint && <dd className="truncate text-xs text-sl-muted">{s.hint}</dd>}
                   </div>
                 ))}
               </dl>
               {problems.length === 0 ? (
-                <p className="text-sm text-emerald-700">{m.allClear}</p>
+                <p className="inline-flex items-center gap-1.5 text-sm font-bold text-sl-ok">
+                  <Icon name="check" className="size-4" />
+                  {m.allClear}
+                </p>
               ) : (
                 <>
-                  <h3 className="mb-1 text-sm font-medium text-stone-700">{m.problems}</h3>
-                  <ul className="divide-y divide-stone-100">
+                  <h3 className="mb-1 text-sm font-bold">{m.problems}</h3>
+                  <ul>
                     {problems.map((p) => {
                       const body = (
                         <>
                           <Badge tone={p.tone} className="shrink-0">{p.kind}</Badge>
                           <span className="min-w-0 flex-1">
-                            {p.number !== undefined && <span className="me-1 font-medium">{fill(m.orderNo, { n: p.number })}</span>}
-                            <span className="text-stone-700">{p.text}</span>
+                            {p.number !== undefined && <span className="me-1 font-bold">{fill(m.orderNo, { n: p.number })}</span>}
+                            <span className="text-sl-muted">{p.text}</span>
                           </span>
+                          {p.orderId && <Icon name="next" className="size-4 shrink-0 text-sl-muted" />}
                         </>
                       );
                       return (
-                        <li key={p.key}>
+                        <li key={p.key} className="border-b border-sl-border last:border-b-0">
                           {p.orderId ? (
-                            <Link href={`/dashboard/orders/${p.orderId}`} className="flex min-h-11 items-center gap-2 py-2 text-sm hover:bg-stone-50">
+                            <Link href={`/dashboard/orders/${p.orderId}`} className="flex min-h-11 items-center gap-2 py-2 text-sm hover:text-sl-accent">
                               {body}
                             </Link>
                           ) : (
@@ -173,32 +187,32 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
         })}
       </section>
 
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">{m.pastTitle}</h2>
+      <section aria-labelledby="remittances">
+        <SectionHeader id="remittances" title={m.pastTitle} />
         {remittances.length === 0 ? (
           <EmptyState title={m.noRemittances} />
         ) : (
-          <ul className="flex flex-col gap-2">
-            {remittances.map((r) => (
-              <li key={r.id}>
-                <Card className="flex flex-col gap-1 text-sm">
+          <Card className="py-1">
+            <ul>
+              {remittances.map((r) => (
+                <li key={r.id} className="flex flex-col gap-0.5 border-b border-sl-border py-3 text-sm last:border-b-0">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-medium">{courierName.get(r.courierId) ?? m.noCourierName}</span>
-                    <span className="font-semibold tabular-nums">{cash({ usdCents: r.amountUsdCents, lbp: r.amountLbp }, locale) || money(0n)}</span>
+                    <span className="font-bold">{courierName.get(r.courierId) ?? m.noCourierName}</span>
+                    <bdi className="font-extrabold tabular-nums">{cash({ usdCents: r.amountUsdCents, lbp: r.amountLbp }, locale) || money(0n)}</bdi>
                   </div>
-                  <div className="text-stone-500">{[formatDate(r.receivedAt, locale), r.reference].filter(Boolean).join(" · ")}</div>
-                  <div className="flex flex-wrap gap-x-2">
-                    <span className="text-stone-500">{m.orders}:</span>
+                  <div className="text-xs text-sl-muted">{[formatDate(r.receivedAt, locale), r.reference].filter(Boolean).join(" · ")}</div>
+                  <div className="flex flex-wrap items-center gap-x-1.5">
+                    <span className="text-xs text-sl-muted">{m.orders}:</span>
                     {r.lines.map((l) => (
-                      <Link key={l.id} href={`/dashboard/orders/${l.orderId}`} className="inline-flex min-h-11 items-center text-[var(--brand)] underline-offset-2 hover:underline">
+                      <Link key={l.id} href={`/dashboard/orders/${l.orderId}`} className="inline-flex min-h-11 items-center px-1 font-bold text-sl-accent underline-offset-2 hover:underline">
                         {fill(m.orderNo, { n: l.order.number })}
                       </Link>
                     ))}
                   </div>
-                </Card>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </Card>
         )}
       </section>
     </>

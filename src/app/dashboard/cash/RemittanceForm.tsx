@@ -123,13 +123,13 @@ export function RemittanceForm({
   }
 
   return (
-    <Card className="mb-6">
-      <h2 className="text-lg font-semibold">{m.recordTitle}</h2>
-      <p className="mb-3 text-sm text-stone-600">{m.recordHint}</p>
+    <Card className="mb-6 p-5">
+      <h2 className="sl-heading text-lg">{m.recordTitle}</h2>
+      <p className="mb-4 mt-0.5 text-sm text-sl-muted">{m.recordHint}</p>
       {done && <Alert tone="success" className="mb-3">{m.saved}</Alert>}
       {error && <Alert tone="error" className="mb-3">{error}</Alert>}
       {couriers.length === 0 ? (
-        <p className="text-sm text-stone-600">{m.noCouriers}</p>
+        <Alert tone="note">{m.noCouriers}</Alert>
       ) : (
         <form onSubmit={submit} className="flex flex-col gap-4">
           <Field label={m.courier}>
@@ -143,12 +143,12 @@ export function RemittanceForm({
             </Select>
           </Field>
 
-          {orders && orders.length === 0 && <p className="text-sm text-stone-600">{m.noUnsettled}</p>}
+          {orders && orders.length === 0 && <Alert tone="note">{m.noUnsettled}</Alert>}
 
           {orders && orders.length > 0 && (
             <>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-stone-600">{fill(m.selected, { n: picked.length })}</span>
+                <span className="text-sm font-bold text-sl-muted">{fill(m.selected, { n: picked.length })}</span>
                 <Button
                   tone="ghost"
                   onClick={() => setLines((all) => Object.fromEntries(Object.entries(all).map(([id, l]) => [id, { ...l, checked: true }])))}
@@ -160,28 +160,28 @@ export function RemittanceForm({
                 {orders.map((o) => {
                   const l = lines[o.id];
                   return (
-                    <li key={o.id} className={cx("rounded-[var(--radius)] border", l.checked ? "border-[var(--brand)]" : "border-stone-200")}>
-                      <label className="flex min-h-11 items-center gap-3 p-3">
+                    <li key={o.id} className={cx("rounded-sl border", l.checked ? "border-sl-accent bg-sl-cat" : "border-sl-border bg-sl-panel")}>
+                      <label className="flex min-h-11 cursor-pointer items-center gap-3 p-3">
                         <input
                           type="checkbox"
-                          className="size-5 shrink-0 accent-[var(--brand)]"
+                          className="size-5 shrink-0 accent-sl-accent"
                           checked={l.checked}
                           onChange={(e) => set(o.id, { checked: e.target.checked })}
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">
+                          <span className="block truncate font-bold">
                             {fill(m.orderNo, { n: o.number })} · {o.customerName}
                           </span>
                           {o.deliveredAt && (
-                            <span className="block text-xs text-stone-500">{fill(m.deliveredOn, { date: formatDate(o.deliveredAt, locale) })}</span>
+                            <span className="block text-xs text-sl-muted">{fill(m.deliveredOn, { date: formatDate(o.deliveredAt, locale) })}</span>
                           )}
                         </span>
-                        <span className="shrink-0 text-sm font-medium tabular-nums">
+                        <span className="shrink-0 text-sm font-bold tabular-nums">
                           {fill(m.dueAmount, { amount: formatMoney(o.codMinor, o.currency, locale) })}
                         </span>
                       </label>
                       {l.checked && (
-                        <div className="grid grid-cols-3 gap-2 px-3 pb-3">
+                        <div className="grid grid-cols-2 gap-2 px-3 pb-3 sm:grid-cols-3">
                           <Field label={m.collectedUsd}>
                             <Input inputMode="decimal" value={l.usd} onChange={(e) => set(o.id, { usd: e.target.value })} />
                           </Field>
@@ -205,7 +205,7 @@ export function RemittanceForm({
                 <Field label={m.handedLbp}>
                   <Input inputMode="numeric" value={amountLbp} onChange={(e) => setHandLbp(e.target.value)} />
                 </Field>
-                <p className="col-span-2 -mt-1 text-xs text-stone-500">{m.handedHint}</p>
+                <p className="col-span-2 -mt-1 text-xs text-sl-muted">{m.handedHint}</p>
                 <Field label={m.receivedAt}>
                   <Input type="date" required value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} />
                 </Field>
@@ -213,7 +213,7 @@ export function RemittanceForm({
                   <Input value={reference} maxLength={120} onChange={(e) => setReference(e.target.value)} />
                 </Field>
               </div>
-              <Button type="submit" block disabled={busy || picked.length === 0}>
+              <Button type="submit" block disabled={busy || picked.length === 0} className="min-h-12 text-[15px]">
                 {m.save}
               </Button>
             </>

@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Alert, Button, Card, Field, Input, Textarea } from "@/components/ui";
+import { Alert, Button, Card, Field, IconButton, Input, Textarea } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { fill } from "@/i18n/locale";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import type { CommonMessages } from "@/i18n/messages/common";
 import { api, errorMessage } from "@/lib/api";
+import { CardHead, ExtrasFields, blankExtras, extrasBody, type Category, type Extras } from "./ProductExtras";
 import { submitWith } from "./useAction";
 
 type Currency = "USD" | "LBP";
@@ -29,10 +30,10 @@ export function VariantFields({ value, onChange, currency, m }: { value: Variant
         <Input value={value.colour} onChange={set("colour")} maxLength={40} placeholder={m.colourPlaceholder} />
       </Field>
       <Field label={fill(m.price, { currency })}>
-        <Input value={value.price} onChange={set("price")} required inputMode="decimal" pattern={currency === "USD" ? "\\d+(\\.\\d{1,2})?" : "\\d+"} />
+        <Input value={value.price} onChange={set("price")} required dir="ltr" inputMode="decimal" pattern={currency === "USD" ? "\\d+(\\.\\d{1,2})?" : "\\d+"} />
       </Field>
       <Field label={m.stock}>
-        <Input value={value.stock} onChange={set("stock")} type="number" min={0} max={100000} inputMode="numeric" />
+        <Input value={value.stock} onChange={set("stock")} type="number" dir="ltr" min={0} max={100000} inputMode="numeric" />
       </Field>
       <Field label={m.sku} className="col-span-2 sm:col-span-1">
         <Input value={value.sku} onChange={set("sku")} maxLength={40} />
@@ -41,9 +42,10 @@ export function VariantFields({ value, onChange, currency, m }: { value: Variant
   );
 }
 
-export function CreateProductForm({ currency, m, t }: { currency: Currency; m: CatalogueMessages; t: CommonMessages }) {
+export function CreateProductForm({ currency, categories, m, t }: { currency: Currency; categories: Category[]; m: CatalogueMessages; t: CommonMessages }) {
   const router = useRouter();
   const [rows, setRows] = useState<VariantDraft[]>([blank]);
+  const [extras, setExtras] = useState<Extras>(blankExtras);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +54,7 @@ export function CreateProductForm({ currency, m, t }: { currency: Currency; m: C
     setError(null);
     try {
       const product = await api<{ id: string }>("/api/products", {
-        body: { name: form.get("name"), description: String(form.get("description") ?? "") || null, variants: rows.map(variantBody) },
+        body: { name: form.get("name"), description: String(form.get("description") ?? "") || null, variants: rows.map(variantBody), ...extrasBody(extras) },
       });
       router.push(`/dashboard/products/${product.id}`);
     } catch (e) {
@@ -62,9 +64,9 @@ export function CreateProductForm({ currency, m, t }: { currency: Currency; m: C
   }
 
   return (
-    <form onSubmit={submitWith(submit)} className="flex flex-col gap-4">
-      {error && <Alert tone="error">{error}</Alert>}
+    <form onSubmit={submitWith(submit)} className="flex max-w-3xl flex-col gap-4">
       <Card className="flex flex-col gap-4">
+        <CardHead title={m.details} />
         <Field label={m.name}>
           <Input name="name" required maxLength={120} />
         </Field>
@@ -73,29 +75,27 @@ export function CreateProductForm({ currency, m, t }: { currency: Currency; m: C
         </Field>
       </Card>
       <Card className="flex flex-col gap-4">
-        <div>
-          <h2 className="font-semibold">{m.variants}</h2>
-          <p className="text-sm text-stone-600">{m.variantsHint}</p>
-        </div>
+        <CardHead title={m.variants} hint={m.variantsHint} />
         {rows.map((row, i) => (
-          <fieldset key={i} className="flex flex-col gap-2 border-t border-stone-200 pt-3 first-of-type:border-0 first-of-type:pt-0">
-            <legend className="flex w-full items-center justify-between text-sm font-medium text-stone-700">
-              {fill(m.variantN, { n: i + 1 })}
-              {rows.length > 1 && (
-                <Button tone="ghost" aria-label={m.removeVariant} onClick={() => setRows(rows.filter((_, j) => j !== i))}>
-                  <Icon name="x" />
-                </Button>
-              )}
-            </legend>
+          <fieldset key={i} className="flex flex-col gap-2 rounded-sl border border-sl-border bg-sl-bg p-3">
+            <legend className="sr-only">{fill(m.variantN, { n: i + 1 })}</legend>
+            <div className="flex min-h-11 items-center justify-between gap-2">
+              <span aria-hidden className="text-sm font-bold">
+                {fill(m.variantN, { n: i + 1 })}
+              </span>
+              {rows.length > 1 && <IconButton label={m.removeVariant} icon="x" onClick={() => setRows(rows.filter((_, j) => j !== i))} />}
+            </div>
             <VariantFields value={row} onChange={(v) => setRows(rows.map((r, j) => (j === i ? v : r)))} currency={currency} m={m} />
           </fieldset>
         ))}
-        <Button tone="secondary" onClick={() => setRows([...rows, { ...blank, price: rows.at(-1)?.price ?? "" }])}>
+        <Button tone="secondary" className="self-start" onClick={() => setRows([...rows, { ...blank, price: rows.at(-1)?.price ?? "" }])}>
           <Icon name="plus" />
           {m.addVariant}
         </Button>
       </Card>
-      <Button type="submit" disabled={pending} block>
+      <ExtrasFields value={extras} onChange={setExtras} categories={categories} m={m} />
+      {error && <Alert tone="error">{error}</Alert>}
+      <Button type="submit" disabled={pending} block className="min-h-12 text-[15px]">
         {pending ? m.creating : m.createProduct}
       </Button>
     </form>

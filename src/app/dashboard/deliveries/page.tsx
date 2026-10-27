@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Alert, Badge, Card, EmptyState, PageHeader, STATUS_TONES, cx } from "@/components/ui";
+import { Icon } from "@/components/Icon";
+import { Alert, Badge, Card, EmptyState, PageHeader, STATUS_TONES, Segmented } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { orderMessages } from "@/i18n/messages/orders";
@@ -13,6 +14,7 @@ import { pageActor } from "../../_server/session";
 import { CourierFilter } from "../_components/Board";
 import { ContactButtons } from "../orders/_components/Contact";
 import { DeliverForm } from "../orders/_components/DeliverForm";
+import { ItemNote, Landmark } from "../orders/_components/ItemNote";
 import { govLabel, reportedCash, statusLabel } from "../orders/_components/labels";
 
 export const metadata = { title: "Deliveries" };
@@ -38,91 +40,97 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
       <PageHeader title={desk ? t.navDeliveries : m.myDeliveries} subtitle={desk ? m.deliveriesHint : undefined} />
       {actor.role === "delivery" && !actor.courierId && <Alert tone="warning" className="mb-4">{m.noCourierLink}</Alert>}
 
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <nav className="flex gap-2" aria-label={t.navDeliveries}>
-          {(["active", "done"] as const).map((v) => (
-            <Link
-              key={v}
-              href={tabHref(v)}
-              aria-current={view === v ? "page" : undefined}
-              className={cx(
-                "inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium",
-                view === v ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-ink)]" : "border-stone-300 bg-white text-stone-700",
-              )}
-            >
-              {v === "active" ? m.viewActive : m.viewDone}
-            </Link>
-          ))}
-        </nav>
+      <div className="mb-4 flex flex-col gap-3">
+        <Segmented
+          label={t.navDeliveries}
+          className="sm:max-w-sm"
+          items={(["active", "done"] as const).map((v) => ({ label: v === "active" ? m.viewActive : m.viewDone, href: tabHref(v), current: view === v }))}
+        />
         {desk && couriers.length > 0 && (
-          <div className="sm:ms-auto">
-            <CourierFilter couriers={couriers.map((c) => ({ id: c.id, name: c.name }))} value={courierId ?? ""} label={m.filterCourier} allLabel={m.allCouriers} />
-          </div>
+          <CourierFilter couriers={couriers.map((c) => ({ id: c.id, name: c.name }))} value={courierId ?? ""} label={m.filterCourier} allLabel={m.allCouriers} />
         )}
       </div>
 
       {!orders.length ? (
         <EmptyState title={view === "active" ? m.noDeliveries : m.noOrders} />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid gap-3 lg:grid-cols-2">
           {orders.map((o) => {
             const other = convert(o.codMinor, o.currency, o.usdLbpRate);
             const units = o.items.reduce((n, i) => n + i.qty, 0);
             return (
               <li key={o.id}>
-                <Card className="flex flex-col gap-3">
+                <Card className="flex h-full flex-col gap-3 rounded-[17px] p-4">
                   <div className="flex items-center justify-between gap-2">
                     {desk ? (
-                      <Link href={`/dashboard/orders/${o.id}`} className="inline-flex min-h-11 items-center font-semibold tabular-nums underline-offset-4 hover:underline">
+                      <Link href={`/dashboard/orders/${o.id}`} className="inline-flex min-h-11 items-center gap-1 text-[17px] font-extrabold tabular-nums text-sl-accent hover:underline">
                         #{o.number}
+                        <Icon name="next" className="size-4" />
                       </Link>
                     ) : (
-                      <span className="font-semibold tabular-nums">#{o.number}</span>
+                      <span className="text-[17px] font-extrabold tabular-nums">#{o.number}</span>
                     )}
                     <Badge tone={STATUS_TONES[o.status]}>{statusLabel(t, o.status)}</Badge>
                   </div>
 
                   <div>
-                    <p className="font-medium">{o.customerName}</p>
-                    <p>{o.addressLine}</p>
-                    <p className="text-sm text-stone-600">
-                      {o.area}, {o.district}, {govLabel(m, o.governorate)}
+                    <p className="font-bold">{o.customerName}</p>
+                    <p className="text-sm">{o.addressLine}</p>
+                    <p className="text-sm text-sl-muted">
+                      <bdi>
+                        {o.area}, {o.district}
+                      </bdi>
+                      , {govLabel(m, o.governorate)}
                     </p>
-                    {o.landmark && (
-                      <p className="mt-2 rounded-[var(--radius)] bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                        <span className="font-medium">{m.landmark}:</span> {o.landmark}
-                      </p>
-                    )}
-                    {o.notes && <p className="mt-2 whitespace-pre-line text-sm text-stone-700">{o.notes}</p>}
+                    {o.landmark && <Landmark label={m.landmark} text={o.landmark} />}
+                    {o.notes && <p className="mt-2 whitespace-pre-line text-sm text-sl-muted">{o.notes}</p>}
                   </div>
 
-                  <p className="text-xs text-stone-500">
-                    {o.items.map((i) => `${i.nameSnapshot} × ${i.qty}`).join(" · ")} ({fill(m.items, { n: units })})
-                    {desk && o.courier && ` · ${o.courier.name}`}
-                  </p>
+                  <div className="border-t border-sl-border pt-3">
+                    <p className="mb-1 flex items-center justify-between gap-2 text-xs font-bold text-sl-muted">
+                      {units === 1 ? m.oneItem : fill(m.items, { n: units })}
+                      {desk && o.courier && (
+                        <span className="inline-flex min-w-0 items-center gap-1">
+                          <Icon name="truck" className="size-4 shrink-0" />
+                          <span className="truncate">{o.courier.name}</span>
+                        </span>
+                      )}
+                    </p>
+                    <ul className="flex flex-col gap-1.5 text-sm">
+                      {o.items.map((i, idx) => (
+                        <li key={idx}>
+                          <bdi className="font-semibold">{i.nameSnapshot}</bdi> <span className="text-sl-muted tabular-nums">× {i.qty}</span>
+                          {i.note && <ItemNote label={m.itemNote} note={i.note} />}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   <ContactButtons phone={o.customerPhone} call={t.call} whatsapp={t.whatsapp} />
 
                   {view === "active" ? (
                     <>
-                      <div className="rounded-[var(--radius)] bg-stone-100 px-3 py-2">
-                        <p className="text-xs font-medium uppercase tracking-wide text-stone-500">{m.toCollect}</p>
-                        <p className="text-2xl font-semibold tabular-nums">{formatMoney(o.codMinor, o.currency, locale)}</p>
-                        {other && <p className="text-sm tabular-nums text-stone-600">≈ {formatMoney(other.minor, other.currency, locale)}</p>}
+                      <div className="rounded-sl bg-sl-soft px-3.5 py-3 text-sl-soft-ink">
+                        <p className="text-xs font-bold uppercase tracking-[0.15em] rtl:tracking-normal">{m.toCollect}</p>
+                        <p className="text-2xl font-extrabold tabular-nums">{formatMoney(o.codMinor, o.currency, locale)}</p>
+                        {other && <p className="text-sm tabular-nums opacity-80">≈ {formatMoney(other.minor, other.currency, locale)}</p>}
                       </div>
                       {o.canComplete && canComplete ? (
                         <DeliverForm orderId={o.id} currency={o.currency} codMinor={o.codMinor} m={m} t={t} />
                       ) : (
-                        <p className="text-sm text-stone-600">{m.waitingPickup}</p>
+                        <Alert tone="note">{m.waitingPickup}</Alert>
                       )}
                     </>
                   ) : (
-                    <p className="text-sm text-stone-700">
-                      {o.status === "DELIVERED"
-                        ? `${m.reportedCash}: ${reportedCash(o.reportedUsdCents, o.reportedLbp, locale)}`
-                        : `${m.failureReason}: ${o.failureReason ?? "—"}`}
-                      {o.deliveredAt && <span className="block text-xs text-stone-500">{formatDateTime(o.deliveredAt, locale)}</span>}
-                    </p>
+                    <div className="rounded-sl bg-sl-cat px-3.5 py-3 text-sm">
+                      <p>
+                        <span className="font-bold">{o.status === "DELIVERED" ? m.reportedCash : m.failureReason}: </span>
+                        <span className="tabular-nums">
+                          {o.status === "DELIVERED" ? reportedCash(o.reportedUsdCents, o.reportedLbp, locale) : (o.failureReason ?? "—")}
+                        </span>
+                      </p>
+                      {o.deliveredAt && <p className="text-xs text-sl-muted">{formatDateTime(o.deliveredAt, locale)}</p>}
+                    </div>
                   )}
                 </Card>
               </li>

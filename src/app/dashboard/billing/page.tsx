@@ -31,19 +31,19 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       {checkout === "success" && <Alert tone="success" className="mb-4">{m.checkoutSuccess}</Alert>}
       {checkout === "cancelled" && <Alert className="mb-4">{m.checkoutCancelled}</Alert>}
 
-      <Card className="mb-4 flex flex-col gap-3">
+      <Card className="mb-5 flex flex-col gap-4 p-5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-stone-600">{m.currentPlan}</span>
-          <Badge tone={plan === "pro" ? "violet" : "neutral"}>{m[`plan${plan}`]}</Badge>
+          <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-sl-muted rtl:tracking-normal">{m.currentPlan}</span>
+          <Badge tone={plan === "pro" ? "violet" : "blue"}>{m[`plan${plan}`]}</Badge>
         </div>
         <div>
-          <p className="text-sm text-stone-600">{m.usage}</p>
-          <p className="text-2xl font-semibold tabular-nums">
+          <p className="text-sm text-sl-muted">{m.usage}</p>
+          <p className="text-[28px] font-extrabold tabular-nums">
             {limit === null ? fill(m.unlimitedUsage, { used }) : fill(m.usageOf, { used, limit })}
           </p>
           {limit !== null && (
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-stone-100" role="progressbar" aria-label={m.usage} aria-valuemin={0} aria-valuemax={limit} aria-valuenow={used}>
-              <div className={cx("h-full", used >= limit ? "bg-red-600" : "bg-[var(--brand)]")} style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} />
+            <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-sl-cat" role="progressbar" aria-label={m.usage} aria-valuemin={0} aria-valuemax={limit} aria-valuenow={used}>
+              <div className={cx("h-full rounded-full", used >= limit ? "bg-sl-danger" : "bg-sl-accent")} style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} />
             </div>
           )}
         </div>
@@ -54,15 +54,25 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <ul className="grid gap-3 sm:grid-cols-2">
         {Object.values(PLANS).map((p) => (
           <li key={p.id}>
-            <Card className={cx("flex h-full flex-col gap-3", p.id === plan && "border-[var(--brand)] ring-2 ring-[var(--brand)]/20")}>
+            <section
+              aria-labelledby={`plan-${p.id}`}
+              className={cx(
+                "flex h-full flex-col gap-3 rounded-[17px] bg-sl-panel p-5 shadow-[0_2px_10px_#00000006]",
+                p.id === plan ? "border-2 border-sl-accent" : "border border-sl-border",
+              )}
+            >
               <div>
-                <h2 className="text-lg font-semibold">{m[`plan${p.id}`]}</h2>
-                <p className="text-2xl font-semibold">{m[`price${p.id}`]}</p>
+                <h2 id={`plan-${p.id}`} className="sl-heading text-xl">
+                  {m[`plan${p.id}`]}
+                </h2>
+                <p className="mt-1 text-[28px] font-extrabold tabular-nums">{m[`price${p.id}`]}</p>
               </div>
-              <ul className="flex flex-1 flex-col gap-1 text-sm">
+              <ul className="flex flex-1 flex-col gap-2 border-t border-sl-border pt-3 text-sm">
                 {[p.monthlyOrderLimit === null ? m.featureUnlimited : fill(m.featureLimit, { n: p.monthlyOrderLimit }), m.featureAll].map((f) => (
-                  <li key={f} className="flex items-start gap-2">
-                    <Icon name="check" className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                  <li key={f} className="flex items-start gap-2.5">
+                    <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-sl-cat text-sl-accent">
+                      <Icon name="check" className="size-3.5" />
+                    </span>
                     {f}
                   </li>
                 ))}
@@ -71,10 +81,10 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               {p.id === "pro" && plan !== "pro" && (
                 <>
                   <UpgradeButton label={m.upgrade} busyLabel={m.redirecting} fallback={common[locale].error} />
-                  <p className="text-xs text-stone-500">{m.testMode}</p>
+                  <p className="text-xs text-sl-muted">{m.testMode}</p>
                 </>
               )}
-            </Card>
+            </section>
           </li>
         ))}
       </ul>

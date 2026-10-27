@@ -55,7 +55,7 @@ export function StatusActions({
       {error && <Alert tone="error">{error}</Alert>}
       {next === "OUT_FOR_DELIVERY" && !hasCourier ? (
         <>
-          <p className="text-sm text-stone-600">{m.courierRequired}</p>
+          <p className="text-sm text-sl-muted">{m.courierRequired}</p>
           <ButtonLink href="#courier" block>
             {m.assignCourier}
           </ButtonLink>
@@ -89,7 +89,7 @@ export function StatusActions({
             </div>
           </form>
         ) : (
-          <Button tone="ghost" block onClick={() => setCancelling(true)} className="text-red-700">
+          <Button tone="ghost" block onClick={() => setCancelling(true)} className="text-sl-danger">
             {m.cancelOrder}
           </Button>
         ))}
@@ -119,7 +119,7 @@ export function CourierForm({
 
   if (!couriers.length && !courierId) {
     return (
-      <div className="flex flex-col gap-2 text-sm text-stone-600">
+      <div className="flex flex-col gap-2 text-sm text-sl-muted">
         <p>{m.noCouriers}</p>
         {canAddCourier && (
           <ButtonLink href="/dashboard/couriers" tone="secondary">

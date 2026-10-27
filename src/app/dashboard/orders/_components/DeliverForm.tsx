@@ -61,7 +61,7 @@ export function DeliverForm({
           <Icon name="check" />
           {m.delivered}
         </Button>
-        <Button tone="secondary" className="min-h-14 text-base" onClick={() => setMode("failed")}>
+        <Button tone="secondary" className="min-h-14 border-sl-danger text-base text-sl-danger" onClick={() => setMode("failed")}>
           <Icon name="x" />
           {m.failed}
         </Button>
