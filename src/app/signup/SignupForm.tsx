@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Alert, Button, Card, Field, Input, Select } from "@/components/ui";
+import { Alert, Button, Field, Input, Select, cx } from "@/components/ui";
 import type { authMessages } from "@/i18n/messages/auth";
 import { api, errorMessage } from "@/lib/api";
+
+const sectionTitle = "text-[11px] font-extrabold uppercase tracking-[0.15em] text-sl-accent rtl:tracking-normal";
 
 /** "Layla's Boutique" -> "laylas-boutique". */
 function slugify(name: string): string {
@@ -55,15 +57,17 @@ export function SignupForm({ m }: { m: (typeof authMessages)["en"] }) {
   return (
     <form action={submit} className="flex flex-col gap-4">
       {error && <Alert tone="error">{error}</Alert>}
+      <h2 className={sectionTitle}>{m.accountSection}</h2>
       <Field label={m.yourName}>
         <Input name="name" autoComplete="name" required maxLength={100} />
       </Field>
       <Field label={m.email}>
-        <Input name="email" type="email" autoComplete="email" inputMode="email" required />
+        <Input name="email" type="email" autoComplete="email" inputMode="email" required dir="ltr" />
       </Field>
       <Field label={m.password} hint={m.passwordHint}>
         <Input name="password" type="password" autoComplete="new-password" required minLength={8} />
       </Field>
+      <h2 className={cx(sectionTitle, "mt-1 border-t border-sl-border pt-4")}>{m.shopSection}</h2>
       <Field label={m.shopName}>
         <Input
           name="shopName"
@@ -75,8 +79,8 @@ export function SignupForm({ m }: { m: (typeof authMessages)["en"] }) {
         />
       </Field>
       <Field label={m.shopLink} hint={m.shopLinkHint}>
-        <div className="flex items-center gap-1" dir="ltr">
-          <span className="shrink-0 text-sm text-stone-500">/s/</span>
+        <div className="flex items-center gap-1.5" dir="ltr">
+          <span className="shrink-0 text-sm font-semibold text-sl-muted">/s/</span>
           <Input
             name="shopSlug"
             required
@@ -99,10 +103,10 @@ export function SignupForm({ m }: { m: (typeof authMessages)["en"] }) {
       <Field label={m.rate} hint={m.rateHint}>
         <Input name="usdLbpRate" inputMode="decimal" placeholder="89500" required={currency === "LBP"} pattern="\d{1,9}(\.\d{1,2})?" />
       </Field>
-      <Card className="flex flex-col gap-3 bg-stone-50">
+      <div className="flex flex-col gap-3 rounded-sl-lg bg-sl-cat p-4">
         <div>
-          <p className="text-sm font-medium">{m.baselineTitle}</p>
-          <p className="text-xs text-stone-500">{m.baselineHint}</p>
+          <p className="text-sm font-bold">{m.baselineTitle}</p>
+          <p className="text-xs leading-normal text-sl-muted">{m.baselineHint}</p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label={m.baselineOrders}>
@@ -112,8 +116,8 @@ export function SignupForm({ m }: { m: (typeof authMessages)["en"] }) {
             <Input name="baselineConfirmMinutes" type="number" inputMode="numeric" min={0} max={100000} />
           </Field>
         </div>
-      </Card>
-      <Button type="submit" disabled={pending} block>
+      </div>
+      <Button type="submit" disabled={pending} block className="min-h-12 text-[15px]">
         {pending ? m.creating : m.createButton}
       </Button>
     </form>

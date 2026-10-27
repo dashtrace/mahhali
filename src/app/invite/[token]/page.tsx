@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { Alert, ButtonLink } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
@@ -9,6 +7,7 @@ import { getLocale } from "@/i18n/server";
 import { AppError } from "@/server/http/errors";
 import { inviteService } from "@/server/services/inviteService";
 import { TokenParam } from "@/server/validation/team";
+import { AuthFrame } from "../../_platform/Shell";
 import { signedInUser } from "../../_server/session";
 import { AcceptForm } from "./AcceptForm";
 
@@ -33,31 +32,21 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   const user = invite ? await signedInUser() : null;
   const role = invite ? ({ manager: t.roleManager, staff: t.roleStaff, delivery: t.roleDelivery }[invite.role ?? ""] ?? invite.role ?? "") : "";
 
+  if (!invite)
+    return (
+      <AuthFrame locale={locale} icon="x" center title={problem}>
+        <ButtonLink href="/login" tone="secondary" block>
+          {m.goToSignIn}
+        </ButtonLink>
+      </AuthFrame>
+    );
+
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-4 py-10">
-      <div className="flex items-center justify-between">
-        <Link href="/" className="text-lg font-semibold text-[var(--brand)]">
-          {t.appName}
-        </Link>
-        <LanguageToggle locale={locale} />
+    <AuthFrame locale={locale} icon="users" title={fill(m.joinShop, { shop: invite.shopName })} subtitle={fill(m.invitedAs, { role, email: invite.email })}>
+      <div className="flex flex-col gap-4">
+        {user && user.email !== invite.email && <Alert tone="warning">{fill(m.signedInAs, { email: user.email, invited: invite.email })}</Alert>}
+        <AcceptForm token={token} hasAccount={invite.hasAccount} m={m} t={t} />
       </div>
-      {invite ? (
-        <>
-          <div>
-            <h1 className="text-2xl font-semibold">{fill(m.joinShop, { shop: invite.shopName })}</h1>
-            <p className="mt-1 text-sm text-stone-600">{fill(m.invitedAs, { role, email: invite.email })}</p>
-          </div>
-          {user && user.email !== invite.email && <Alert tone="warning">{fill(m.signedInAs, { email: user.email, invited: invite.email })}</Alert>}
-          <AcceptForm token={token} hasAccount={invite.hasAccount} m={m} t={t} />
-        </>
-      ) : (
-        <>
-          <Alert tone="error">{problem}</Alert>
-          <ButtonLink href="/login" tone="secondary">
-            {m.goToSignIn}
-          </ButtonLink>
-        </>
-      )}
-    </main>
+    </AuthFrame>
   );
 }

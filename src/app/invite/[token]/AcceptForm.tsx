@@ -40,7 +40,7 @@ export function AcceptForm({ token, hasAccount, m, t }: { token: string; hasAcco
       }}
       className="flex flex-col gap-4"
     >
-      <p className="text-sm text-stone-700">{hasAccount ? m.signInToAccept : m.createAccount}</p>
+      <Alert tone="note">{hasAccount ? m.signInToAccept : m.createAccount}</Alert>
       {error && <Alert tone="error">{error}</Alert>}
       {!hasAccount && (
         <Field label={m.yourName}>
@@ -50,7 +50,7 @@ export function AcceptForm({ token, hasAccount, m, t }: { token: string; hasAcco
       <Field label={m.password} hint={hasAccount ? undefined : m.passwordHint}>
         <Input name="password" type="password" autoComplete={hasAccount ? "current-password" : "new-password"} required minLength={8} maxLength={128} />
       </Field>
-      <Button type="submit" disabled={pending} block>
+      <Button type="submit" disabled={pending} block className="min-h-12 text-[15px]">
         {pending ? m.accepting : m.accept}
       </Button>
     </form>

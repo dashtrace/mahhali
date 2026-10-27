@@ -36,6 +36,8 @@ export const adminMessages = defineMessages({
     who: "Who",
     action: "Action",
     shop: "Shop",
+    plan_free: "Free",
+    plan_pro: "Pro",
   },
   ar: {
     title: "إدارة المنصّة",
@@ -71,6 +73,8 @@ export const adminMessages = defineMessages({
     who: "المستخدم",
     action: "الإجراء",
     shop: "المتجر",
+    plan_free: "المجانية",
+    plan_pro: "الاحترافية",
   },
 });
 

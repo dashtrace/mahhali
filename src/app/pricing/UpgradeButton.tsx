@@ -23,7 +23,7 @@ export function UpgradeButton({ label, busyLabel, errorLabel }: { label: string;
 
   return (
     <div className="flex flex-col gap-2">
-      <Button block onClick={upgrade} disabled={busy}>
+      <Button block onClick={upgrade} disabled={busy} className="min-h-12 text-[15px]">
         {busy ? busyLabel : label}
       </Button>
       {error && <Alert tone="error">{error}</Alert>}
