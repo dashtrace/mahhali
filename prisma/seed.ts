@@ -216,6 +216,10 @@ async function main() {
       baselineConfirmMinutes: 95,
       theme: PALETTES.rose,
       language: "en",
+      tagline: "Made in Lebanon, delivered to your door",
+      about: "Beirut Threads makes everyday clothes with Lebanese artisans, from Tripoli embroidery to Bourj Hammoud prints.",
+      shippingInfo: "Delivery across Lebanon in 1 to 3 days. Pay cash on delivery in dollars or pounds.",
+      instagramUrl: "https://www.instagram.com/beirutthreads",
     },
   });
   await member(shop.id, ownerId, "owner");
@@ -266,6 +270,24 @@ async function main() {
   await product(shop.id, "Winter wool coat", "Last season. Archived, kept for old orders.", [{ size: "M", colour: "Camel", price: 12000, stock: 0 }]).then(
     (p) => prisma.product.update({ where: { id: p.id }, data: { status: "ARCHIVED" } }),
   );
+
+  // Storefront: categories, a featured product, specs, a customizable tote and approved feedback.
+  const category = (name: string, position: number) => prisma.category.create({ data: { shopId: shop.id, name, position } });
+  const [clothing, accessories] = [await category("Clothing", 0), await category("Accessories", 1)];
+  const file = (variants: Variant[], categoryId: string, data: Prisma.ProductUncheckedUpdateInput = {}) =>
+    prisma.product.update({ where: { id: variants[0].productId }, data: { categoryId, ...data } });
+  await file(shirt, clothing.id, { specs: [{ label: "Fabric", value: "100% linen" }, { label: "Fit", value: "Relaxed" }] });
+  await file(abaya, clothing.id, { featured: true });
+  await file(tee, clothing.id);
+  await file(scarf, accessories.id);
+  await file(tote, accessories.id, { customLabel: "Initials to print", customPlaceholder: "e.g. R.K.", customMaxLength: 4 });
+  await prisma.testimonial.createMany({
+    data: [
+      { shopId: shop.id, authorName: "Maya H.", message: "The linen shirt is even nicer in person, and it came the next day.", status: "APPROVED", moderatedAt: new Date(), moderatedById: ownerId },
+      { shopId: shop.id, authorName: "Jad F.", message: "Great quality tote, my initials look perfect.", status: "APPROVED", moderatedAt: new Date(), moderatedById: ownerId },
+      { shopId: shop.id, authorName: "Nour", message: "Could you add bigger sizes for the abaya?" },
+    ],
+  });
 
   const people: Customer[] = [
     { name: "Maya Haddad", phone: "+96171123456", email: "maya@example.com", governorate: "Beirut", district: "Beirut", area: "Mar Mikhael", addressLine: "Armenia St, Saade bldg, 3rd floor", landmark: "Above the bakery" },
