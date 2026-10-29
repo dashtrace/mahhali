@@ -6,6 +6,7 @@ import { registerOrders } from "./paths/orders";
 import { registerProducts } from "./paths/products";
 import { registerReviews } from "./paths/reviews";
 import { registerShop } from "./paths/shop";
+import { registerStorefront } from "./paths/storefront";
 import { registerTeam } from "./paths/team";
 
 // The API contract, built from the same Zod schemas the routes validate with.
@@ -14,7 +15,7 @@ import { registerTeam } from "./paths/team";
 export function buildOpenApi() {
   const r = new OpenAPIRegistry();
   const h = pathHelpers(r);
-  for (const register of [registerCore, registerProducts, registerOrders, registerShop, registerMoney, registerTeam, registerReviews]) {
+  for (const register of [registerCore, registerProducts, registerOrders, registerShop, registerMoney, registerTeam, registerReviews, registerStorefront]) {
     register(r, h);
   }
   return new OpenApiGeneratorV31(r.definitions).generateDocument({

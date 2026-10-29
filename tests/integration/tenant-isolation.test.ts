@@ -10,6 +10,12 @@ import { GET as listCouriers } from "@/app/api/couriers/route";
 import { PATCH as patchCourier } from "@/app/api/couriers/[id]/route";
 import { GET as listRemittances, POST as createRemittance } from "@/app/api/remittances/route";
 import { GET as reconciliation } from "@/app/api/reconciliation/route";
+import { DELETE as deleteCategory, PATCH as patchCategory } from "@/app/api/categories/[id]/route";
+import { GET as listCategories } from "@/app/api/categories/route";
+import { DELETE as deleteSlide, PATCH as patchSlide } from "@/app/api/shop/slides/[id]/route";
+import { GET as listSlides } from "@/app/api/shop/slides/route";
+import { PATCH as moderateTestimonial } from "@/app/api/testimonials/[id]/route";
+import { GET as listTestimonials } from "@/app/api/testimonials/route";
 import { prisma } from "@/server/db";
 import { seedCourier, seedOrder, seedVariant } from "./fixtures";
 import { addMember, call, resetDb, signUpOwner } from "./helpers";
@@ -177,5 +183,64 @@ describe("tenant isolation: orders, couriers and cash", () => {
     expect(order).toMatchObject({ status: "OUT_FOR_DELIVERY", notes: null });
     expect((await prisma.courier.findUniqueOrThrow({ where: { id: courierB } })).name).toBe("B's secret courier");
     expect(await prisma.remittanceLine.count({ where: { orderId: orderB } })).toBe(0);
+  });
+});
+
+// Hero slides, categories and testimonials of shop B, tried by every role of shop A.
+describe("tenant isolation: storefront", () => {
+  let shopA: Awaited<ReturnType<typeof signUpOwner>>;
+  let shopB: Awaited<ReturnType<typeof signUpOwner>>;
+  let slideB: string;
+  let categoryB: string;
+  let testimonialB: string;
+  const actorsA: Record<string, string> = {};
+  const roles = ["owner", "manager", "staff", "delivery"];
+  // Who passes the role check for each action; everyone else gets 403 first.
+  const settings = ["owner"];
+  const managers = ["owner", "manager"];
+
+  beforeAll(async () => {
+    shopA = await signUpOwner();
+    shopB = await signUpOwner();
+    actorsA.owner = shopA.cookie;
+    for (const role of roles.slice(1)) actorsA[role] = (await addMember(shopA.shop.id, role)).cookie;
+    const b = shopB.shop.id;
+    slideB = (await prisma.heroSlide.create({ data: { shopId: b, imageUrl: `/uploads/${b}/x.png`, title: "B's secret slide", position: 0 } })).id;
+    categoryB = (await prisma.category.create({ data: { shopId: b, name: "B's secret category", position: 0 } })).id;
+    testimonialB = (await prisma.testimonial.create({ data: { shopId: b, authorName: "B's secret fan", message: "A secret message for B" } })).id;
+  });
+
+  for (const role of roles) {
+    it(`${role} of shop A cannot change or delete shop B's slide, category or testimonial`, async () => {
+      const cookie = actorsA[role];
+      const expected = (allowed: string[]) => (allowed.includes(role) ? 404 : 403);
+      const patch = (route: typeof patchSlide, url: string, id: string, body: unknown) =>
+        call(route, url, { method: "PATCH", cookie, body }, { id });
+      const remove = (route: typeof deleteSlide, url: string, id: string) => call(route, url, { method: "DELETE", cookie }, { id });
+      expect((await patch(patchSlide, `/api/shop/slides/${slideB}`, slideB, { title: "hacked" })).status).toBe(expected(settings));
+      expect((await remove(deleteSlide, `/api/shop/slides/${slideB}`, slideB)).status).toBe(expected(settings));
+      expect((await patch(patchCategory, `/api/categories/${categoryB}`, categoryB, { name: "hacked" })).status).toBe(expected(managers));
+      expect((await remove(deleteCategory, `/api/categories/${categoryB}`, categoryB)).status).toBe(expected(managers));
+      expect((await patch(moderateTestimonial, `/api/testimonials/${testimonialB}`, testimonialB, { status: "APPROVED" })).status).toBe(
+        expected(managers),
+      );
+    });
+  }
+
+  it("shop A's lists never include shop B's storefront records", async () => {
+    const lists = await Promise.all([
+      call(listSlides, "/api/shop/slides", { cookie: shopA.cookie }),
+      call(listCategories, "/api/categories", { cookie: shopA.cookie }),
+      call(listTestimonials, "/api/testimonials", { cookie: shopA.cookie }),
+      call(catalogue, `/api/public/shops/${shopA.shop.slug}/catalogue`, {}, { slug: shopA.shop.slug }),
+    ]);
+    for (const res of lists.slice(0, 3)) expect(res.body).toEqual([]);
+    expect(JSON.stringify(lists.map((r) => r.body))).not.toContain("secret");
+  });
+
+  it("shop B's storefront records are untouched", async () => {
+    expect((await prisma.heroSlide.findUniqueOrThrow({ where: { id: slideB } })).title).toBe("B's secret slide");
+    expect((await prisma.category.findUniqueOrThrow({ where: { id: categoryB } })).name).toBe("B's secret category");
+    expect((await prisma.testimonial.findUniqueOrThrow({ where: { id: testimonialB } })).status).toBe("PENDING");
   });
 });

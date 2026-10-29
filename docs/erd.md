@@ -22,6 +22,10 @@ erDiagram
   USER ||--o{ INVITATION : "inviterId"
   COURIER |o--o{ INVITATION : "courierId"
   SHOP ||--o{ PRODUCT : "shopId"
+  CATEGORY |o--o{ PRODUCT : "categoryId"
+  SHOP ||--o{ CATEGORY : "shopId"
+  SHOP ||--o{ HERO_SLIDE : "shopId"
+  SHOP ||--o{ TESTIMONIAL : "shopId"
   SHOP ||--o{ VARIANT : "shopId"
   PRODUCT ||--o{ VARIANT : "productId"
   SHOP ||--o{ PRODUCT_IMAGE : "shopId"
@@ -121,6 +125,14 @@ erDiagram
     int baselineConfirmMinutes
     string stripeCustomerId
     string stripeSubscriptionId
+    string tagline
+    string about
+    string shippingInfo
+    string instagramUrl
+    string facebookUrl
+    string logoMode
+    string homeSection
+    boolean showTestimonials
   }
   MEMBERSHIP {
     string id PK
@@ -149,8 +161,42 @@ erDiagram
     enum status
     decimal ratingAvg
     int ratingCount
+    string categoryId FK
+    boolean featured
+    json specs
+    string customLabel
+    string customPlaceholder
+    boolean customRequired
+    int customMaxLength
     datetime createdAt
     datetime updatedAt
+  }
+  CATEGORY {
+    string id PK
+    string shopId FK
+    string name
+    int position
+    datetime createdAt
+  }
+  HERO_SLIDE {
+    string id PK
+    string shopId FK
+    string imageUrl
+    string kicker
+    string title
+    string body
+    int position
+    datetime createdAt
+  }
+  TESTIMONIAL {
+    string id PK
+    string shopId FK
+    string authorName
+    string message
+    enum status
+    datetime createdAt
+    datetime moderatedAt
+    string moderatedById
   }
   VARIANT {
     string id PK
@@ -224,6 +270,7 @@ erDiagram
     string nameSnapshot
     bigint unitPriceMinor
     int qty
+    string note
   }
   ORDER_EVENT {
     string id PK

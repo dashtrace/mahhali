@@ -111,6 +111,18 @@ model Shop {
   baselineConfirmMinutes Int?
   stripeCustomerId       String?
   stripeSubscriptionId   String?
+  /// Storefront copy and links. Length limits are CHECKs in the migration.
+  tagline                String?
+  about                  String?
+  shippingInfo           String?
+  /// https only, instagram.com or facebook.com hosts (checked by the service).
+  instagramUrl           String?
+  facebookUrl            String?
+  /// "image-and-name", "image-only" or "name-only".
+  logoMode               String           @default("image-and-name")
+  /// Home page highlight: "bestsellers", "new", "featured" or "hidden".
+  homeSection            String           @default("bestsellers")
+  showTestimonials       Boolean          @default(true)
   memberships            Membership[]
   invitations            Invitation[]
   products               Product[]
@@ -126,6 +138,9 @@ model Shop {
   remittanceLines        RemittanceLine[]
   reviewInvites          ReviewInvite[]
   reviews                Review[]
+  heroSlides             HeroSlide[]
+  categories             Category[]
+  testimonials           Testimonial[]
 
   @@unique([slug])
   @@map("shop")
@@ -223,22 +238,85 @@ enum ReviewStatus {
 }
 
 model Product {
-  id          String         @id @default(cuid())
-  shopId      String
-  shop        Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  status      ProductStatus  @default(ACTIVE)
-  ratingAvg   Decimal        @default(0) @db.Decimal(3, 2)
-  ratingCount Int            @default(0)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  variants    Variant[]
-  images      ProductImage[]
-  reviews     Review[]
+  id                String         @id @default(cuid())
+  shopId            String
+  shop              Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name              String
+  description       String?
+  status            ProductStatus  @default(ACTIVE)
+  ratingAvg         Decimal        @default(0) @db.Decimal(3, 2)
+  ratingCount       Int            @default(0)
+  /// Same shop only; the service checks. Deleting the category leaves the product uncategorised.
+  categoryId        String?
+  category          Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  featured          Boolean        @default(false)
+  /// [{ label, value }], at most 12.
+  specs             Json?
+  /// A customer note on each ordered item (e.g. engraving). A label means enabled.
+  customLabel       String?
+  customPlaceholder String?
+  customRequired    Boolean        @default(false)
+  /// CHECK 1..500 in the migration.
+  customMaxLength   Int            @default(240)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  variants          Variant[]
+  images            ProductImage[]
+  reviews           Review[]
 
   @@index([shopId, status])
   @@map("product")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  @@unique([shopId, name])
+  @@map("category")
+}
+
+/// A promo banner on the storefront home page; at most 6 per shop.
+model HeroSlide {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  imageUrl  String
+  kicker    String?
+  title     String
+  body      String?
+  position  Int
+  createdAt DateTime @default(now())
+
+  @@index([shopId, position])
+  @@map("hero_slide")
+}
+
+enum TestimonialStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Shop feedback a customer agreed to show publicly; shown once the shop approves it.
+model Testimonial {
+  id            String            @id @default(cuid())
+  shopId        String
+  shop          Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  authorName    String
+  message       String
+  status        TestimonialStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  moderatedAt   DateTime?
+  moderatedById String?
+
+  @@index([shopId, status, createdAt])
+  @@map("testimonial")
 }
 
 model Variant {
@@ -365,6 +443,8 @@ model OrderItem {
   nameSnapshot   String
   unitPriceMinor BigInt
   qty            Int
+  /// The customer's customization text for this line, if the product asks for one.
+  note           String?
   review         Review?
 
   @@index([orderId])

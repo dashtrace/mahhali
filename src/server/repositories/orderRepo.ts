@@ -4,7 +4,7 @@ import { db, type Db } from "./tx";
 // Every function takes shopId and puts it in every where clause.
 
 const listInclude = {
-  items: { select: { id: true, nameSnapshot: true, qty: true, unitPriceMinor: true } },
+  items: { select: { id: true, nameSnapshot: true, qty: true, unitPriceMinor: true, note: true } },
   courier: { select: { id: true, name: true, type: true } },
   deliveredBy: { select: { id: true, name: true } },
   remittanceLine: { select: { id: true, remittanceId: true } },
@@ -41,7 +41,7 @@ export type NewOrder = {
   totalMinor: bigint;
   codMinor: bigint;
   firstContactAt: Date;
-  items: { variantId: string; nameSnapshot: string; unitPriceMinor: bigint; qty: number }[];
+  items: { variantId: string; nameSnapshot: string; unitPriceMinor: bigint; qty: number; note: string | null }[];
 };
 
 export type Movement = { variantId: string; delta: number; reason: StockReason };
@@ -55,7 +55,7 @@ export const orderRepo = {
   orderableVariants(shopId: string, variantIds: string[], client: Db = db) {
     return client.variant.findMany({
       where: { shopId, id: { in: variantIds }, archived: false, product: { status: "ACTIVE" } },
-      include: { product: { select: { name: true } } },
+      include: { product: { select: { name: true, customLabel: true, customRequired: true, customMaxLength: true } } },
     });
   },
 
@@ -195,7 +195,7 @@ export const orderRepo = {
         ...(f.since ? { updatedAt: { gte: f.since } } : {}),
       },
       include: {
-        items: { select: { nameSnapshot: true, qty: true } },
+        items: { select: { nameSnapshot: true, qty: true, note: true } },
         courier: { select: { id: true, name: true } },
       },
       orderBy: [{ updatedAt: "desc" }],

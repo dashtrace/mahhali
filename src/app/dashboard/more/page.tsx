@@ -7,7 +7,7 @@ import { getLocale } from "@/i18n/server";
 import { can } from "@/server/domain/policy";
 import { pageActor } from "../../_server/session";
 
-// Phones only: the sections that do not fit in the bottom bar.
+// Phones only: the sections that do not fit in the bottom bar, as the mockup's drawer list.
 export default async function MorePage() {
   const actor = await pageActor("order.readAssigned");
   const t = common[await getLocale()];
@@ -22,19 +22,22 @@ export default async function MorePage() {
   return (
     <>
       <PageHeader title={t.navMore} />
-      <ul className="divide-y divide-stone-200 overflow-hidden rounded-[var(--radius)] border border-stone-200 bg-white">
+      <ul className="overflow-hidden rounded-[17px] border border-sl-border bg-sl-panel px-4 shadow-[0_2px_10px_#00000006]">
         {links
           .filter((l) => l.ok)
           .map((l) => (
-            <li key={l.href}>
-              <Link href={l.href} className="flex min-h-14 items-center gap-3 px-4 font-medium hover:bg-stone-50">
-                <Icon name={l.icon} />
-                {l.label}
+            <li key={l.href} className="border-b border-sl-border last:border-b-0">
+              <Link href={l.href} className="flex min-h-14 items-center gap-3 text-[15px] font-semibold">
+                <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-sl-cat text-sl-accent">
+                  <Icon name={l.icon} className="size-[18px]" />
+                </span>
+                <span className="flex-1">{l.label}</span>
+                <Icon name="next" className="size-4 text-sl-muted" />
               </Link>
             </li>
           ))}
       </ul>
-      <SignOutButton label={t.signOut} className="mt-4 w-full justify-center border border-stone-200 bg-white" />
+      <SignOutButton label={t.signOut} className="mt-4 w-full justify-center border border-sl-border bg-sl-panel" />
     </>
   );
 }

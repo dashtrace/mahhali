@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { SignOutButton } from "@/components/SignOutButton";
-import { Badge } from "@/components/ui";
+import { Chip, cx } from "@/components/ui";
 import { common } from "@/i18n/messages/common";
 import { getLocale } from "@/i18n/server";
 import { can, type Action } from "@/server/domain/policy";
@@ -40,33 +40,37 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const phoneItems = items.length > 5 ? items.slice(0, 4) : items;
   const more = items.length > 5 ? { href: "/dashboard/more", label: t.navMore, icon: "more" as const } : null;
 
+  // The platform's slate/blue palette (globals.css :root); the shop shows through its logo and name.
+  // themeVars still feeds --brand/--radius to pages not yet on the sl-* tokens.
   return (
-    <div style={themeVars(me.shop.theme, "chrome")} className="min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
-          <Link href={items[0]?.href ?? "/dashboard"} className="flex min-w-0 items-center gap-2">
+    <div style={themeVars(me.shop.theme, "chrome")} className="min-h-dvh bg-sl-bg">
+      <header className="sticky top-0 z-20 border-b border-sl-border bg-sl-panel/95 backdrop-blur">
+        <div className="mx-auto flex h-[60px] max-w-6xl items-center gap-3 px-4">
+          <Link href={items[0]?.href ?? "/dashboard"} className="flex min-h-11 min-w-0 items-center gap-2.5">
             {me.shop.logo ? (
               // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
-              <img src={me.shop.logo} alt="" className="size-9 rounded-[var(--radius)] object-cover" />
+              <img src={me.shop.logo} alt="" className="size-10 shrink-0 rounded-sl border border-sl-border bg-sl-panel object-contain p-0.5" />
             ) : (
-              <span className="flex size-9 items-center justify-center rounded-[var(--radius)] bg-[var(--brand)] font-semibold text-[var(--brand-ink)]">
+              <span className="grid size-10 shrink-0 place-items-center rounded-sl bg-sl-accent text-lg font-extrabold text-sl-accent-ink">
                 {me.shop.name.slice(0, 1)}
               </span>
             )}
-            <span className="truncate font-semibold">{me.shop.name}</span>
+            <span className="truncate font-extrabold tracking-tight">{me.shop.name}</span>
           </Link>
-          <Badge className="hidden sm:inline-flex">{roleLabel}</Badge>
-          <div className="ms-auto flex items-center">
+          {/* max-sm:hidden, not "hidden sm:inline-flex": cx does not dedupe, so the components' own inline-flex would win */}
+          <Chip className="shrink-0 max-sm:hidden">{roleLabel}</Chip>
+          <div className="ms-auto flex shrink-0 items-center gap-1">
             <LanguageToggle locale={locale} />
-            <SignOutButton label={t.signOut} className="hidden sm:inline-flex" />
+            {/* On phones the More page carries sign-out; roles without More keep it here. */}
+            <SignOutButton label={t.signOut} className={cx("whitespace-nowrap", more && "max-sm:hidden")} />
           </div>
         </div>
       </header>
       <div className="mx-auto flex max-w-6xl">
-        <SideNav items={items} />
+        <SideNav items={items} label={t.navMain} />
         <main className="pb-safe min-w-0 flex-1 px-4 pt-4 md:pb-10">{children}</main>
       </div>
-      <BottomNav items={phoneItems} more={more} />
+      <BottomNav items={phoneItems} more={more} label={t.navMain} />
     </div>
   );
 }

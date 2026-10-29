@@ -12,6 +12,7 @@ import {
   stockEffect,
   type OrderStatus,
 } from "../domain/orderStatus";
+import { checkNote } from "../domain/storefront";
 import { randomToken } from "../domain/tokens";
 import { AppError, badRequest, conflict, notFound, unprocessable } from "../http/errors";
 import { json } from "../http/json";
@@ -60,6 +61,20 @@ async function place(p: Placement) {
   if (missing.length) {
     throw unprocessable("UNAVAILABLE", "Some items can no longer be ordered.", { variantIds: missing });
   }
+  const notes = p.input.items.map((l) => {
+    const { product } = variants.get(l.variantId)!;
+    const checked = checkNote(
+      { label: product.customLabel, required: product.customRequired, maxLength: product.customMaxLength },
+      l.note,
+    );
+    if (checked.ok) return checked.note;
+    throw checked.code === "CUSTOMIZATION_REQUIRED"
+      ? unprocessable(checked.code, `${product.customLabel} is required for ${product.name}.`, { variantId: l.variantId })
+      : unprocessable(checked.code, `${product.customLabel} can be up to ${product.customMaxLength} characters.`, {
+          variantId: l.variantId,
+          maxLength: product.customMaxLength,
+        });
+  });
 
   const limit = orderLimit(p.shop.plan);
   if (limit !== null) {
@@ -82,9 +97,15 @@ async function place(p: Placement) {
       }
       const shop = await orderRepo.takeOrderNumber(tx, shopId);
       const customer = await orderRepo.upsertCustomer(tx, shopId, p.input.customer);
-      const items = p.input.items.map((l) => {
+      const items = p.input.items.map((l, i) => {
         const v = variants.get(l.variantId)!;
-        return { variantId: v.id, nameSnapshot: itemLabel(v.product.name, v.size, v.colour), unitPriceMinor: v.priceMinor, qty: l.qty };
+        return {
+          variantId: v.id,
+          nameSnapshot: itemLabel(v.product.name, v.size, v.colour),
+          unitPriceMinor: v.priceMinor,
+          qty: l.qty,
+          note: notes[i],
+        };
       });
       const created = await orderRepo.create(
         tx,

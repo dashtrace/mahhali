@@ -9,13 +9,15 @@ const intl = (locale: Locale) => (locale === "ar" ? "ar-LB-u-nu-latn" : "en-US")
 
 export function formatMoney(minor: Minor, currency: Currency, locale: Locale = "en"): string {
   const value = Number(minor) / (currency === "USD" ? 100 : 1);
-  return new Intl.NumberFormat(intl(locale), {
+  const text = new Intl.NumberFormat(intl(locale), {
     style: "currency",
     currency,
     currencyDisplay: currency === "LBP" ? "code" : "symbol",
     minimumFractionDigits: currency === "USD" ? 2 : 0,
     maximumFractionDigits: currency === "USD" ? 2 : 0,
   }).format(value);
+  // Arabic ends in "US$": a trailing LRM keeps the "$" after "US" in right-to-left text (else it shows "$US").
+  return locale === "ar" ? text + "‎" : text;
 }
 
 /** The same amount in the other currency at the order's frozen rate (pounds per dollar). */

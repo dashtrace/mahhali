@@ -10,7 +10,16 @@ export const trackingRepo = {
       where: { publicToken },
       include: {
         shop: { select: { name: true, slug: true, logo: true, theme: true, language: true, whatsappPhone: true } },
-        items: { select: { nameSnapshot: true, unitPriceMinor: true, qty: true }, orderBy: { id: "asc" } },
+        items: {
+          select: {
+            nameSnapshot: true,
+            unitPriceMinor: true,
+            qty: true,
+            note: true,
+            variant: { select: { product: { select: { images: { select: { url: true }, orderBy: { position: "asc" }, take: 1 } } } } },
+          },
+          orderBy: { id: "asc" },
+        },
         events: { where: { type: "STATUS" }, select: { toValue: true, at: true }, orderBy: { at: "asc" } },
         courier: { select: { name: true } },
         reviewInvite: { select: { usedAt: true, expiresAt: true } },

@@ -24,9 +24,15 @@ export function readTheme(value: unknown): Theme {
   };
 }
 
+/** "dark" when the shop's background needs white text; drives the .sl-shop[data-tone] styles. */
+export function themeTone(value: unknown): "light" | "dark" {
+  return inkFor(readTheme(value).background) === "#ffffff" ? "dark" : "light";
+}
+
 /**
  * CSS variables for a shop's pages. Labels on primary and accent use the page
  * background colour, the pairing validateTheme checked for contrast.
+ * The sl-* base tokens go on an element with class "sl-shop", which derives the rest.
  */
 export function themeVars(value: unknown, scope: "page" | "chrome" = "page"): CSSProperties {
   const t = readTheme(value);
@@ -41,6 +47,11 @@ export function themeVars(value: unknown, scope: "page" | "chrome" = "page"): CS
     vars["--surface"] = t.background;
     vars["--ink"] = inkFor(t.background);
     vars["--font-shop"] = FONT[t.font];
+    vars["--sl-bg"] = t.background;
+    vars["--sl-fg"] = inkFor(t.background);
+    vars["--sl-accent"] = t.primary;
+    vars["--sl-accent-ink"] = t.background;
+    vars["--sl-r"] = RADIUS[t.radius];
   }
   return vars as CSSProperties;
 }

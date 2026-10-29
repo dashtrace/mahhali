@@ -53,11 +53,22 @@ What V1 must do, and how well. Pilot shops are in Lebanon and price in US dollar
 - **FR-24** The catalogue shows each product's average rating and its reviews, labelled as from verified buyers.
 - **FR-25** The owner or a manager can hide an abusive review but cannot edit what the customer wrote.
 
+**Storefront**
+
+- **FR-26** The owner can set a tagline, an About text, shipping information, links to the shop's Instagram and Facebook pages (only https links to those sites are accepted), how the logo is shown (image and name, image only or name only), and which highlight the home page shows (best sellers, new arrivals, featured products or none).
+- **FR-27** The owner can add up to 6 promotional banner slides, each with an image (PNG, JPEG or WebP up to 3 MB), a headline, an optional short label and an optional description, and can edit, reorder and remove them.
+- **FR-28** The owner or a manager can create up to 30 named product categories, rename and reorder them, file each product under one category of the same shop, and delete a category without deleting its products.
+- **FR-29** The owner or a manager can mark products as featured and give each product up to 12 specification lines (label and value).
+- **FR-30** Customers can browse the catalogue by search text (name, description or category), category, collection (all, best sellers, new arrivals, featured) and price range, 8 products per page. A product matches a price range only if a variant that is in stock has a price inside it. Best sellers are ranked by units sold on orders that were not cancelled.
+- **FR-31** The owner or a manager can let customers add a personal note to a product when ordering (for example an engraving), with a label, an example text, a maximum length of 1 to 500 characters and whether the note is required. The note is stored on the order line and shown on the order, the delivery screen and the customer's tracking page; an order missing a required note is refused.
+- **FR-32** A customer can send feedback about the shop for public display without an account, giving a name, a message of 10 to 1000 characters and explicit consent to publication. Owners, managers and staff can read it; the owner or a manager approves or rejects it, and only approved feedback appears on the storefront (the latest 12), unless the owner turns testimonials off.
+- **FR-33** Customers can keep a wishlist of products on their device without an account.
+
 ## Non-functional requirements
 
 - **NFR-1 Correctness under load.** Every operation that changes stock, order numbers or money runs in a single ACID database transaction, so it happens completely or not at all. When many customers order the last item at the same moment, exactly one order succeeds.
 - **NFR-2 Tenant isolation.** No user of one shop can read or change another shop's data. Only platform admins can see across shops.
-- **NFR-3 Security.** Passwords are hashed; every API route checks the session, the role and the input; the public order endpoint is rate limited; customer tracking and review links cannot be guessed; review links work once, expire after 30 days and are stored only as a hash; looking up an order by number and phone is rate limited.
+- **NFR-3 Security.** Passwords are hashed; every API route checks the session, the role and the input; the public order endpoint is rate limited; customer tracking and review links cannot be guessed; review links work once, expire after 30 days and are stored only as a hash; looking up an order by number and phone is rate limited, and so is sending shop feedback.
 - **NFR-4 Mobile first.** Every screen works well on a 375 px wide phone, with large tap targets; owners and delivery users will mostly use phones.
 - **NFR-5 Performance.** The public catalogue loads in under 2 seconds on a 4G phone; API responses take under 500 ms for typical shop sizes.
 - **NFR-6 Reliability.** A double tap or a retry on a bad connection never creates a duplicate order; money is stored as whole cents or whole pounds in 64-bit integers, never as decimals, and each order keeps the exchange rate that applied when it was placed.
