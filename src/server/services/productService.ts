@@ -188,13 +188,14 @@ async function publicProducts(shopId: string) {
       createdAt: p.createdAt.toISOString(),
       rating: { average: Number(p.ratingAvg), count: p.ratingCount },
       images: p.images.map((i) => ({ url: i.url, colour: i.colour })),
-      // Customers see whether a variant can be ordered, not the stock count.
+      // Customers see how many are left only up to the per-order cap (20), so larger stock stays private.
       variants: p.variants.map((v) => ({
         id: v.id,
         size: v.size,
         colour: v.colour,
         priceMinor: v.priceMinor,
         inStock: v.available > 0,
+        left: Math.min(v.available, 20),
       })),
     })),
   };

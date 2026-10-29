@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
-import { MAX_QTY, addToCart, useCart } from "@/app/_storefront/cart";
+import { MAX_QTY, addToCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
 import { Icon } from "@/components/Icon";
 import { Button, ProductPhoto, QtyStepper, Textarea, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
@@ -24,6 +24,8 @@ const SWIPE_PX = 38;
 const MAX_NOTE = 500;
 
 const variantName = (v: Variant, m: StoreMessages) => [v.size, v.colour].filter(Boolean).join(" · ") || m.standard;
+/** "In stock" while at least MAX_QTY are left (the count is capped there), else how many are left. */
+const stockText = (v: Variant, m: StoreMessages) => (!v.inStock ? m.soldOut : v.left < MAX_QTY ? fill(m.onlyLeft, { n: v.left }) : m.inStock);
 
 function useProductState(product: Product, slug: string, locale: Locale) {
   const m = storeMessages[locale];
@@ -34,10 +36,11 @@ function useProductState(product: Product, slug: string, locale: Locale) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [photo, setPhoto] = useState(0);
   const noteRef = useRef<HTMLTextAreaElement>(null);
-  const { roomFor } = useCart(slug);
+  const { lines, roomFor } = useCart(slug);
 
   const variant = product.variants.find((v) => v.id === variantId);
-  const room = variant ? roomFor(variant.id) : 0;
+  const room = variant ? roomFor(variant.id, variant.left) : 0;
+  const inCart = variant ? qtyOf(lines, variant.id) : 0;
   const custom = product.customization;
   const noteMax = custom ? Math.min(MAX_NOTE, custom.maxLength) : 0;
 
@@ -50,14 +53,29 @@ function useProductState(product: Product, slug: string, locale: Locale) {
     if (i >= 0) setPhoto(i);
   }
 
-  /** Adds the selection; false when the note blocks it (the textarea gets focus). */
-  function add(): boolean {
+  /**
+   * "add" adds the selection to the cart. "buy" only raises an existing line to the chosen
+   * quantity (never lowers it), so Add to cart then Buy now never doubles it. False when the
+   * note blocks it (the textarea gets focus) or when nothing more fits (a notice says why).
+   */
+  function add(mode: "add" | "buy" = "add"): boolean {
     if (!variant?.inStock) return false;
     const text = note.trim();
     if (custom?.required && !text) return blockNote(m.errCustomRequired);
     if (custom && text.length > noteMax) return blockNote(m.errCustomLong);
     setNoteError(null);
-    const added = addToCart(slug, { variantId: variant.id, qty: Math.min(qty, Math.max(1, room)), note: custom ? text : undefined });
+    const lineNote = custom ? text : undefined;
+    const line = lines.find((l) => sameLine(l, variant.id, lineNote));
+    if (mode === "buy" && line) {
+      const target = Math.min(qty, line.qty + room);
+      if (target > line.qty) setLineQty(slug, variant.id, lineNote, target);
+      return true;
+    }
+    if (room < 1) {
+      setNotice({ tone: "warn", text: variant.left < MAX_QTY ? fill(m.allLeftInCart, { n: variant.left }) : m.maxInCart });
+      return false;
+    }
+    const added = addToCart(slug, { variantId: variant.id, qty: Math.min(qty, room), note: lineNote });
     setNotice(
       added === 0
         ? { tone: "warn", text: m.maxInCart }
@@ -73,7 +91,7 @@ function useProductState(product: Product, slug: string, locale: Locale) {
     return false;
   }
 
-  return { product, slug, locale, m, variant, room, qty, setQty, note, setNote, noteMax, noteError, noteRef, notice, setNotice, photo, setPhoto, pick, add };
+  return { product, slug, locale, m, variant, room, inCart, qty, setQty, note, setNote, noteMax, noteError, noteRef, notice, setNotice, photo, setPhoto, pick, add };
 }
 
 type ProductState = ReturnType<typeof useProductState>;
@@ -154,10 +172,9 @@ export function Gallery() {
 
 /** Price, option pills, quantity, stock line and the customization note. */
 export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
-  const { product, m, locale, variant, room, qty, setQty, note, setNote, noteMax, noteError, noteRef, pick } = useProduct();
+  const { product, m, locale, variant, room, inCart, qty, setQty, note, setNote, noteMax, noteError, noteRef, pick } = useProduct();
   const custom = product.customization;
   const price = variant?.priceMinor ?? Math.min(...product.variants.map((v) => v.priceMinor));
-  const inCart = variant ? MAX_QTY - room : 0;
 
   return (
     <div>
@@ -183,7 +200,7 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
           >
             <strong className="text-[13px]">{variantName(v, m)}</strong>
             <small className="text-xs text-sl-muted">
-              <bdi>{fill(m.variantMeta, { price: formatMoney(v.priceMinor, currency, locale), stock: v.inStock ? m.inStock : m.soldOut })}</bdi>
+              <bdi>{fill(m.variantMeta, { price: formatMoney(v.priceMinor, currency, locale), stock: stockText(v, m) })}</bdi>
             </small>
           </button>
         ))}
@@ -197,7 +214,7 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
               <span aria-hidden className="text-sl-ok">
                 ●{" "}
               </span>
-              {m.inStock}
+              {stockText(variant, m)}
             </>
           ) : (
             <span className="text-sl-danger">{m.outOfStock}</span>
@@ -205,7 +222,11 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
           <span className="block text-xs font-normal">{m.forSelected}</span>
         </p>
       </div>
-      {inCart > 0 && <p className="text-xs text-sl-muted">{room > 0 ? fill(m.inCartAlready, { n: inCart }) : m.maxInCart}</p>}
+      {variant && inCart > 0 && (
+        <p className="text-xs text-sl-muted">
+          {room > 0 ? fill(m.inCartAlready, { n: inCart }) : variant.left < MAX_QTY ? fill(m.allLeftInCart, { n: variant.left }) : m.maxInCart}
+        </p>
+      )}
 
       {custom && (
         <section aria-labelledby="customize-title" className="mb-2 mt-4 rounded-[15px] border border-sl-accent bg-sl-panel p-3.5">
@@ -274,10 +295,10 @@ export function ProductBar() {
           </div>
         )}
       </div>
-      <Button tone="outline" className="min-h-12 min-w-0 flex-1" disabled={!variant?.inStock || room < 1} onClick={add}>
+      <Button tone="outline" className="min-h-12 min-w-0 flex-1" disabled={!variant?.inStock || room < 1} onClick={() => add()}>
         {variant?.inStock ? m.addToCart : m.outOfStock}
       </Button>
-      <Button className="min-h-12 min-w-0 flex-1" disabled={!variant?.inStock} onClick={() => add() && router.push(`/s/${slug}/cart`)}>
+      <Button className="min-h-12 min-w-0 flex-1" disabled={!variant?.inStock} onClick={() => add("buy") && router.push(`/s/${slug}/cart`)}>
         {m.buyNow}
         <Icon name="arrow" className="size-4" />
       </Button>

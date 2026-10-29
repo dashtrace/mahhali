@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cache, type ReactNode } from "react";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon, type IconName } from "@/components/Icon";
 import { Alert, Badge, ButtonLink, Card, ProductPhoto, Timeline } from "@/components/ui";
 import { fill } from "@/i18n/locale";
@@ -61,6 +62,8 @@ export default async function TrackingPage({ params, searchParams }: Props) {
 
   return (
     <ShopFrame shop={shop} locale={locale}>
+      {/* Live status until the order is final; 2 refreshes a minute stay well under the tracking rate limit. */}
+      {!bad && order.status !== "DELIVERED" && <AutoRefresh seconds={30} />}
       <div className="mx-auto flex max-w-xl flex-col gap-4 py-2">
         {showConfirmation && (
           <>

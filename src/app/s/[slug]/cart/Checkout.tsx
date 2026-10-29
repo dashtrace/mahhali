@@ -12,7 +12,7 @@ import { ApiError, api, errorMessage, newIdempotencyKey } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 import { GOVERNORATES } from "@/server/domain/lebanon";
 import { checkNote } from "@/server/domain/storefront";
-import { clearCart, removeLine, setQty, useCart, type CartLine } from "../../../_storefront/cart";
+import { clearCart, qtyOf, removeLine, setQty, useCart, type CartLine } from "../../../_storefront/cart";
 import type { CatalogueProduct } from "../../../_storefront/data";
 
 type Props = {
@@ -64,7 +64,10 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
 
   function problemOf(line: CartLine, hit: Hit | undefined): string | null {
     if (!hit) return m.lineUnavailable;
-    if (!hit.variant.inStock || soldOut.includes(line.variantId)) return m.lineSoldOut;
+    if (!hit.variant.inStock) return m.lineSoldOut;
+    // Over all lines of the variant: two notes on the same variant share its stock.
+    if (qtyOf(lines, line.variantId) > hit.variant.left) return fill(m.lineOnlyLeft, { n: hit.variant.left });
+    if (soldOut.includes(line.variantId)) return m.lineSoldOut;
     const custom = hit.product.customization;
     const check = custom ? checkNote(custom, line.note) : null;
     if (check?.ok === false) {
@@ -204,13 +207,16 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
                   {r.line.note && <NoteLine label={r.hit?.product.customization?.label} note={r.line.note} className="mt-2" />}
                   {r.problem && <p className="mt-2 text-xs font-semibold text-sl-danger">{r.problem}</p>}
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    {r.hit && !r.problem ? (
+                    {r.hit?.variant.inStock ? (
                       <QtyStepper
                         shape="square"
                         value={r.line.qty}
                         min={1}
-                        max={r.line.qty + roomFor(r.line.variantId)}
-                        onChange={(n) => setQty(slug, r.line.variantId, r.line.note, n)}
+                        max={Math.max(1, r.line.qty + roomFor(r.line.variantId, r.hit.variant.left))}
+                        onChange={(n) => {
+                          setQty(slug, r.line.variantId, r.line.note, n);
+                          setSoldOut((ids) => ids.filter((id) => id !== r.line.variantId));
+                        }}
                         locale={locale}
                         label={r.name}
                       />

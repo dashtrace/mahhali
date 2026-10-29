@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_QTY, fromLegacy, parseLines, qtyOf, withLine } from "@/app/_storefront/cart";
+import { MAX_QTY, fromLegacy, parseLines, qtyOf, roomIn, withLine } from "@/app/_storefront/cart";
 import { cx, pageTokens } from "@/components/ui";
 
 describe("cx", () => {
@@ -47,6 +47,14 @@ describe("cart lines", () => {
     expect(second.added).toBe(1);
     expect(qtyOf(second.lines, "v")).toBe(MAX_QTY);
     expect(withLine(second.lines, { variantId: "v", qty: 1 }).added).toBe(0);
+  });
+
+  it("leaves room only up to the stock left, across all lines of a variant", () => {
+    const lines = [{ variantId: "v", qty: 1, note: "a" }, { variantId: "v", qty: 1 }];
+    expect(roomIn(lines, "v", 3)).toBe(1);
+    expect(roomIn(lines, "v", 1)).toBe(-1); // cart holds more than is left
+    expect(roomIn(lines, "v")).toBe(MAX_QTY - 2);
+    expect(roomIn([], "v", 50)).toBe(MAX_QTY);
   });
 
   it("drops junk and migrates the old { variantId: qty } shape", () => {
