@@ -22,3 +22,5 @@ export const conflict = (code: string, message: string, details?: unknown) =>
   new AppError(409, code, message, details);
 export const unprocessable = (code: string, message: string, details?: unknown) =>
   new AppError(422, code, message, details);
+export const tooManyRequests = (retryAfter: number) =>
+  new AppError(429, "RATE_LIMITED", "Too many attempts. Try again in a moment.", { retryAfter });

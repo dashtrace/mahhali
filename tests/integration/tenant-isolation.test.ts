@@ -2,7 +2,16 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { GET as listProducts, POST as createProduct } from "@/app/api/products/route";
 import { GET as getProduct, PATCH as patchProduct } from "@/app/api/products/[id]/route";
 import { GET as catalogue } from "@/app/api/public/shops/[slug]/catalogue/route";
+import { GET as listOrders } from "@/app/api/orders/route";
+import { GET as getOrder, PATCH as patchOrder } from "@/app/api/orders/[id]/route";
+import { POST as transition } from "@/app/api/orders/[id]/transitions/route";
+import { POST as delivered } from "@/app/api/delivery/orders/[id]/delivered/route";
+import { GET as listCouriers } from "@/app/api/couriers/route";
+import { PATCH as patchCourier } from "@/app/api/couriers/[id]/route";
+import { GET as listRemittances, POST as createRemittance } from "@/app/api/remittances/route";
+import { GET as reconciliation } from "@/app/api/reconciliation/route";
 import { prisma } from "@/server/db";
+import { seedCourier, seedOrder, seedVariant } from "./fixtures";
 import { addMember, call, resetDb, signUpOwner } from "./helpers";
 
 // One business must never read or change another business's data.
@@ -77,5 +86,96 @@ describe("tenant isolation", () => {
   it("the owner of shop B can still read it", async () => {
     const res = await call(getProduct, `/api/products/${productB}`, { cookie: shopB.cookie }, { id: productB });
     expect(res.status).toBe(200);
+  });
+});
+
+// Orders, couriers and remittances: read, list, edit and transition attempts
+// by every role of shop A against shop B.
+describe("tenant isolation: orders, couriers and cash", () => {
+  let shopA: Awaited<ReturnType<typeof signUpOwner>>;
+  let shopB: Awaited<ReturnType<typeof signUpOwner>>;
+  let orderB: string;
+  let courierB: string;
+  let courierA: string;
+  let unassignedA: string;
+  const actorsA: Record<string, string> = {};
+  const desk = ["owner", "manager", "staff"];
+  const managers = ["owner", "manager"];
+
+  beforeAll(async () => {
+    shopA = await signUpOwner();
+    shopB = await signUpOwner();
+    courierA = (await seedCourier(shopA.shop.id, { name: "A's courier" })).id;
+    courierB = (await seedCourier(shopB.shop.id, { name: "B's secret courier" })).id;
+    actorsA.owner = shopA.cookie;
+    actorsA.manager = (await addMember(shopA.shop.id, "manager")).cookie;
+    actorsA.staff = (await addMember(shopA.shop.id, "staff")).cookie;
+    actorsA.delivery = (await addMember(shopA.shop.id, "delivery", courierA)).cookie;
+
+    const { variant: vB } = await seedVariant(shopB.shop.id);
+    orderB = (await seedOrder(shopB.shop.id, { variantId: vB.id, status: "OUT_FOR_DELIVERY", courierId: courierB, customerName: "B's secret customer" })).id;
+    const delivered = await seedOrder(shopB.shop.id, { variantId: vB.id, status: "DELIVERED", courierId: courierB });
+    await prisma.remittance.create({
+      data: {
+        shopId: shopB.shop.id,
+        courierId: courierB,
+        amountUsdCents: 2500n,
+        receivedAt: new Date(),
+        reference: "B's secret remittance",
+        lines: { create: { shopId: shopB.shop.id, orderId: delivered.id, collectedUsdCents: 2500n } },
+      },
+    });
+    const { variant: vA } = await seedVariant(shopA.shop.id);
+    unassignedA = (await seedOrder(shopA.shop.id, { variantId: vA.id, status: "OUT_FOR_DELIVERY" })).id;
+  });
+
+  for (const role of ["owner", "manager", "staff", "delivery"]) {
+    it(`${role} of shop A cannot read, edit or move shop B's order`, async () => {
+      const cookie = actorsA[role];
+      const expected = desk.includes(role) ? 404 : 403;
+      const read = await call(getOrder, `/api/orders/${orderB}`, { cookie }, { id: orderB });
+      expect(read.status).toBe(expected);
+      expect(JSON.stringify(read.body)).not.toContain("secret");
+      expect((await call(patchOrder, `/api/orders/${orderB}`, { method: "PATCH", cookie, body: { notes: "x" } }, { id: orderB })).status).toBe(expected);
+      expect((await call(transition, `/api/orders/${orderB}/transitions`, { method: "POST", cookie, body: { to: "RETURNED" } }, { id: orderB })).status).toBe(expected);
+      // Every role may mark deliveries, so the record itself must be invisible.
+      expect((await call(delivered, `/api/delivery/orders/${orderB}/delivered`, { method: "POST", cookie, body: {} }, { id: orderB })).status).toBe(404);
+    });
+
+    it(`${role} of shop A cannot change shop B's courier or settle shop B's orders`, async () => {
+      const cookie = actorsA[role];
+      const patch = await call(patchCourier, `/api/couriers/${courierB}`, { method: "PATCH", cookie, body: { name: "hacked" } }, { id: courierB });
+      expect(patch.status).toBe(managers.includes(role) ? 404 : 403);
+      const settle = await call(createRemittance, "/api/remittances", {
+        method: "POST",
+        cookie,
+        body: { courierId: courierA, receivedAt: "2026-10-20", amountUsd: "25", lines: [{ orderId: orderB, collectedUsd: "25" }] },
+      });
+      expect(settle.status).toBe(managers.includes(role) ? 404 : 403);
+      const recon = await call(reconciliation, `/api/reconciliation?courierId=${courierB}`, { cookie });
+      expect(recon.status).toBe(managers.includes(role) ? 404 : 403);
+    });
+  }
+
+  it("shop A's lists never include shop B's orders, couriers or remittances", async () => {
+    const orders = await call(listOrders, "/api/orders", { cookie: shopA.cookie });
+    expect(orders.body.orders.map((o: { id: string }) => o.id)).toEqual([unassignedA]);
+    const couriers = await call(listCouriers, "/api/couriers", { cookie: shopA.cookie });
+    expect(couriers.body.map((c: { id: string }) => c.id)).toEqual([courierA]);
+    const remittances = await call(listRemittances, "/api/remittances", { cookie: shopA.cookie });
+    expect(remittances.body.remittances).toEqual([]);
+    expect(JSON.stringify([orders.body, couriers.body, remittances.body])).not.toContain("secret");
+  });
+
+  it("a delivery user gets 404 on their own shop's orders that are not assigned to them", async () => {
+    const res = await call(delivered, `/api/delivery/orders/${unassignedA}/delivered`, { method: "POST", cookie: actorsA.delivery, body: {} }, { id: unassignedA });
+    expect(res.status).toBe(404);
+  });
+
+  it("shop B's order, courier and cash are untouched", async () => {
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderB } });
+    expect(order).toMatchObject({ status: "OUT_FOR_DELIVERY", notes: null });
+    expect((await prisma.courier.findUniqueOrThrow({ where: { id: courierB } })).name).toBe("B's secret courier");
+    expect(await prisma.remittanceLine.count({ where: { orderId: orderB } })).toBe(0);
   });
 });

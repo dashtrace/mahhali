@@ -68,12 +68,80 @@ export const productRepo = {
     return count === 1;
   },
 
-  /** The public catalogue: active products with their variants, by shop slug. */
+  /** The public catalogue: active products with their live variants, by shop slug. */
   catalogue(shopId: string, client: Db = db) {
     return client.product.findMany({
-      where: { shopId, status: "ACTIVE" },
-      include: withVariants,
+      where: { shopId, status: "ACTIVE", variants: { some: { archived: false } } },
+      include: { ...withVariants, variants: { ...withVariants.variants, where: { archived: false } } },
       orderBy: { createdAt: "desc" },
     });
+  },
+
+  async addVariant(tx: Db, shopId: string, productId: string, input: VariantInput, actorUserId: string) {
+    const variant = await tx.variant.create({ data: { ...input, shopId, productId } });
+    if (variant.available > 0) {
+      await tx.stockMovement.create({
+        data: { shopId, variantId: variant.id, delta: variant.available, reason: "ADJUST", actorUserId },
+      });
+    }
+    return variant;
+  },
+
+  /** A variant with the size and colour of its siblings, for duplicate checks. */
+  findVariant(shopId: string, id: string, client: Db = db) {
+    return client.variant.findFirst({
+      where: { id, shopId },
+      include: { product: { select: { variants: { select: { id: true, size: true, colour: true } } } } },
+    });
+  },
+
+  async updateVariant(
+    shopId: string,
+    id: string,
+    data: { size?: string | null; colour?: string | null; sku?: string | null; priceMinor?: bigint; archived?: boolean },
+    client: Db = db,
+  ) {
+    const { count } = await client.variant.updateMany({ where: { id, shopId }, data });
+    return count === 1 ? client.variant.findFirst({ where: { id, shopId } }) : null;
+  },
+
+  /**
+   * Adds delta to available stock and logs it, in the caller's transaction.
+   * The conditional update cannot take stock below zero; null when it would.
+   */
+  async adjustStock(tx: Db, shopId: string, id: string, delta: number, note: string | null, actorUserId: string) {
+    const { count } = await tx.variant.updateMany({
+      where: { id, shopId, ...(delta < 0 ? { available: { gte: -delta } } : {}) },
+      data: { available: { increment: delta } },
+    });
+    if (count === 0) return null;
+    await tx.stockMovement.create({ data: { shopId, variantId: id, delta, reason: "ADJUST", note, actorUserId } });
+    return tx.variant.findFirst({ where: { id, shopId } });
+  },
+
+  /** A variant's stock history, newest first. */
+  movements(shopId: string, variantId: string, client: Db = db) {
+    // shortcut: last 200 only; add paging if a variant ever needs more history on screen.
+    return client.stockMovement.findMany({
+      where: { shopId, variantId },
+      orderBy: [{ at: "desc" }, { id: "desc" }],
+      take: 200,
+    });
+  },
+
+  async addImage(shopId: string, productId: string, input: { url: string; colour: string | null }, client: Db = db) {
+    const { _max } = await client.productImage.aggregate({ where: { shopId, productId }, _max: { position: true } });
+    return client.productImage.create({
+      data: { shopId, productId, ...input, position: (_max.position ?? -1) + 1 },
+    });
+  },
+
+  findImage(shopId: string, productId: string, id: string, client: Db = db) {
+    return client.productImage.findFirst({ where: { id, productId, shopId } });
+  },
+
+  async deleteImage(shopId: string, id: string, client: Db = db) {
+    const { count } = await client.productImage.deleteMany({ where: { id, shopId } });
+    return count === 1;
   },
 };

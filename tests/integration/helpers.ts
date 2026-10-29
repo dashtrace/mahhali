@@ -34,7 +34,7 @@ export async function call(
   return { status: res.status, body: text ? JSON.parse(text) : null, headers: res.headers };
 }
 
-function cookieFrom(headers: Headers): string {
+export function cookieFrom(headers: Headers): string {
   return headers
     .getSetCookie()
     .map((c) => c.split(";")[0])

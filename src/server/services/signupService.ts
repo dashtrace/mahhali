@@ -39,6 +39,8 @@ export async function signUpBusiness(input: SignupInput): Promise<Response> {
         slug: input.shopSlug,
         currency: input.currency,
         usdLbpRate: input.usdLbpRate,
+        baselineOrdersPerDay: input.baselineOrdersPerDay,
+        baselineConfirmMinutes: input.baselineConfirmMinutes,
         userId: user.id,
       }),
     );

@@ -2,8 +2,15 @@
 # straight from the uploads volume; everything else goes to the Next.js app.
 {$DOMAIN} {
 	encode zstd gzip
+	# Uploads are at most 3 MB; bigger bodies are refused before they reach the app.
+	request_body {
+		max_size 5MB
+	}
 	handle_path /uploads/* {
 		root * /srv/uploads
+		# Same headers as src/app/uploads: no type sniffing, no script even in an SVG.
+		header X-Content-Type-Options nosniff
+		header Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; sandbox"
 		file_server
 	}
 	reverse_proxy app:3000

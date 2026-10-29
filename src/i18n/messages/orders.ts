@@ -1,0 +1,51 @@
+import { defineMessages } from "../locale";
+
+// The order board, order detail, manual orders and the delivery screen.
+export const orderMessages = defineMessages({
+  en: {
+    boardTitle: "Orders",
+    newOrder: "New order",
+    searchPlaceholder: "#1042, phone or name",
+    allCouriers: "All couriers",
+    filterCourier: "Courier",
+    noOrders: "No orders here.",
+    noOrdersHint: "Share your catalogue link to get the first one.",
+    moveTo: "Move to {status}",
+    markDelivered: "Mark delivered",
+    assignCourier: "Assign a courier",
+    unassigned: "No courier",
+    items: "{n} items",
+    open: "Open",
+    done: "Done",
+    moveFailed: "Could not move the order.",
+    dropNotAllowed: "An order cannot move there from {status}.",
+    catalogueLink: "Your catalogue",
+    copyLink: "Copy link",
+    copied: "Copied",
+    welcome: "Welcome! Add your first product, then share your catalogue link.",
+  },
+  ar: {
+    boardTitle: "الطلبات",
+    newOrder: "طلب جديد",
+    searchPlaceholder: "‎#1042 أو الهاتف أو الاسم",
+    allCouriers: "كل المندوبين",
+    filterCourier: "المندوب",
+    noOrders: "لا طلبات هنا.",
+    noOrdersHint: "شارك رابط الكتالوج لتحصل على أول طلب.",
+    moveTo: "نقل إلى {status}",
+    markDelivered: "تأكيد التسليم",
+    assignCourier: "اختر مندوباً",
+    unassigned: "بلا مندوب",
+    items: "{n} قطع",
+    open: "فتح",
+    done: "منتهية",
+    moveFailed: "تعذّر نقل الطلب.",
+    dropNotAllowed: "لا يمكن نقل طلب من حالة {status} إلى هنا.",
+    catalogueLink: "رابط الكتالوج",
+    copyLink: "نسخ الرابط",
+    copied: "تم النسخ",
+    welcome: "أهلاً بك! أضف منتجك الأول ثم شارك رابط الكتالوج.",
+  },
+});
+
+export type OrderMessages = (typeof orderMessages)["en"];
