@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* Shop themes override these per page (see the build plan: Shop branding). */
+:root {
+  --brand: #0f766e;
+  --brand-ink: #ffffff;
+}
+
+body {
+  @apply bg-stone-50 text-stone-900 antialiased;
+}

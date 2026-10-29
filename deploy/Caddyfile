@@ -1,0 +1,10 @@
+# Automatic HTTPS for the shop domain. Logos and product photos are served
+# straight from the uploads volume; everything else goes to the Next.js app.
+{$DOMAIN} {
+	encode zstd gzip
+	handle_path /uploads/* {
+		root * /srv/uploads
+		file_server
+	}
+	reverse_proxy app:3000
+}
