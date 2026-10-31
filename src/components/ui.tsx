@@ -576,7 +576,7 @@ export function ProductCard({
     <article
       className={cx(
         "relative flex flex-col overflow-hidden rounded-sl border border-sl-border bg-sl-panel has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-sl-accent",
-        layout === "strip" ? "w-[150px] shrink-0 snap-start md:w-[200px]" : "w-full",
+        layout === "strip" ? "w-[132px] shrink-0 snap-start md:w-[200px]" : "w-full",
         className,
       )}
     >
@@ -591,7 +591,8 @@ export function ProductCard({
             {name}
           </Link>
         </h3>
-        {description && <p className="mb-1 truncate text-xs text-sl-muted">{description}</p>}
+        {/* Phones show name, rating and price only, so two cards and their prices fit a row. */}
+        {description && <p className="mb-1 hidden truncate text-xs text-sl-muted sm:block">{description}</p>}
         {rating && rating.count > 0 ? (
           <Stars average={rating.average} count={rating.count} label={fill(t.ratingLabel, { n: rating.average.toFixed(1) })} className="mb-1.5 text-xs" />
         ) : (
@@ -599,8 +600,8 @@ export function ProductCard({
         )}
         <div className="mt-auto flex items-center justify-between gap-2">
           {/* May wrap ("From" above the amount) in narrow cards; the caller keeps the amount itself on one line. */}
-          <span className="min-w-0 text-[15px] font-extrabold leading-tight tabular-nums">{price}</span>
-          <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-sl-accent text-sl-accent-ink">
+          <span className="min-w-0 text-sm font-extrabold leading-tight tabular-nums sm:text-[15px]">{price}</span>
+          <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-sl-accent text-sl-accent-ink sm:size-8">
             <Icon name="plus" className="size-4" />
           </span>
         </div>
