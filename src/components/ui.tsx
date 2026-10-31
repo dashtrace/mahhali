@@ -79,6 +79,25 @@ export function Button({ tone = "primary", block, className, ...props }: Compone
   return <button type="button" className={cx(buttonBase, buttonTones[tone], block && "w-full", className)} {...props} />;
 }
 
+/**
+ * An edit form's submit button (pair with useSave): off until something changed, "Saving…" while
+ * the request and refresh run, then "✓ Saved" until the next edit. `children` replaces the Save label.
+ */
+export function SaveButton({
+  state,
+  labels,
+  children,
+  disabled,
+  ...props
+}: ComponentProps<typeof Button> & { state: { busy: boolean; dirty: boolean; saved: boolean }; labels: { save: string; saving: string; saved: string } }) {
+  return (
+    <Button type="submit" disabled={disabled || state.busy || !state.dirty} {...props}>
+      {state.saved && !state.busy && <Icon name="check" className="size-4" />}
+      <span aria-live="polite">{state.busy ? labels.saving : state.saved ? labels.saved : (children ?? labels.save)}</span>
+    </Button>
+  );
+}
+
 export function ButtonLink({ tone = "primary", block, className, ...props }: ComponentProps<typeof Link> & { tone?: Tone; block?: boolean }) {
   return <Link className={cx(buttonBase, buttonTones[tone], block && "w-full", className)} {...props} />;
 }
