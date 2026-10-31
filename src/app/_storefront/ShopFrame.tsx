@@ -34,7 +34,7 @@ const https = (url: string | null | undefined) => (url && url.startsWith("https:
 
 /**
  * The shop's own look and language around every public shop page: header with
- * menu drawer, logo, search / wishlist / cart; a bottom tab bar on phones and a
+ * menu drawer, logo, wishlist / cart; a bottom tab bar on phones and a
  * top nav on desktop; footer; WhatsApp button on the home page.
  * `bar` replaces the phone tab bar with a sticky action bar (product page: Add to
  * cart / Buy now). `back` swaps the menu button for a back link; `wish` swaps the
@@ -72,7 +72,8 @@ export function ShopFrame({
       )}
     >
       <header className="sticky top-0 z-30 border-b border-sl-border bg-sl-bg/95 backdrop-blur">
-        <div className="mx-auto grid h-[60px] max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 md:flex md:gap-4">
+        {/* The middle column takes what the buttons leave, so a long name truncates instead of overlapping them. */}
+        <div className="mx-auto grid h-[60px] max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4 md:flex md:gap-4">
           <div className="flex items-center">
             {back ? (
               <IconButtonLink href={back.href} label={back.label} icon="back" />
@@ -87,7 +88,6 @@ export function ShopFrame({
           </Link>
           <ShopTopNav slug={shop.slug} locale={locale} />
           <div className="flex items-center justify-end gap-2 md:ms-auto">
-            <IconButtonLink href={`${base}/shop`} label={t.searchShop} icon="search" />
             {wish ?? <WishLink slug={shop.slug} locale={locale} />}
             <span className="hidden md:block">
               <CartLink slug={shop.slug} label={t.navCart} countLabel={t.cartCount} />
@@ -137,25 +137,26 @@ function ShopLogo({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
   const mode = shop.logoMode ?? "image-and-name";
   const showImage = !!shop.logo && mode !== "name-only";
   const showName = !shop.logo || mode !== "image-only";
-  // The phone header leaves ~150px between the buttons: long names step down in size and spacing instead of truncating.
+  // The phone header leaves ~230px between the two buttons: long names step down in size and spacing, then truncate.
   const length = [...shop.name].length;
   // Letter-spacing only in Latin script: it breaks Arabic joining.
-  const wordmark = length <= 10 ? "text-xl ltr:tracking-[0.1em]" : length <= 14 ? "text-base ltr:tracking-[0.04em]" : "text-sm";
+  const wordmark = length <= 10 ? "text-lg sm:text-xl ltr:tracking-[0.1em]" : length <= 14 ? "text-base ltr:tracking-[0.04em]" : "text-sm";
   return (
-    <span className="flex min-w-0 items-center gap-2">
+    <span className="flex min-w-0 items-center gap-1.5">
       {showImage && (
         // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
         <img
           src={shop.logo!}
           alt={showName ? "" : fill(t.shopLogo, { name: shop.name })}
-          className={showName ? "h-9 w-auto max-w-10 shrink-0 object-contain" : "block max-h-[43px] w-auto max-w-[168px] object-contain"}
+          className={showName ? "size-8 shrink-0 object-contain" : "block max-h-[43px] w-auto max-w-[168px] object-contain"}
         />
       )}
       {showName && (
-        <span className="flex min-w-0 flex-col items-center leading-none">
+        // Beside a logo the name lines up against it; alone it centres over the tagline.
+        <span className={cx("flex min-w-0 flex-col leading-none", showImage ? "items-start" : "items-center")}>
           <span
             className={cx(
-              "max-w-[46vw] truncate [font-family:var(--sl-heading-font)] [font-weight:var(--sl-heading-weight)] md:max-w-xs md:text-xl md:ltr:tracking-[0.1em]",
+              "max-w-full truncate [font-family:var(--sl-heading-font)] [font-weight:var(--sl-heading-weight)] md:max-w-xs md:text-xl md:ltr:tracking-[0.1em]",
               wordmark,
             )}
           >
@@ -165,7 +166,7 @@ function ShopLogo({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
             // A long tagline only fits on desktop; phones show it in the hero and footer.
             <span
               className={cx(
-                "mt-1 max-w-[46vw] truncate text-[10px] font-bold uppercase tracking-[0.15em] text-sl-muted rtl:tracking-normal md:block md:max-w-xs",
+                "mt-1 max-w-full truncate text-[10px] font-bold uppercase tracking-[0.15em] text-sl-muted rtl:tracking-normal md:block md:max-w-xs",
                 [...shop.tagline].length > 22 && "hidden",
               )}
             >
