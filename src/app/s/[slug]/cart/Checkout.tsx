@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
+import { EmailField } from "@/components/EmailField";
 import { Icon } from "@/components/Icon";
 import { Alert, Button, ButtonLink, Card, EmptyState, Field, IconButton, Input, ProductPhoto, QtyStepper, Select, Textarea } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CheckoutMessages } from "@/i18n/messages/checkout";
+import { common } from "@/i18n/messages/common";
 import { governorateNames } from "@/i18n/messages/store";
 import { ApiError, api, errorMessage, newIdempotencyKey } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
@@ -130,6 +132,9 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
         setError(fill(m.errNoteTooLong, { item: nameOf(one.variantId), max: one.maxLength ?? 0 }));
       } else if (Array.isArray(details) && details.some((d) => d.path === "customer.phone")) {
         setPhoneError(true);
+      } else if (Array.isArray(details) && details.some((d) => d.path === "customer.email")) {
+        // The field checks itself first; this catches what only the server knows.
+        setError(common[locale].emailInvalid);
       } else if (err instanceof ApiError && err.status === 429) {
         setError(m.errRateLimited);
       } else {
@@ -277,9 +282,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
               onChange={() => setPhoneError(false)}
             />
           </Field>
-          <Field label={`${m.email} (${m.optional})`} hint={m.emailHint}>
-            <Input name="email" type="email" maxLength={200} autoComplete="email" dir="ltr" className="rtl:text-end" />
-          </Field>
+          <EmailField label={`${m.email} (${m.optional})`} hint={m.emailHint} locale={locale} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={m.governorate}>
               <Select name="governorate" required defaultValue="">
