@@ -24,7 +24,12 @@ export function medianConfirmMinutes(orders: { firstContactAt: Date; confirmedAt
   return minutes.length % 2 === 1 ? minutes[mid] : (minutes[mid - 1] + minutes[mid]) / 2;
 }
 
-/** Orders created in the period divided by its days. */
-export function ordersPerDay(count: number, period: Period): number {
-  return count / Math.round((period.end.getTime() - period.start.getTime()) / DAY_MS);
+/**
+ * Orders created in the period per day the shop was open in it: days before it opened and
+ * after today don't count, so a shop that opened yesterday isn't averaged over a month.
+ */
+export function ordersPerDay(count: number, period: Period, openedAt: Date, now: Date): number {
+  const from = Math.max(period.start.getTime(), Date.parse(isoDay(openedAt)));
+  const to = Math.min(period.end.getTime(), Date.parse(isoDay(now)) + DAY_MS);
+  return count / Math.max(1, Math.round((to - from) / DAY_MS));
 }

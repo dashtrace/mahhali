@@ -52,6 +52,12 @@ export const reportingRepo = {
     });
   },
 
+  /** When the shop's first order was created (imported or backdated orders can predate the shop), or null. */
+  async firstOrderAt(shopId: string, client: Db = db) {
+    const { _min } = await client.order.aggregate({ where: { shopId }, _min: { createdAt: true } });
+    return _min.createdAt;
+  },
+
   /** First contact and confirmation times of the range's confirmed orders. */
   confirmations(shopId: string, range: Range, client: Db = db) {
     return client.order.findMany({
