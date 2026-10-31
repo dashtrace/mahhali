@@ -8,7 +8,7 @@ import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
-import { FONTS, PALETTES, RADII, validateTheme, type PaletteName, type Theme } from "@/server/domain/theme";
+import { FONTS, PALETTES, RADII, inkFor, validateTheme, type PaletteName, type Theme } from "@/server/domain/theme";
 import { themeTone, themeVars } from "../../../_server/theme";
 import { FilePicker } from "../../products/_components/FilePicker";
 import { CardHead } from "../../products/_components/ProductExtras";
@@ -18,7 +18,9 @@ type PreviewShop = { name: string; currency: "USD" | "LBP"; logoMode: string; ta
 type Props = { theme: Theme; logo: string | null; shop: PreviewShop; locale: Locale; m: ShopMessages; t: CommonMessages };
 
 const PAIR_KEYS = { "text on primary": "pairPrimary", "text on accent": "pairAccent", "body text on background": "pairBackground" } as const;
-const same = (a: Theme, b: Theme) => (Object.keys(a) as (keyof Theme)[]).every((k) => a[k] === b[k]);
+// A fixed key list: `text` is optional, so clearing it must still count as a change.
+const KEYS = ["primary", "accent", "background", "text", "radius", "font"] as const;
+const same = (a: Theme, b: Theme) => KEYS.every((k) => a[k] === b[k]);
 
 export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: Props) {
   const [theme, setTheme] = useState<Theme>(saved);
@@ -70,23 +72,40 @@ export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: 
             </div>
           </fieldset>
 
-          <fieldset className="grid grid-cols-3 gap-3">
+          <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <legend className="mb-2 text-[13px] font-bold">{m.custom}</legend>
-            {(["primary", "accent", "background"] as const).map((k) => (
+            {(["primary", "accent", "background", "text"] as const).map((k) => (
               <Field key={k} label={m[k]}>
                 <span className="flex items-center gap-2">
                   <input
                     type="color"
-                    value={theme[k]}
+                    // An unset text colour shows the automatic one (black or white for the background).
+                    value={theme[k] ?? inkFor(theme.background)}
                     onChange={(e) => set(k, e.target.value.toLowerCase())}
                     className="h-11 w-14 shrink-0 cursor-pointer rounded-sl-sm border border-sl-control bg-sl-panel p-1"
                   />
                   <span dir="ltr" className="hidden font-mono text-xs text-sl-muted sm:inline">
-                    {theme[k]}
+                    {theme[k] ?? m.textAuto}
                   </span>
                 </span>
               </Field>
             ))}
+            {theme.text && (
+              <Button
+                tone="ghost"
+                className="col-span-2 justify-self-start sm:col-span-4"
+                onClick={() => {
+                  setDone(false);
+                  setTheme((current) => {
+                    const next = { ...current };
+                    delete next.text;
+                    return next;
+                  });
+                }}
+              >
+                {m.useAutoText}
+              </Button>
+            )}
           </fieldset>
 
           <div className="grid gap-3 sm:grid-cols-2">
