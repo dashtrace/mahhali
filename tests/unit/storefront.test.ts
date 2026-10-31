@@ -15,7 +15,7 @@ describe("homeHighlight", () => {
     { id: "face", name: "Face care" },
     { id: "body", name: "Body" },
   ];
-  const ids = (h: ReturnType<typeof homeHighlight>) => h?.items.map((p) => p.id);
+  const ids = (h: { items: { id: string }[] } | null) => h?.items.map((p) => p.id);
 
   it("shows the chosen category, or the first one when none is chosen or it is gone", () => {
     expect(homeHighlight(products, categories, "category", "body")).toMatchObject({ kind: "category", category: { name: "Body" } });
