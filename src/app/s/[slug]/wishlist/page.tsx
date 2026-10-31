@@ -21,7 +21,7 @@ export default async function WishlistPage({ params }: Params) {
 
   return (
     <ShopFrame shop={shop} locale={locale}>
-      <h1 className="sl-heading mt-1 text-[26px] leading-tight">{m.wishTitle}</h1>
+      <h1 className="sl-heading mt-1 text-[22px] leading-tight sm:text-[26px]">{m.wishTitle}</h1>
       <p className="mb-4 mt-1 text-[13px] text-sl-muted">{m.wishNote}</p>
       <WishlistGrid slug={slug} products={tiles} currency={shop.currency} locale={locale} />
     </ShopFrame>

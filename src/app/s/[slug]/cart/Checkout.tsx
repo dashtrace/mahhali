@@ -150,7 +150,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
   if (rows.length === 0) {
     return (
       <div className="mx-auto max-w-xl">
-        <h1 className="sl-heading mb-4 text-[28px] leading-tight">{m.cartTitle}</h1>
+        <h1 className="sl-heading mb-4 text-[22px] leading-tight sm:text-[28px]">{m.cartTitle}</h1>
         <EmptyState
           title={m.cartEmpty}
           body={m.cartEmptyBody}
@@ -174,7 +174,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
   if (step === "cart") {
     return (
       <div className="mx-auto max-w-5xl">
-        <h1 className="sl-heading text-[28px] leading-tight">{m.cartTitle}</h1>
+        <h1 className="sl-heading text-[22px] leading-tight sm:text-[28px]">{m.cartTitle}</h1>
         <p className="mt-1 text-sm text-sl-muted">{fill(m.cartItems, { n: count })}</p>
         <div className="mt-4 grid gap-5 md:grid-cols-[minmax(0,1fr)_340px] md:items-start">
           <ul className="divide-y divide-sl-border rounded-sl-lg border border-sl-border bg-sl-panel px-4 shadow-[0_2px_10px_#00000006]">
@@ -255,7 +255,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
         <Icon name="back" className="size-4" />
         {m.backToCart}
       </Link>
-      <h1 className="sl-heading text-[28px] leading-tight">{m.checkoutTitle}</h1>
+      <h1 className="sl-heading text-[22px] leading-tight sm:text-[28px]">{m.checkoutTitle}</h1>
       <p className="mt-1 text-sm text-sl-muted">{m.checkoutLead}</p>
       <form onSubmit={submit} className="mt-4 grid gap-5 md:grid-cols-[minmax(0,1fr)_360px] md:items-start">
         <Card className="flex flex-col gap-4 rounded-[14px] p-5">

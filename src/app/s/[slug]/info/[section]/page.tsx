@@ -157,7 +157,7 @@ export default async function InfoPage({ params }: Params) {
       <div className="mx-auto max-w-2xl">
         <header className="mb-4 mt-2">
           <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.17em] text-sl-accent rtl:tracking-normal">{fill(m.infoEyebrow, { shop: shop.name })}</p>
-          <h1 className="sl-heading mb-2 text-[28px] leading-tight">{t[TITLE[section]]}</h1>
+          <h1 className="sl-heading mb-2 text-[22px] leading-tight sm:text-[28px]">{t[TITLE[section]]}</h1>
           <p className="text-sm leading-relaxed text-sl-muted">{intro}</p>
         </header>
         <Card className="min-h-40 rounded-[17px] px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.035)] sm:px-6">{content}</Card>

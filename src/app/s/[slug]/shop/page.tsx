@@ -67,7 +67,7 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
 
   return (
     <ShopFrame shop={shop} locale={locale}>
-      <h1 className="sl-heading mb-3 mt-1 text-[26px] leading-tight">{title}</h1>
+      <h1 className="sl-heading mb-3 mt-1 text-[22px] leading-tight sm:text-[26px]">{title}</h1>
 
       <form
         action={`/s/${slug}/shop`}
@@ -143,7 +143,7 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
       )}
 
       {items.length > 0 ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
           {items.map((p) => (
             <li key={p.id} className="flex">
               <ProductTile slug={slug} product={p} currency={shop.currency} locale={locale} priceMinor={priced ? p.matchPriceMinor : undefined} />
