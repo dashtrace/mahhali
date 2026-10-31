@@ -4,6 +4,7 @@ import {
   CreateProductBody,
   ImageParams,
   ListProductsQuery,
+  SetOptionsBody,
   StockAdjustmentBody,
   UpdateProductBody,
   UpdateVariantBody,
@@ -65,6 +66,20 @@ export function registerProducts(r: OpenAPIRegistry, { secured, ok, error, error
     security: secured,
     request: { params: IdParam },
     responses: { 200: ok("Archived product"), ...errors },
+  });
+  r.registerPath({
+    method: "put",
+    path: "/api/products/{id}/options",
+    summary: "Rename, add, remove or reorder a product's options; every variant's values follow (owner, manager)",
+    tags: ["Products"],
+    security: secured,
+    request: { params: IdParam, body: { content: { "application/json": { schema: SetOptionsBody } } } },
+    responses: {
+      200: ok("Product with its variants"),
+      ...errors,
+      409: error("OPTIONS_CHANGED: a `from` name is not one of the current options"),
+      422: error("DUPLICATE_VARIANT: two variants would end up with the same values"),
+    },
   });
   r.registerPath({
     method: "post",

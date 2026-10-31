@@ -6,6 +6,7 @@ import { POST as createProduct } from "@/app/api/products/route";
 import { DELETE as archiveProduct, GET as getProduct } from "@/app/api/products/[id]/route";
 import { POST as addImage } from "@/app/api/products/[id]/images/route";
 import { DELETE as deleteImage } from "@/app/api/products/[id]/images/[imageId]/route";
+import { PUT as setOptions } from "@/app/api/products/[id]/options/route";
 import { POST as addVariant } from "@/app/api/products/[id]/variants/route";
 import { GET as catalogue } from "@/app/api/public/shops/[slug]/catalogue/route";
 import { PATCH as patchVariant } from "@/app/api/variants/[id]/route";
@@ -171,6 +172,80 @@ describe("products and variants", () => {
   });
 });
 
+describe("product options", () => {
+  type Option = { name: string; from: string | null };
+  const put = (productId: string, options: Option[], cookie = owner.cookie) =>
+    call(setOptions, `/api/products/${productId}/options`, { method: "PUT", cookie, body: { options } }, { id: productId });
+  const valuesOf = async (productId: string) =>
+    (await prisma.variant.findMany({ where: { productId }, orderBy: { id: "asc" } })).map((v) => v.optionValues);
+  /** Shirt with Size and Colour: [M, Sand] and a hidden [L, Olive]. */
+  async function shirt() {
+    const { product } = await seedVariant(owner.shop.id);
+    await prisma.variant.create({ data: { shopId: owner.shop.id, productId: product.id, optionValues: ["L", "Olive"], priceMinor: 1n, archived: true } });
+    return product.id;
+  }
+
+  it("renames, adds and reorders, moving every variant's values, hidden ones too", async () => {
+    const id = await shirt();
+    const res = await put(id, [
+      { name: "Shade", from: "Colour" },
+      { name: "Fit", from: null },
+      { name: "Size", from: "Size" },
+    ]);
+    expect(res.status).toBe(200);
+    expect(res.body.options).toEqual(["Shade", "Fit", "Size"]);
+    expect(await valuesOf(id)).toEqual([
+      ["Sand", "", "M"],
+      ["Olive", "", "L"],
+    ]);
+  });
+
+  it("leaves every value alone on a rename", async () => {
+    const id = await shirt();
+    const before = await prisma.variant.findMany({ where: { productId: id }, orderBy: { id: "asc" } });
+    expect((await put(id, [{ name: "Fit", from: "Size" }, { name: "Colour", from: "Colour" }])).status).toBe(200);
+    expect(await prisma.variant.findMany({ where: { productId: id }, orderBy: { id: "asc" } })).toEqual(before);
+  });
+
+  it("swaps two options even when the variants mirror each other", async () => {
+    const { product } = await seedVariant(owner.shop.id, { options: ["A", "B"], optionValues: ["x", "y"] });
+    await prisma.variant.create({ data: { shopId: owner.shop.id, productId: product.id, optionValues: ["y", "x"], priceMinor: 1n } });
+    expect((await put(product.id, [{ name: "B", from: "B" }, { name: "A", from: "A" }])).status).toBe(200);
+    expect(await valuesOf(product.id)).toEqual([
+      ["y", "x"],
+      ["x", "y"],
+    ]);
+  });
+
+  it("refuses a removal that would make two variants the same, changing nothing", async () => {
+    const { product } = await seedVariant(owner.shop.id);
+    await prisma.variant.create({ data: { shopId: owner.shop.id, productId: product.id, optionValues: ["M", "Olive"], priceMinor: 1n, archived: true } });
+    const clash = await put(product.id, [{ name: "Size", from: "Size" }]);
+    expect(clash.status).toBe(422);
+    expect(clash.body.error.code).toBe("DUPLICATE_VARIANT");
+    expect((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).options).toEqual(["Size", "Colour"]);
+    expect(await valuesOf(product.id)).toEqual([
+      ["M", "Sand"],
+      ["M", "Olive"],
+    ]);
+
+    expect((await put(product.id, [{ name: "Colour", from: "Colour" }])).status).toBe(200);
+    expect(await valuesOf(product.id)).toEqual([["Sand"], ["Olive"]]);
+  });
+
+  it("says when the options changed in the meantime, and checks the body", async () => {
+    const id = await shirt();
+    const stale = await put(id, [{ name: "Size", from: "Fit" }]);
+    expect(stale.status).toBe(409);
+    expect(stale.body.error.code).toBe("OPTIONS_CHANGED");
+    expect((await put(id, [{ name: "Size", from: "Size" }, { name: "size", from: null }])).status).toBe(400);
+    expect((await put(id, [{ name: "A", from: "Size" }, { name: "B", from: "Size" }])).status).toBe(400);
+    const four = ["A", "B", "C", "D"].map((name) => ({ name, from: null }));
+    expect((await put(id, four)).status).toBe(400);
+    expect((await prisma.product.findUniqueOrThrow({ where: { id } })).options).toEqual(["Size", "Colour"]);
+  });
+});
+
 describe("stock adjustments", () => {
   const adjust = (id: string, delta: unknown, cookie = owner.cookie) =>
     call(adjustStock, `/api/variants/${id}/stock-adjustments`, { method: "POST", cookie, body: { delta } }, { id });
@@ -309,6 +384,7 @@ describe("roles", () => {
     const id = { id: product.id };
     expect((await call(addVariant, "/v", { method: "POST", cookie: staff, body: { price: "1" } }, id)).status).toBe(403);
     expect((await call(archiveProduct, "/p", { method: "DELETE", cookie: staff }, id)).status).toBe(403);
+    expect((await call(setOptions, "/o", { method: "PUT", cookie: staff, body: { options: [] } }, id)).status).toBe(403);
     expect((await call(patchVariant, "/v", { method: "PATCH", cookie: staff, body: { sku: "x" } }, { id: variant.id })).status).toBe(403);
     expect((await call(adjustStock, "/s", { method: "POST", cookie: staff, body: { delta: 1 } }, { id: variant.id })).status).toBe(403);
     expect((await upload(addImage, "/i", staff, { file: png() }, id)).status).toBe(403);
@@ -328,6 +404,7 @@ describe("tenant isolation", () => {
     const statuses = [
       (await call(getProduct, "/p", { cookie }, pid)).status,
       (await call(archiveProduct, "/p", { method: "DELETE", cookie }, pid)).status,
+      (await call(setOptions, "/o", { method: "PUT", cookie, body: { options: [] } }, pid)).status,
       (await call(addVariant, "/v", { method: "POST", cookie, body: { optionValues: ["XL", "Sand"], price: "1" } }, pid)).status,
       (await call(patchVariant, "/v", { method: "PATCH", cookie, body: { price: "0.01" } }, vid)).status,
       (await call(adjustStock, "/s", { method: "POST", cookie, body: { delta: -2 } }, vid)).status,
@@ -339,7 +416,8 @@ describe("tenant isolation", () => {
 
     const after = await prisma.product.findUniqueOrThrow({ where: { id: product.id }, include: { variants: true, images: true } });
     expect(after.status).toBe("ACTIVE");
-    expect(after.variants).toEqual([expect.objectContaining({ available: 2, priceMinor: 2500n })]);
+    expect(after.options).toEqual(["Size", "Colour"]);
+    expect(after.variants).toEqual([expect.objectContaining({ available: 2, priceMinor: 2500n, optionValues: ["M", "Sand"] })]);
     expect(after.images).toHaveLength(1);
     expect((await serve(image.url)).status).toBe(200);
   });

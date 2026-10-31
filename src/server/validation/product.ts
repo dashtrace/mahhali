@@ -108,6 +108,21 @@ export const StockAdjustmentBody = z
   })
   .openapi("StockAdjustmentBody");
 
+export const SetOptionsBody = z
+  .object({
+    /**
+     * The new list, in order. `from` is the current name of the option this one keeps (renamed or
+     * moved), null for a new option with blank values. Options left out lose their values.
+     */
+    options: z.array(z.object({ name: OptionName, from: OptionName.nullable() })).max(3),
+  })
+  .refine((b) => !repeats(b.options.map((o) => o.name)), { message: "Each option name can appear once", path: ["options"] })
+  .refine((b) => !repeats(b.options.flatMap((o) => (o.from === null ? [] : [o.from]))), {
+    message: "Each current option can be kept once",
+    path: ["options"],
+  })
+  .openapi("SetOptionsBody");
+
 /** Text fields sent next to an uploaded photo; the file is checked in storage/uploads. */
 export const ImageFields = z.object({ optionValue: optionalText });
 
@@ -118,4 +133,5 @@ export type CreateProductInput = z.infer<typeof CreateProductBody>;
 export type UpdateProductInput = z.infer<typeof UpdateProductBody>;
 export type VariantInput = z.infer<typeof VariantBody>;
 export type UpdateVariantInput = z.infer<typeof UpdateVariantBody>;
+export type SetOptionsInput = z.infer<typeof SetOptionsBody>;
 export type StockAdjustmentInput = z.infer<typeof StockAdjustmentBody>;

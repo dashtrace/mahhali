@@ -315,6 +315,40 @@
           }
         }
       },
+      "SetOptionsBody": {
+        "type": "object",
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "from": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "minLength": 1,
+                  "maxLength": 40
+                }
+              },
+              "required": [
+                "name",
+                "from"
+              ]
+            },
+            "maxItems": 3
+          }
+        },
+        "required": [
+          "options"
+        ]
+      },
       "UpdateVariantBody": {
         "type": "object",
         "properties": {
@@ -1874,6 +1908,110 @@
           },
           "404": {
             "description": "Not found, or belongs to another shop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{id}/options": {
+      "put": {
+        "summary": "Rename, add, remove or reorder a product's options; every variant's values follow (owner, manager)",
+        "tags": [
+          "Products"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOptionsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product with its variants",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another shop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OPTIONS_CHANGED: a `from` name is not one of the current options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "DUPLICATE_VARIANT: two variants would end up with the same values",
             "content": {
               "application/json": {
                 "schema": {

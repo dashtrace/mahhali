@@ -1,7 +1,8 @@
-import { badRequest, notFound, unprocessable } from "../http/errors";
+import { badRequest, conflict, notFound, unprocessable } from "../http/errors";
 import type { Actor } from "../http/withRoute";
 import { toMinor, type Currency } from "../domain/money";
 import { browseProducts, type BrowseOptions, type HomeSection, type LogoMode } from "../domain/storefront";
+import { remapValues } from "../domain/variants";
 import { productRepo } from "../repositories/productRepo";
 import { shopRepo } from "../repositories/shopRepo";
 import { categoryRepo, slideRepo, testimonialRepo } from "../repositories/storefrontRepo";
@@ -11,6 +12,7 @@ import {
   ImageFields,
   type CreateProductInput,
   type ProductSpec,
+  type SetOptionsInput,
   type StockAdjustmentInput,
   type UpdateProductInput,
   type UpdateVariantInput,
@@ -104,6 +106,33 @@ export const productService = {
       if (isUniqueViolation(error)) throw duplicateVariant();
       throw error;
     }
+  },
+
+  /** Renames, adds, removes or reorders options; every variant, hidden ones too, keeps its values in step. */
+  async setOptions(actor: Actor, productId: string, input: SetOptionsInput) {
+    try {
+      // shortcut: no row lock, so a variant added in the same instant keeps the old value count; lock the product row if that shows up.
+      await transaction(async (tx) => {
+        const product = await productRepo.findById(actor.shopId, productId, tx);
+        if (!product) throw notFound("Product");
+        const from = input.options.map((o) => {
+          if (o.from === null) return null;
+          const i = product.options.indexOf(o.from);
+          if (i < 0) throw conflict("OPTIONS_CHANGED", "The options changed since you opened them. Reload and try again.");
+          return i;
+        });
+        // A rename alone leaves every value where it is.
+        const moved = from.length !== product.options.length || from.some((f, i) => f !== i);
+        const variants = moved ? product.variants.map((v) => ({ id: v.id, optionValues: remapValues(v.optionValues, from) })) : [];
+        await productRepo.setOptions(tx, actor.shopId, productId, input.options.map((o) => o.name), variants);
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw unprocessable("DUPLICATE_VARIANT", "Two variants would end up the same (hidden ones count too). Change or remove one first.");
+      }
+      throw error;
+    }
+    return this.get(actor, productId);
   },
 
   async updateVariant(actor: Actor, id: string, input: UpdateVariantInput) {

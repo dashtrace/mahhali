@@ -126,6 +126,17 @@ export const productRepo = {
   },
 
   /**
+   * Saves a product's option names and its variants' new values, in the caller's transaction.
+   * The unique index is checked row by row, so each row first takes a value no other row holds
+   * (its own id); writing the final values straight away would fail when two variants swap.
+   */
+  async setOptions(tx: Db, shopId: string, productId: string, options: string[], variants: { id: string; optionValues: string[] }[]) {
+    await tx.product.updateMany({ where: { id: productId, shopId }, data: { options } });
+    for (const v of variants) await tx.variant.updateMany({ where: { id: v.id, shopId }, data: { optionValues: [v.id] } });
+    for (const v of variants) await tx.variant.updateMany({ where: { id: v.id, shopId }, data: { optionValues: v.optionValues } });
+  },
+
+  /**
    * Adds delta to available stock and logs it, in the caller's transaction.
    * The conditional update cannot take stock below zero; null when it would.
    */
