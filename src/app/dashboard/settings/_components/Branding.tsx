@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Button, Card, Field, Select, cx } from "@/components/ui";
+import { Alert, Button, Card, Field, SaveButton, Select, cx } from "@/components/ui";
 import { Icon, type IconName } from "@/components/Icon";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
@@ -20,8 +20,10 @@ type Props = { theme: Theme; logo: string | null; shop: PreviewShop; locale: Loc
 const PAIR_KEYS = { "text on primary": "pairPrimary", "text on accent": "pairAccent", "body text on background": "pairBackground" } as const;
 const same = (a: Theme, b: Theme) => (Object.keys(a) as (keyof Theme)[]).every((k) => a[k] === b[k]);
 
-export function Branding({ theme: saved, logo, shop, locale, m, t }: Props) {
+export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: Props) {
   const [theme, setTheme] = useState<Theme>(saved);
+  // Set from the upload's response, so the new logo shows before the page refresh lands.
+  const [logo, setLogo] = useState(savedLogo);
   const [done, setDone] = useState(false);
   const save = useAction(t.error);
   const failures = validateTheme(theme);
@@ -121,17 +123,19 @@ export function Branding({ theme: saved, logo, shop, locale, m, t }: Props) {
             </Alert>
           )}
           {save.error && <Alert tone="error">{save.error}</Alert>}
-          {done && <Alert tone="success">{t.saved}</Alert>}
-          <Button
+          <SaveButton
+            type="button"
             className="self-start"
-            disabled={save.busy || failures.length > 0 || same(theme, saved)}
+            state={{ busy: save.busy, dirty: !same(theme, saved), saved: done }}
+            labels={t}
+            disabled={failures.length > 0}
             onClick={async () => setDone(await save.run(() => api("/api/shop/branding", { method: "PATCH", body: theme })))}
           >
-            {save.busy ? t.saving : m.saveBranding}
-          </Button>
+            {m.saveBranding}
+          </SaveButton>
         </Card>
 
-        <Logo logo={logo} m={m} t={t} />
+        <Logo logo={logo} onChange={setLogo} m={m} t={t} />
       </div>
 
       <section aria-labelledby="branding-preview" className="flex flex-col gap-2 lg:sticky lg:top-[76px]">
@@ -241,8 +245,10 @@ function MiniShop({ theme, logo, shop, locale, m }: { theme: Theme; logo: string
   );
 }
 
-function Logo({ logo, m, t }: { logo: string | null; m: ShopMessages; t: CommonMessages }) {
+function Logo({ logo, onChange, m, t }: { logo: string | null; onChange: (logo: string | null) => void; m: ShopMessages; t: CommonMessages }) {
   const action = useAction(t.error);
+  const [uploaded, setUploaded] = useState(false);
+  const [uploading, setUploading] = useState(false);
   return (
     <Card className="flex flex-col gap-3">
       <CardHead title={m.logo} hint={m.logoHint} />
@@ -255,19 +261,42 @@ function Logo({ logo, m, t }: { logo: string | null; m: ShopMessages; t: CommonM
         <FilePicker
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
           busy={action.busy}
-          onFile={(file) => {
+          onFile={async (file) => {
             const form = new FormData();
             form.set("file", file);
-            action.run(() => api("/api/shop/logo", { body: form }));
+            setUploaded(false);
+            setUploading(true);
+            const ok = await action.run(async () => onChange((await api<{ logo: string }>("/api/shop/logo", { body: form })).logo));
+            setUploading(false);
+            setUploaded(ok);
           }}
         >
-          {action.busy ? m.uploading : logo ? m.replaceLogo : m.uploadLogo}
+          {uploading ? m.uploading : logo ? m.replaceLogo : m.uploadLogo}
         </FilePicker>
         {logo && (
-          <Button tone="ghost" disabled={action.busy} onClick={() => confirm(m.removeLogoConfirm) && action.run(() => api("/api/shop/logo", { method: "DELETE" }))}>
+          <Button
+            tone="ghost"
+            disabled={action.busy}
+            onClick={() =>
+              confirm(m.removeLogoConfirm) &&
+              action.run(async () => {
+                await api("/api/shop/logo", { method: "DELETE" });
+                onChange(null);
+                setUploaded(false);
+              })
+            }
+          >
             {m.removeLogo}
           </Button>
         )}
+        <span role="status" className="inline-flex items-center gap-1 text-sm font-bold text-sl-ok">
+          {uploaded && (
+            <>
+              <Icon name="check" className="size-4" />
+              {m.logoUploaded}
+            </>
+          )}
+        </span>
       </div>
     </Card>
   );
