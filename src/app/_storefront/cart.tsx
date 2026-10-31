@@ -28,6 +28,11 @@ export function roomIn(lines: CartLine[], variantId: string, left = MAX_QTY) {
   return Math.min(MAX_QTY, left) - qtyOf(lines, variantId);
 }
 
+/** Units still free once the cart's are taken, or null when `left` is the MAX_QTY cap (the real count isn't shown). */
+export function leftAfterCart(left: number, inCart: number): number | null {
+  return left >= MAX_QTY ? null : Math.max(0, left - inCart);
+}
+
 /** Stored JSON -> valid lines: merges duplicates, drops junk, caps each variant at MAX_QTY. */
 export function parseLines(raw: unknown): CartLine[] {
   let lines: CartLine[] = [];

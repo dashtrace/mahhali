@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_QTY, fromLegacy, parseLines, qtyOf, roomIn, withLine } from "@/app/_storefront/cart";
+import { MAX_QTY, fromLegacy, leftAfterCart, parseLines, qtyOf, roomIn, withLine } from "@/app/_storefront/cart";
 import { cx, pageTokens } from "@/components/ui";
 
 describe("cx", () => {
@@ -55,6 +55,12 @@ describe("cart lines", () => {
     expect(roomIn(lines, "v", 1)).toBe(-1); // cart holds more than is left
     expect(roomIn(lines, "v")).toBe(MAX_QTY - 2);
     expect(roomIn([], "v", 50)).toBe(MAX_QTY);
+  });
+
+  it("counts the stock still free after the cart, unless the count is capped", () => {
+    expect(leftAfterCart(15, 11)).toBe(4);
+    expect(leftAfterCart(5, 7)).toBe(0);
+    expect(leftAfterCart(MAX_QTY, 11)).toBeNull();
   });
 
   it("drops junk and migrates the old { variantId: qty } shape", () => {

@@ -6,10 +6,10 @@ import { ButtonLink, Card, EmptyState, FilterChip, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
-import { formatMoney, whatsappLink } from "@/lib/format";
+import { whatsappLink } from "@/lib/format";
 import { INFO_SECTIONS, ShopFrame } from "../../../../_storefront/ShopFrame";
 import { loadStore } from "../../_components/load";
-import { TestimonialCard } from "../../_components/tiles";
+import { ShippingPolicy, TestimonialCard } from "../../_components/tiles";
 import { FeedbackForm } from "./FeedbackForm";
 
 type Section = (typeof INFO_SECTIONS)[number];
@@ -74,16 +74,10 @@ export default async function InfoPage({ params }: Params) {
       </>
     );
   } else if (section === "shipping") {
-    const fee = shop.deliveryFeeMinor;
     content = (
       <>
         <h2 className={h2}>{m.shippingHeading}</h2>
-        <p className={body}>{shop.shippingInfo || fill(m.shippingEmpty, { shop: shop.name })}</p>
-        <p className="flex items-center gap-2 text-sm font-bold">
-          <Icon name="truck" className="size-5 text-sl-accent" />
-          {Number(fee) > 0 ? <bdi>{fill(m.deliveryFeeLine, { fee: formatMoney(fee, shop.currency, locale) })}</bdi> : m.freeDelivery}
-        </p>
-        <p className="mt-1 text-sm text-sl-muted">{m.payOnDelivery}</p>
+        <ShippingPolicy shop={shop} locale={locale} />
       </>
     );
   } else if (section === "contact") {

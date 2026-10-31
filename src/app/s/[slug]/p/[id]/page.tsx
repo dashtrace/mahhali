@@ -12,8 +12,8 @@ import { plain } from "@/server/http/json";
 import { reviewService } from "@/server/services/reviewService";
 import { ShopFrame } from "../../../../_storefront/ShopFrame";
 import { loadStore } from "../../_components/load";
-import { ProductTile } from "../../_components/tiles";
-import { Gallery, ProductBar, ProductOptions, ProductProvider } from "./ProductClient";
+import { ProductTile, ShippingPolicy } from "../../_components/tiles";
+import { Gallery, PolicySheet, ProductBar, ProductOptions, ProductProvider } from "./ProductClient";
 
 type Params = { params: Promise<{ slug: string; id: string }> };
 
@@ -134,10 +134,9 @@ export default async function ProductPage({ params }: Params) {
               <p>
                 <strong>{m.shippingTitle}</strong> · <span className="text-sl-muted">{m.shippingLine}</span>
               </p>
-              <Link href={`${base}/info/shipping`} className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-extrabold text-sl-accent hover:underline">
-                {fill(m.shippingLink, { shop: shop.name })}
-                <Icon name="arrow" className="size-3.5" />
-              </Link>
+              <PolicySheet label={fill(m.shippingLink, { shop: shop.name })} title={m.shippingHeading}>
+                <ShippingPolicy shop={shop} locale={locale} />
+              </PolicySheet>
             </div>
           </Card>
 

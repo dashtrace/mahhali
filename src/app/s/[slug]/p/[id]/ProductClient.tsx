@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
-import { MAX_QTY, addToCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
+import { MAX_QTY, addToCart, leftAfterCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
 import { Icon } from "@/components/Icon";
+import { Sheet } from "@/components/Sheet";
 import { Button, ProductPhoto, QtyStepper, Textarea, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages, type StoreMessages } from "@/i18n/messages/store";
@@ -26,6 +27,11 @@ const MAX_NOTE = 500;
 const variantName = (v: Variant, m: StoreMessages) => [v.size, v.colour].filter(Boolean).join(" · ") || m.standard;
 /** "In stock" while at least MAX_QTY are left (the count is capped there), else how many are left. */
 const stockText = (v: Variant, m: StoreMessages) => (!v.inStock ? m.soldOut : v.left < MAX_QTY ? fill(m.onlyLeft, { n: v.left }) : m.inStock);
+/** The line under the quantity: what can still be added after the cart (the full count once it's all in the cart). */
+const stockLine = (v: Variant, inCart: number, m: StoreMessages) => {
+  const n = leftAfterCart(v.left, inCart);
+  return n === null ? m.inStock : fill(m.onlyLeft, { n: n || v.left });
+};
 
 function useProductState(product: Product, slug: string, locale: Locale) {
   const m = storeMessages[locale];
@@ -215,7 +221,7 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
               <span aria-hidden className="text-sl-ok">
                 ●{" "}
               </span>
-              {stockText(variant, m)}
+              {stockLine(variant, inCart, m)}
             </>
           ) : (
             <span className="text-sl-danger">{m.outOfStock}</span>
@@ -262,6 +268,29 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
         </section>
       )}
     </div>
+  );
+}
+
+/** The shipping & returns policy in a bottom sheet, so reading it keeps the chosen option, quantity and note. */
+export function PolicySheet({ label, title, children }: { label: string; title: string; children: ReactNode }) {
+  const { locale } = useProduct();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className="inline-flex min-h-11 items-center gap-1.5 text-start text-[13px] font-extrabold text-sl-accent hover:underline"
+      >
+        {label}
+        <Icon name="arrow" className="size-3.5" />
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={title} locale={locale} side="bottom">
+        {children}
+      </Sheet>
+    </>
   );
 }
 
