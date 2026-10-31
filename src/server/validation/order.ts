@@ -1,6 +1,6 @@
 import { GOVERNORATES } from "../domain/lebanon";
 import { ORDER_STATUSES } from "../domain/orderStatus";
-import { Amount, Phone } from "./common";
+import { Amount, Email, Phone } from "./common";
 import { z } from "./zod";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -49,7 +49,7 @@ const orderFields = {
   customer: z.object({
     name: text(80),
     phone: Phone,
-    email: z.email().max(200).nullish().transform((v) => v ?? null),
+    email: Email.nullish().transform((v) => v ?? null),
   }),
   address: Address,
   notes: optionalText(500),

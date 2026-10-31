@@ -1,3 +1,4 @@
+import { Email } from "./common";
 import { z } from "./zod";
 
 // The owner role is never granted through these routes: a shop keeps the owner who signed it up.
@@ -6,7 +7,7 @@ const Id = z.string().min(1).max(64);
 
 export const InviteBody = z
   .object({
-    email: z.email().max(200).transform((v) => v.toLowerCase()),
+    email: Email.transform((v) => v.toLowerCase()),
     role: StaffRole,
     /** Required for delivery users: the shop's courier they deliver for. */
     courierId: Id.optional(),

@@ -1,12 +1,12 @@
 import { isValidSlug } from "../domain/slug";
-import { Currency, Rate } from "./common";
+import { Currency, Email, Rate } from "./common";
 import { BaselineConfirmMinutes, BaselineOrdersPerDay } from "./shop";
 import { z } from "./zod";
 
 export const SignupBody = z
   .object({
     name: z.string().trim().min(1).max(100),
-    email: z.email().max(200),
+    email: Email,
     password: z.string().min(8).max(128),
     shopName: z.string().trim().min(1).max(100),
     shopSlug: z

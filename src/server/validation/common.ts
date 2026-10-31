@@ -1,3 +1,4 @@
+import { emailTypo } from "../domain/email";
 import { isValidSlug } from "../domain/slug";
 import { normalizePhone } from "../domain/phone";
 import { z } from "./zod";
@@ -32,6 +33,15 @@ export const Phone = z
     return normalized;
   })
   .openapi({ type: "string", example: "+96171123456" });
+
+/** An email address; a slip in a big provider's domain (name@gmail.cam) is refused with the fix. */
+export const Email = z
+  .email()
+  .max(200)
+  .superRefine((v, ctx) => {
+    const fix = emailTypo(v);
+    if (fix) ctx.addIssue({ code: "custom", message: `Check the email address. Did you mean ${fix}?` });
+  });
 
 export const ErrorBody = z
   .object({
