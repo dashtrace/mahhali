@@ -226,7 +226,7 @@ describe("categories", () => {
   it("files products under the shop's own categories only, and deleting one leaves them uncategorised", async () => {
     const mine = await create("Necklaces");
     const theirs = await call(createCategory, "/api/categories", { method: "POST", cookie: other.cookie, body: { name: "Secret" } });
-    const variants = [{ size: "M", price: "10", stock: 1 }];
+    const variants = [{ price: "10", stock: 1 }];
     const refused = await call(createProduct, "/api/products", {
       method: "POST",
       cookie: owner.cookie,
@@ -400,8 +400,8 @@ describe("catalogueService.browse", () => {
   beforeAll(async () => {
     shop = await signUpOwner();
     // A cheap variant that is sold out must not make the product match a low price range.
-    const { product } = await seedVariant(shop.shop.id, { name: "Hoodie", size: "S", priceMinor: 1000n, available: 0 });
-    await prisma.variant.create({ data: { shopId: shop.shop.id, productId: product.id, size: "L", priceMinor: 6000n, available: 3 } });
+    const { product } = await seedVariant(shop.shop.id, { name: "Hoodie", options: ["Size"], optionValues: ["S"], priceMinor: 1000n, available: 0 });
+    await prisma.variant.create({ data: { shopId: shop.shop.id, productId: product.id, optionValues: ["L"], priceMinor: 6000n, available: 3 } });
     const { variant: tee } = await seedVariant(shop.shop.id, { name: "Tee", priceMinor: 1500n, available: 4 });
     await seedOrder(shop.shop.id, { variantId: tee.id, qty: 2 });
     await seedOrder(shop.shop.id, { variantId: tee.id, qty: 5, status: "RETURNED" });

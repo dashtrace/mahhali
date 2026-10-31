@@ -101,7 +101,7 @@ async function place(p: Placement) {
         const v = variants.get(l.variantId)!;
         return {
           variantId: v.id,
-          nameSnapshot: itemLabel(v.product.name, [v.size, v.colour]),
+          nameSnapshot: itemLabel(v.product.name, v.optionValues),
           unitPriceMinor: v.priceMinor,
           qty: l.qty,
           note: notes[i],

@@ -40,7 +40,7 @@ describe("tenant isolation", () => {
     const created = await call(createProduct, "/api/products", {
       method: "POST",
       cookie: shopB.cookie,
-      body: { name: "B's secret product", variants: [{ size: "M", price: "10", stock: 5 }] },
+      body: { name: "B's secret product", options: ["Size"], variants: [{ optionValues: ["M"], price: "10", stock: 5 }] },
     });
     productB = created.body.id;
   });

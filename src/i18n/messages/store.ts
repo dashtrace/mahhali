@@ -49,8 +49,6 @@ export const storeMessages = defineMessages({
     photoOf: "{name}, photo {n}",
 
     // Product
-    size: "Size",
-    colour: "Colour",
     quantity: "Quantity",
     decrease: "Decrease quantity",
     increase: "Increase quantity",
@@ -317,8 +315,6 @@ export const storeMessages = defineMessages({
     rated: "التقييم {avg} من 5. عدد التقييمات: {n}",
     photoOf: "{name}، الصورة {n}",
 
-    size: "المقاس",
-    colour: "اللون",
     quantity: "الكمية",
     decrease: "إنقاص الكمية",
     increase: "زيادة الكمية",

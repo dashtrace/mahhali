@@ -24,7 +24,7 @@ type Notice = { tone: "ok" | "warn"; text: string };
 const SWIPE_PX = 38;
 const MAX_NOTE = 500;
 
-const variantName = (v: Variant, m: StoreMessages) => [v.size, v.colour].filter(Boolean).join(" · ") || m.standard;
+const variantName = (v: Variant, m: StoreMessages) => v.optionValues.filter(Boolean).join(" · ") || m.standard;
 /** "In stock" while at least MAX_QTY are left (the count is capped there), else how many are left. */
 const stockText = (v: Variant, m: StoreMessages) => (!v.inStock ? m.soldOut : v.left < MAX_QTY ? fill(m.onlyLeft, { n: v.left }) : m.inStock);
 /** The line under the quantity: what can still be added after the cart (the full count once it's all in the cart). */
@@ -50,12 +50,12 @@ function useProductState(product: Product, slug: string, locale: Locale) {
   const custom = product.customization;
   const noteMax = custom ? Math.min(MAX_NOTE, custom.maxLength) : 0;
 
-  /** Picking an option resets the quantity and shows that colour's photo when there is one. */
+  /** Picking an option resets the quantity and shows a photo of one of its values (e.g. its colour) when there is one. */
   function pick(v: Variant) {
     setVariantId(v.id);
     setQty(1);
     setNotice(null);
-    const i = v.colour ? product.images.findIndex((img) => img.colour === v.colour) : -1;
+    const i = product.images.findIndex((img) => !!img.optionValue && v.optionValues.includes(img.optionValue));
     if (i >= 0) setPhoto(i);
   }
 

@@ -55,7 +55,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
       line,
       hit,
       name: hit?.product.name ?? m.lineUnavailable,
-      variant: hit ? [hit.variant.size, hit.variant.colour].filter(Boolean).join(" · ") : "",
+      variant: hit ? hit.variant.optionValues.filter(Boolean).join(" · ") : "",
       problem: problemOf(line, hit),
     };
   });

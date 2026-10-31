@@ -260,6 +260,8 @@ model Product {
   customRequired    Boolean        @default(false)
   /// CHECK 1..500 in the migration.
   customMaxLength   Int            @default(240)
+  /// Option names, e.g. ["Size", "Colour"] or ["SPF"]; at most 3 (CHECK in the migration).
+  options           String[]       @default([])
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   variants          Variant[]
@@ -327,8 +329,8 @@ model Variant {
   shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
   productId      String
   product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  size           String?
-  colour         String?
+  /// One value per product option, by position; "" when blank.
+  optionValues   String[]        @default([])
   sku            String?
   /// In the shop's currency: cents for USD, whole pounds for LBP.
   priceMinor     BigInt
@@ -341,20 +343,21 @@ model Variant {
   orderItems     OrderItem[]
   stockMovements StockMovement[]
 
-  @@unique([productId, size, colour])
+  @@unique([productId, optionValues])
   @@index([shopId])
   @@map("variant")
 }
 
 model ProductImage {
-  id        String  @id @default(cuid())
-  shopId    String
-  shop      Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url       String
-  colour    String?
-  position  Int     @default(0)
+  id          String  @id @default(cuid())
+  shopId      String
+  shop        Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url         String
+  /// The option value this photo shows (e.g. a colour); null for every variant.
+  optionValue String?
+  position    Int     @default(0)
 
   @@index([productId])
   @@map("product_image")
@@ -441,7 +444,7 @@ model OrderItem {
   order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variantId      String
   variant        Variant @relation(fields: [variantId], references: [id])
-  /// Product name, size and colour at order time.
+  /// Product name and option values at order time.
   nameSnapshot   String
   unitPriceMinor BigInt
   qty            Int

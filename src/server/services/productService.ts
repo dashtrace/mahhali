@@ -17,7 +17,14 @@ import {
   type VariantInput,
 } from "../validation/product";
 
-const duplicateVariant = () => unprocessable("DUPLICATE_VARIANT", "Each size and colour combination can appear once.");
+const duplicateVariant = () => unprocessable("DUPLICATE_VARIANT", "Each combination of option values can appear once.");
+
+/** A variant holds one value per product option. */
+function checkValues(values: string[] | undefined, options: string[]) {
+  if (values !== undefined && values.length !== options.length) {
+    throw unprocessable("OPTION_VALUES_MISMATCH", `Give one value for each option (${options.length}).`);
+  }
+}
 
 function priceMinor(amount: string, currency: Currency) {
   try {
@@ -55,8 +62,7 @@ export const productService = {
     await checkCategory(actor, input.categoryId);
     const { variants: lines, description, ...fields } = input;
     const variants = lines.map((v) => ({
-      size: v.size,
-      colour: v.colour,
+      optionValues: v.optionValues,
       sku: v.sku,
       priceMinor: priceMinor(v.price, currency),
       available: v.stock,
@@ -84,10 +90,10 @@ export const productService = {
   },
 
   async addVariant(actor: Actor, productId: string, input: VariantInput) {
-    await this.get(actor, productId);
+    const product = await this.get(actor, productId);
+    checkValues(input.optionValues, product.options);
     const variant = {
-      size: input.size,
-      colour: input.colour,
+      optionValues: input.optionValues,
       sku: input.sku,
       priceMinor: priceMinor(input.price, await currencyOf(actor)),
       available: input.stock,
@@ -103,6 +109,7 @@ export const productService = {
   async updateVariant(actor: Actor, id: string, input: UpdateVariantInput) {
     const variant = await productRepo.findVariant(actor.shopId, id);
     if (!variant) throw notFound("Variant");
+    checkValues(input.optionValues, variant.product.options);
     const { price, ...rest } = input;
     try {
       const updated = await productRepo.updateVariant(actor.shopId, id, {
@@ -131,13 +138,13 @@ export const productService = {
 
   async addImage(actor: Actor, productId: string, form: FormData) {
     await this.get(actor, productId);
-    const fields = ImageFields.safeParse({ colour: form.get("colour") ?? undefined });
+    const fields = ImageFields.safeParse({ optionValue: form.get("optionValue") ?? undefined });
     if (!fields.success) {
       throw badRequest("Invalid form", fields.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
     }
     const url = await saveUpload(actor.shopId, form.get("file"), "photo");
     try {
-      return await productRepo.addImage(actor.shopId, productId, { url, colour: fields.data.colour });
+      return await productRepo.addImage(actor.shopId, productId, { url, optionValue: fields.data.optionValue });
     } catch (error) {
       await deleteUpload(actor.shopId, url);
       throw error;
@@ -182,12 +189,12 @@ async function publicProducts(shopId: string) {
       soldCount: sold.get(p.id) ?? 0,
       createdAt: p.createdAt.toISOString(),
       rating: { average: Number(p.ratingAvg), count: p.ratingCount },
-      images: p.images.map((i) => ({ url: i.url, colour: i.colour })),
+      options: p.options,
+      images: p.images.map((i) => ({ url: i.url, optionValue: i.optionValue })),
       // Customers see how many are left only up to the per-order cap (20), so larger stock stays private.
       variants: p.variants.map((v) => ({
         id: v.id,
-        size: v.size,
-        colour: v.colour,
+        optionValues: v.optionValues,
         priceMinor: v.priceMinor,
         inStock: v.available > 0,
         left: Math.min(v.available, 20),

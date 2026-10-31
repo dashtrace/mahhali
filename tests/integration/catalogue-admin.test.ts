@@ -66,27 +66,27 @@ describe("products and variants", () => {
     const res = await call(
       addVariant,
       `/api/products/${product.id}/variants`,
-      { method: "POST", cookie: owner.cookie, body: { size: "L", colour: "Sand", price: "26", stock: 4 } },
+      { method: "POST", cookie: owner.cookie, body: { optionValues: ["L", "Sand"], price: "26", stock: 4 } },
       { id: product.id },
     );
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ size: "L", colour: "Sand", priceMinor: 2600, available: 4 });
+    expect(res.body).toMatchObject({ optionValues: ["L", "Sand"], priceMinor: 2600, available: 4 });
     const logged = await prisma.stockMovement.findMany({ where: { variantId: res.body.id } });
     expect(logged).toEqual([expect.objectContaining({ delta: 4, reason: "ADJUST", actorUserId: owner.user.id })]);
   });
 
-  it("refuses a duplicate size and colour, including two empty ones", async () => {
-    const { product } = await seedVariant(owner.shop.id, { size: "M", colour: "Sand" });
+  it("refuses duplicate option values, including two products sold one way", async () => {
+    const { product } = await seedVariant(owner.shop.id);
     const dup = await call(
       addVariant,
       `/api/products/${product.id}/variants`,
-      { method: "POST", cookie: owner.cookie, body: { size: "M", colour: "Sand", price: "10" } },
+      { method: "POST", cookie: owner.cookie, body: { optionValues: ["M", "Sand"], price: "10" } },
       { id: product.id },
     );
     expect(dup.status).toBe(422);
     expect(dup.body.error.code).toBe("DUPLICATE_VARIANT");
 
-    const ring = await seedVariant(owner.shop.id, { name: "Ring", size: null, colour: null });
+    const ring = await seedVariant(owner.shop.id, { name: "Ring", options: [], optionValues: [] });
     const empty = await call(
       addVariant,
       `/api/products/${ring.product.id}/variants`,
@@ -97,16 +97,40 @@ describe("products and variants", () => {
     expect(empty.body.error.code).toBe("DUPLICATE_VARIANT");
   });
 
-  it("changes a variant's price and SKU but not into a sibling's size and colour", async () => {
-    const { product } = await seedVariant(owner.shop.id, { size: "M", colour: "Sand" });
+  it("needs one value per option and a known body", async () => {
+    const { product, variant } = await seedVariant(owner.shop.id);
+    const short = await call(
+      addVariant,
+      `/api/products/${product.id}/variants`,
+      { method: "POST", cookie: owner.cookie, body: { optionValues: ["L"], price: "10" } },
+      { id: product.id },
+    );
+    expect(short.status).toBe(422);
+    expect(short.body.error.code).toBe("OPTION_VALUES_MISMATCH");
+    const id = variant.id;
+    const long = await call(patchVariant, `/api/variants/${id}`, { method: "PATCH", cookie: owner.cookie, body: { optionValues: ["L", "Sand", "x"] } }, { id });
+    expect(long.status).toBe(422);
+    expect(long.body.error.code).toBe("OPTION_VALUES_MISMATCH");
+    // An old form still sending size and colour is refused, not saved with blank values.
+    const stale = await call(
+      addVariant,
+      `/api/products/${product.id}/variants`,
+      { method: "POST", cookie: owner.cookie, body: { size: "L", colour: "Sand", price: "10" } },
+      { id: product.id },
+    );
+    expect(stale.status).toBe(400);
+  });
+
+  it("changes a variant's price and SKU but not into a sibling's option values", async () => {
+    const { product } = await seedVariant(owner.shop.id);
     const large = await call(
       addVariant,
       `/api/products/${product.id}/variants`,
-      { method: "POST", cookie: owner.cookie, body: { size: "L", colour: "Sand", price: "26" } },
+      { method: "POST", cookie: owner.cookie, body: { optionValues: ["L", "Sand"], price: "26" } },
       { id: product.id },
     );
     const id = large.body.id;
-    const clash = await call(patchVariant, `/api/variants/${id}`, { method: "PATCH", cookie: owner.cookie, body: { size: "M" } }, { id });
+    const clash = await call(patchVariant, `/api/variants/${id}`, { method: "PATCH", cookie: owner.cookie, body: { optionValues: ["M", "Sand"] } }, { id });
     expect(clash.status).toBe(422);
     expect(clash.body.error.code).toBe("DUPLICATE_VARIANT");
 
@@ -117,7 +141,7 @@ describe("products and variants", () => {
       { id },
     );
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ size: "L", priceMinor: 3000, sku: "SH-L" });
+    expect(res.body).toMatchObject({ optionValues: ["L", "Sand"], priceMinor: 3000, sku: "SH-L" });
     const empty = await call(patchVariant, `/api/variants/${id}`, { method: "PATCH", cookie: owner.cookie, body: {} }, { id });
     expect(empty.status).toBe(400);
   });
@@ -126,7 +150,7 @@ describe("products and variants", () => {
     const created = await call(createProduct, "/api/products", {
       method: "POST",
       cookie: owner.cookie,
-      body: { name: "Kaftan", variants: [{ size: "S", price: "40", stock: 2 }, { size: "M", price: "40", stock: 2 }] },
+      body: { name: "Kaftan", options: ["Size"], variants: [{ optionValues: ["S"], price: "40", stock: 2 }, { optionValues: ["M"], price: "40", stock: 2 }] },
     });
     const [small, medium] = created.body.variants;
     const archive = (id: string) =>
@@ -183,15 +207,20 @@ describe("stock adjustments", () => {
     expect(movement.note).toBe("Damaged in the shop");
   });
 
-  it("refuses a second variant with the same empty size and colour, even when two arrive at once", async () => {
-    const { product } = await seedVariant(owner.shop.id, { name: "Bag", size: null, colour: "Black" });
+  it("refuses a second variant with the same values and a blank one, even when two arrive at once", async () => {
+    const { product } = await seedVariant(owner.shop.id, { name: "Bag", optionValues: ["", "Black"] });
     const results = await Promise.all(
       Array.from({ length: 4 }, () =>
-        call(addVariant, `/api/products/${product.id}/variants`, { method: "POST", cookie: owner.cookie, body: { colour: "Tan", price: "10" } }, { id: product.id }),
+        call(
+          addVariant,
+          `/api/products/${product.id}/variants`,
+          { method: "POST", cookie: owner.cookie, body: { optionValues: ["", "Tan"], price: "10" } },
+          { id: product.id },
+        ),
       ),
     );
     expect(results.filter((r) => r.status === 201)).toHaveLength(1);
-    expect(await prisma.variant.count({ where: { productId: product.id, colour: "Tan" } })).toBe(1);
+    expect(await prisma.variant.count({ where: { productId: product.id, optionValues: { equals: ["", "Tan"] } } })).toBe(1);
   });
 
   it("stops concurrent removals exactly at zero", async () => {
@@ -207,9 +236,9 @@ describe("stock adjustments", () => {
 describe("product photos", () => {
   it("stores a photo and serves it with headers that stop sniffing and scripts", async () => {
     const { product } = await seedVariant(owner.shop.id);
-    const res = await upload(addImage, `/api/products/${product.id}/images`, owner.cookie, { file: png(), colour: "Sand" }, { id: product.id });
+    const res = await upload(addImage, `/api/products/${product.id}/images`, owner.cookie, { file: png(), optionValue: "Sand" }, { id: product.id });
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ colour: "Sand", position: 0 });
+    expect(res.body).toMatchObject({ optionValue: "Sand", position: 0 });
     expect(res.body.url).toMatch(new RegExp(`^/uploads/${owner.shop.id}/[\\w-]+\\.png$`));
 
     const served = await serve(res.body.url);
@@ -220,7 +249,7 @@ describe("product photos", () => {
     expect([...new Uint8Array(await served.arrayBuffer())]).toEqual(PNG);
 
     const second = await upload(addImage, `/api/products/${product.id}/images`, owner.cookie, { file: png() }, { id: product.id });
-    expect(second.body).toMatchObject({ colour: null, position: 1 });
+    expect(second.body).toMatchObject({ optionValue: null, position: 1 });
     const shown = await call(getProduct, `/api/products/${product.id}`, { cookie: owner.cookie }, { id: product.id });
     expect(shown.body.images).toHaveLength(2);
   });
@@ -243,7 +272,7 @@ describe("product photos", () => {
 
   it("asks for a file and for multipart", async () => {
     const { product } = await seedVariant(owner.shop.id);
-    const none = await upload(addImage, `/api/products/${product.id}/images`, owner.cookie, { colour: "Red" }, { id: product.id });
+    const none = await upload(addImage, `/api/products/${product.id}/images`, owner.cookie, { optionValue: "Red" }, { id: product.id });
     expect(none.status).toBe(400);
     const json = await call(addImage, `/api/products/${product.id}/images`, { method: "POST", cookie: owner.cookie, body: {} }, { id: product.id });
     expect(json.status).toBe(400);
@@ -299,7 +328,7 @@ describe("tenant isolation", () => {
     const statuses = [
       (await call(getProduct, "/p", { cookie }, pid)).status,
       (await call(archiveProduct, "/p", { method: "DELETE", cookie }, pid)).status,
-      (await call(addVariant, "/v", { method: "POST", cookie, body: { size: "XL", price: "1" } }, pid)).status,
+      (await call(addVariant, "/v", { method: "POST", cookie, body: { optionValues: ["XL", "Sand"], price: "1" } }, pid)).status,
       (await call(patchVariant, "/v", { method: "PATCH", cookie, body: { price: "0.01" } }, vid)).status,
       (await call(adjustStock, "/s", { method: "POST", cookie, body: { delta: -2 } }, vid)).status,
       (await call(movements, "/m", { cookie }, vid)).status,

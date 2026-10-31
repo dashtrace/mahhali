@@ -119,6 +119,16 @@
             ],
             "maxLength": 2000
           },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "maxItems": 3,
+            "default": []
+          },
           "variants": {
             "type": "array",
             "items": {
@@ -192,19 +202,14 @@
       "VariantInput": {
         "type": "object",
         "properties": {
-          "size": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
-          },
-          "colour": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
+          "optionValues": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 3,
+            "default": []
           },
           "sku": {
             "type": [
@@ -227,7 +232,8 @@
         },
         "required": [
           "price"
-        ]
+        ],
+        "additionalProperties": false
       },
       "UpdateProductBody": {
         "type": "object",
@@ -312,19 +318,13 @@
       "UpdateVariantBody": {
         "type": "object",
         "properties": {
-          "size": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
-          },
-          "colour": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
+          "optionValues": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 3
           },
           "sku": {
             "type": [
@@ -341,7 +341,8 @@
           "archived": {
             "type": "boolean"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "StockAdjustmentBody": {
         "type": "object",
@@ -371,10 +372,10 @@
             "format": "binary",
             "description": "PNG, JPEG or WebP, up to 3 MB"
           },
-          "colour": {
+          "optionValue": {
             "type": "string",
             "maxLength": 40,
-            "description": "The variant colour this photo shows"
+            "description": "The option value this photo shows, e.g. a colour"
           }
         },
         "required": [
@@ -1966,7 +1967,7 @@
             }
           },
           "422": {
-            "description": "DUPLICATE_VARIANT or INVALID_PRICE",
+            "description": "DUPLICATE_VARIANT, OPTION_VALUES_MISMATCH or INVALID_PRICE",
             "content": {
               "application/json": {
                 "schema": {
@@ -1980,7 +1981,7 @@
     },
     "/api/variants/{id}": {
       "patch": {
-        "summary": "Change a variant's price, SKU, size or colour, or archive it (owner, manager)",
+        "summary": "Change a variant's price, SKU or option values, or archive it (owner, manager)",
         "tags": [
           "Products"
         ],
@@ -2060,7 +2061,7 @@
             }
           },
           "422": {
-            "description": "DUPLICATE_VARIANT or INVALID_PRICE",
+            "description": "DUPLICATE_VARIANT, OPTION_VALUES_MISMATCH or INVALID_PRICE",
             "content": {
               "application/json": {
                 "schema": {
