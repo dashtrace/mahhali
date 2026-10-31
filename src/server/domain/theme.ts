@@ -1,6 +1,6 @@
-// A shop's look: three colours, a corner radius and a font, applied as CSS
-// variables on the catalogue, the tracking page and the dashboard header.
-// Pure: no I/O, so the contrast rules are unit-tested directly.
+// A shop's look: three colours (and an optional text colour), a corner radius
+// and a font, applied as CSS variables on the catalogue, the tracking page and
+// the dashboard header. Pure: no I/O, so the contrast rules are unit-tested directly.
 export const RADII = ["none", "sm", "md", "lg", "full"] as const;
 export const FONTS = ["system", "inter", "cairo", "tajawal"] as const;
 
@@ -8,6 +8,8 @@ export type Theme = {
   primary: string;
   accent: string;
   background: string;
+  /** Body text; black or white, whichever reads better on the background, when unset. */
+  text?: string;
   radius: (typeof RADII)[number];
   font: (typeof FONTS)[number];
 };
@@ -54,13 +56,13 @@ export type ContrastFailure = { pair: string; foreground: string; background: st
  * The colour pairs the pages draw text with, below AA. Buttons and badges put
  * their labels in the page background colour, and primary and accent are also
  * used for links and prices on the page, so both directions are the same pair.
- * Body text uses inkFor(background), which by construction is always at least 4.58.
+ * Body text is the shop's text colour, or inkFor(background), which by construction is always at least 4.58.
  */
-export function validateTheme(theme: Pick<Theme, "primary" | "accent" | "background">): ContrastFailure[] {
+export function validateTheme(theme: Pick<Theme, "primary" | "accent" | "background" | "text">): ContrastFailure[] {
   const pairs = [
     { pair: "text on primary", foreground: theme.background, background: theme.primary },
     { pair: "text on accent", foreground: theme.background, background: theme.accent },
-    { pair: "body text on background", foreground: inkFor(theme.background), background: theme.background },
+    { pair: "body text on background", foreground: theme.text ?? inkFor(theme.background), background: theme.background },
   ];
   return pairs
     .map((p) => ({ ...p, ratio: contrastRatio(p.foreground, p.background) }))

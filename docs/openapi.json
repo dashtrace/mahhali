@@ -866,6 +866,10 @@
             "type": "string",
             "pattern": "^#[0-9a-fA-F]{6}$"
           },
+          "text": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
           "radius": {
             "type": "string",
             "enum": [

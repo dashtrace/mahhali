@@ -149,6 +149,19 @@ describe("branding", () => {
     expect(res.body.theme).toEqual({ primary: "#1e3a8a", accent: "#9d174d", background: "#ffffff", radius: "full", font: "cairo" });
   });
 
+  it("saves a text colour, and refuses one too faint for the background", async () => {
+    const theme = { primary: "#1e3a8a", accent: "#9d174d", background: "#ffffff", radius: "md", font: "system" };
+    const res = await branding({ ...theme, text: "#1F2937" });
+    expect(res.status).toBe(200);
+    expect(res.body.theme.text).toBe("#1f2937");
+
+    const faint = await branding({ ...theme, text: "#cccccc" });
+    expect(faint.status).toBe(422);
+    expect(faint.body.error.details).toEqual([expect.objectContaining({ pair: "body text on background", foreground: "#cccccc" })]);
+    // Leaving the text colour out sets it back to automatic.
+    expect((await branding(theme)).body.theme.text).toBeUndefined();
+  });
+
   it("refuses colours that make text hard to read and says which pair failed", async () => {
     const before = (await prisma.shop.findUniqueOrThrow({ where: { id: owner.shop.id } })).theme;
     const res = await branding({ primary: "#ffff00", accent: "#1e3a8a", background: "#ffffff", radius: "md", font: "system" });
@@ -162,7 +175,7 @@ describe("branding", () => {
 
   it("validates the theme shape", async () => {
     const ok = { primary: "#1e3a8a", accent: "#9d174d", background: "#ffffff", radius: "md", font: "system" };
-    for (const body of [{ preset: "neon" }, { ...ok, primary: "blue" }, { ...ok, radius: "huge" }, { ...ok, font: "comic" }, {}]) {
+    for (const body of [{ preset: "neon" }, { ...ok, primary: "blue" }, { ...ok, text: "blue" }, { ...ok, radius: "huge" }, { ...ok, font: "comic" }, {}]) {
       expect((await branding(body)).status, JSON.stringify(body)).toBe(400);
     }
   });
