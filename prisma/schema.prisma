@@ -120,8 +120,10 @@ model Shop {
   facebookUrl            String?
   /// "image-and-name", "image-only" or "name-only".
   logoMode               String           @default("image-and-name")
-  /// Home page highlight: "bestsellers", "new", "featured" or "hidden".
-  homeSection            String           @default("bestsellers")
+  /// Home page highlight: "bestsellers", "new", "featured", "category" or "hidden".
+  homeSection            String           @default("category")
+  /// The category the "category" highlight shows; null (or a deleted one) means the first. No FK: the service checks the shop.
+  homeCategoryId         String?
   showTestimonials       Boolean          @default(true)
   memberships            Membership[]
   invitations            Invitation[]

@@ -1,5 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { browseProducts, checkNote, isAllowedSocialUrl, matchPrice, moveTo, type BrowsableProduct } from "@/server/domain/storefront";
+import { browseProducts, checkNote, homeHighlight, isAllowedSocialUrl, matchPrice, moveTo, type BrowsableProduct } from "@/server/domain/storefront";
+
+describe("homeHighlight", () => {
+  const item = (id: string, categoryId: string | null, extra: { featured?: boolean; soldCount?: number } = {}) => ({
+    id,
+    categoryId,
+    featured: false,
+    soldCount: 0,
+    ...extra,
+  });
+  // Newest first, as the catalogue sends them.
+  const products = [item("a", "face"), item("b", "body", { soldCount: 2 }), item("c", "face", { featured: true, soldCount: 5 })];
+  const categories = [
+    { id: "face", name: "Face care" },
+    { id: "body", name: "Body" },
+  ];
+  const ids = (h: ReturnType<typeof homeHighlight>) => h?.items.map((p) => p.id);
+
+  it("shows the chosen category, or the first one when none is chosen or it is gone", () => {
+    expect(homeHighlight(products, categories, "category", "body")).toMatchObject({ kind: "category", category: { name: "Body" } });
+    expect(ids(homeHighlight(products, categories, "category", "body"))).toEqual(["b"]);
+    expect(ids(homeHighlight(products, categories, "category", null))).toEqual(["a", "c"]);
+    expect(ids(homeHighlight(products, categories, "category", "deleted"))).toEqual(["a", "c"]);
+  });
+
+  it("falls back to new arrivals when the choice has nothing to show", () => {
+    expect(homeHighlight(products, [], "category", null)?.kind).toBe("new");
+    expect(homeHighlight([item("x", null)], categories, "category", "face")?.kind).toBe("new");
+    expect(homeHighlight([item("x", null)], categories, "bestsellers", null)?.kind).toBe("new");
+  });
+
+  it("ranks best sellers, filters featured, and can be hidden", () => {
+    expect(ids(homeHighlight(products, categories, "bestsellers", null))).toEqual(["c", "b"]);
+    expect(ids(homeHighlight(products, categories, "featured", null))).toEqual(["c"]);
+    expect(homeHighlight(products, categories, "hidden", null)).toBeNull();
+    expect(homeHighlight([], categories, "new", null)).toBeNull();
+  });
+});
 
 describe("isAllowedSocialUrl", () => {
   it("accepts https links on the network's own hosts", () => {

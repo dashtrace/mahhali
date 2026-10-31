@@ -132,6 +132,7 @@ erDiagram
     string facebookUrl
     string logoMode
     string homeSection
+    string homeCategoryId
     boolean showTestimonials
   }
   MEMBERSHIP {

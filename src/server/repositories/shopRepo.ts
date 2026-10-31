@@ -72,5 +72,6 @@ export type ShopChanges = Partial<{
   facebookUrl: string | null;
   logoMode: string;
   homeSection: string;
+  homeCategoryId: string | null;
   showTestimonials: boolean;
 }>;

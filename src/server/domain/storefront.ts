@@ -2,7 +2,7 @@
 // and reordering. No I/O; the services load the data and call these.
 
 export const LOGO_MODES = ["image-and-name", "image-only", "name-only"] as const;
-export const HOME_SECTIONS = ["bestsellers", "new", "featured", "hidden"] as const;
+export const HOME_SECTIONS = ["bestsellers", "new", "featured", "category", "hidden"] as const;
 export type LogoMode = (typeof LOGO_MODES)[number];
 export type HomeSection = (typeof HOME_SECTIONS)[number];
 export const BROWSE_SORTS = ["all", "bestsellers", "new", "featured"] as const;
@@ -110,6 +110,32 @@ export function browseProducts<P extends BrowsableProduct>(products: P[], o: Bro
   const requested = o.page !== undefined && Number.isFinite(o.page) ? Math.floor(o.page) : 1;
   const page = Math.min(Math.max(1, requested), pageCount);
   return { items: matched.slice((page - 1) * pageSize, page * pageSize), total, page, pageCount };
+}
+
+type HighlightProduct = { categoryId: string | null; featured: boolean; soldCount: number };
+
+/**
+ * The home page's product strip for the owner's choice. "category" shows the chosen
+ * category, or the first one when none is chosen or it was deleted. Best sellers,
+ * featured and a category fall back to new arrivals while they have nothing to show.
+ * Products arrive newest first.
+ */
+export function homeHighlight<P extends HighlightProduct, C extends { id: string }>(products: P[], categories: C[], mode: HomeSection, categoryId: string | null) {
+  if (mode === "hidden") return null;
+  if (mode === "bestsellers") {
+    const sold = products.filter((p) => p.soldCount > 0).sort((a, b) => b.soldCount - a.soldCount);
+    if (sold.length) return { kind: "bestsellers" as const, items: sold };
+  }
+  if (mode === "featured") {
+    const featured = products.filter((p) => p.featured);
+    if (featured.length) return { kind: "featured" as const, items: featured };
+  }
+  if (mode === "category") {
+    const category = categories.find((c) => c.id === categoryId) ?? categories[0];
+    const items = category ? products.filter((p) => p.categoryId === category.id) : [];
+    if (category && items.length) return { kind: "category" as const, category, items };
+  }
+  return products.length ? { kind: "new" as const, items: products } : null;
 }
 
 /** Ids in their new order after moving `id` to index `to` (clamped). */
