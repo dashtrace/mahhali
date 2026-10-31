@@ -8,7 +8,7 @@ import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import type { CommonMessages } from "@/i18n/messages/common";
 import { api } from "@/lib/api";
 import { formatDateTime, toAmountText } from "@/lib/format";
-import { VariantFields, blankVariant, variantBody, type VariantDraft } from "./CreateProductForm";
+import { OptionsFields, VariantFields, blankVariant, variantBody, type VariantDraft } from "./CreateProductForm";
 import { FilePicker } from "./FilePicker";
 import { CardHead, ExtrasFields, extrasBody, extrasOf, type Category, type Extras } from "./ProductExtras";
 import { submitWith, useAction, useSave } from "./useAction";
@@ -63,6 +63,8 @@ export function ProductEditor({ product, categories, ...c }: { product: Product;
 
       <Photos productId={product.id} images={product.images} values={values} {...c} />
 
+      <Options product={product} {...c} />
+
       <Card className="flex flex-col gap-3">
         <CardHead title={m.variants} hint={product.options.length ? m.variantsHint : m.variantsHintNone} />
         {product.variants.map((v) => (
@@ -90,6 +92,43 @@ export function ProductEditor({ product, categories, ...c }: { product: Product;
         )}
       </div>
     </div>
+  );
+}
+
+type OptionRow = { name: string; from: string | null };
+const rowsOf = (options: string[]): OptionRow[] => options.map((name) => ({ name, from: name }));
+
+/** Option names. Each row remembers which current option it was, so a rename keeps every value. */
+function Options({ product, m, t }: { product: Product } & Common) {
+  const [rows, setRows] = useState(() => rowsOf(product.options));
+  // After a save (or a change in another tab) the rows start again from the saved names.
+  const [saved, setSaved] = useState(JSON.stringify(product.options));
+  if (saved !== JSON.stringify(product.options)) {
+    setSaved(JSON.stringify(product.options));
+    setRows(rowsOf(product.options));
+  }
+  const save = useSave(t.error, rows.map((r) => r.name.trim()));
+  return (
+    <Card>
+      <form
+        {...save.form}
+        onSubmit={submitWith(() =>
+          save.save(() => api(`/api/products/${product.id}/options`, { method: "PUT", body: { options: rows.map((r) => ({ ...r, name: r.name.trim() })) } })),
+        )}
+        className="flex flex-col gap-4"
+      >
+        <CardHead title={m.options} hint={`${m.optionsHint} ${m.optionsRemoveHint}`} />
+        {save.error && <Alert tone="error">{save.error}</Alert>}
+        <OptionsFields
+          names={rows.map((r) => r.name)}
+          onRename={(i, name) => setRows(rows.map((r, j) => (j === i ? { ...r, name } : r)))}
+          onAdd={() => setRows([...rows, { name: "", from: null }])}
+          onRemove={(i) => setRows(rows.filter((_, j) => j !== i))}
+          m={m}
+        />
+        <SaveButton state={save} labels={t} className="self-start" />
+      </form>
+    </Card>
   );
 }
 
