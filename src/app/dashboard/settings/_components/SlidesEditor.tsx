@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Button, Card, EmptyState, Field, IconButton, Input } from "@/components/ui";
+import { Alert, Button, Card, EmptyState, Field, IconButton, Input, SaveButton } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
@@ -11,7 +11,7 @@ import type { Theme } from "@/server/domain/theme";
 import { themeTone, themeVars } from "../../../_server/theme";
 import { FilePicker } from "../../products/_components/FilePicker";
 import { CardHead } from "../../products/_components/ProductExtras";
-import { submitWith, useAction } from "../../products/_components/useAction";
+import { submitWith, useAction, useSave } from "../../products/_components/useAction";
 
 type Slide = { id: string; imageUrl: string; kicker: string | null; title: string; body: string | null };
 type Text = { kicker: string; title: string; body: string };
@@ -72,8 +72,7 @@ export function SlidesEditor({ slides, theme, max, m, t }: Props) {
 
 function SlideCard({ slide: s, index, last, theme, m, t }: { slide: Slide; index: number; last: boolean } & Shared) {
   const [text, setText] = useState<Text>({ kicker: s.kicker ?? "", title: s.title, body: s.body ?? "" });
-  const [saved, setSaved] = useState(false);
-  const action = useAction(t.error);
+  const action = useSave(t.error, text);
   const n = index + 1;
   const move = (position: number) => action.run(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: { position } }));
 
@@ -94,26 +93,10 @@ function SlideCard({ slide: s, index, last, theme, m, t }: { slide: Slide; index
         </div>
       </div>
       <HeroPreview image={s.imageUrl} text={text} theme={theme} />
-      <form
-        onSubmit={submitWith(async () => {
-          setSaved(false);
-          setSaved(await action.run(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: text })));
-        })}
-        className="flex flex-col gap-3"
-      >
-        <TextFields
-          value={text}
-          onChange={(v) => {
-            setSaved(false);
-            setText(v);
-          }}
-          m={m}
-        />
+      <form onSubmit={submitWith(() => action.save(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: text })))} className="flex flex-col gap-3">
+        <TextFields value={text} onChange={setText} m={m} />
         {action.error && <Alert tone="error">{action.error}</Alert>}
-        {saved && <Alert tone="success">{t.saved}</Alert>}
-        <Button type="submit" tone="secondary" disabled={action.busy} className="self-start">
-          {action.busy ? t.saving : t.save}
-        </Button>
+        <SaveButton state={action} labels={t} tone="secondary" className="self-start" />
       </form>
     </Card>
   );

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Badge, Button, Card, EmptyState, Field, Input, Select, cx } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Field, Input, SaveButton, Select, cx } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { fill } from "@/i18n/locale";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import type { CommonMessages } from "@/i18n/messages/common";
 import { api } from "@/lib/api";
-import { submitWith, useAction } from "../../products/_components/useAction";
+import { submitWith, useAction, useSave } from "../../products/_components/useAction";
 
 type Courier = { id: string; name: string; type: "COMPANY" | "INDIVIDUAL"; phone: string | null; active: boolean };
 type Msgs = { m: CatalogueMessages; t: CommonMessages };
@@ -85,24 +85,23 @@ export function Couriers({ couriers, canWrite, m, t }: { couriers: Courier[]; ca
 
 function CourierRow({ courier: c, canWrite, m, t }: { courier: Courier; canWrite: boolean } & Msgs) {
   const [editing, setEditing] = useState(false);
-  const action = useAction(t.error);
+  const action = useSave(t.error);
   const patch = (body: object) => action.run(() => api(`/api/couriers/${c.id}`, { method: "PATCH", body }));
 
   if (editing) {
     return (
       <Card>
         <form
+          {...action.form}
           onSubmit={submitWith(async (f) => {
-            if (await patch(fields(f))) setEditing(false);
+            if (await action.save(() => api(`/api/couriers/${c.id}`, { method: "PATCH", body: fields(f) }))) setEditing(false);
           })}
           className="flex flex-col gap-3"
         >
           {action.error && <Alert tone="error">{action.error}</Alert>}
           <CourierFields courier={c} m={m} />
           <div className="flex gap-2">
-            <Button type="submit" disabled={action.busy}>
-              {action.busy ? t.saving : t.save}
-            </Button>
+            <SaveButton state={action} labels={t} />
             <Button tone="ghost" onClick={() => setEditing(false)}>
               {t.cancel}
             </Button>
