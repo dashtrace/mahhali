@@ -72,8 +72,16 @@ export function SlidesEditor({ slides, theme, max, m, t }: Props) {
 
 function SlideCard({ slide: s, index, last, theme, m, t }: { slide: Slide; index: number; last: boolean } & Shared) {
   const [text, setText] = useState<Text>({ kicker: s.kicker ?? "", title: s.title, body: s.body ?? "" });
+  // Set from the upload's response, so the new image shows before the page refresh lands.
+  const [image, setImage] = useState(s.imageUrl);
   const action = useSave(t.error, text);
   const n = index + 1;
+
+  function changeImage(file: File) {
+    const form = new FormData();
+    form.set("file", file);
+    action.run(async () => setImage((await api<{ imageUrl: string }>(`/api/shop/slides/${s.id}/image`, { body: form })).imageUrl));
+  }
   const move = (position: number) => action.run(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: { position } }));
 
   return (
@@ -92,7 +100,10 @@ function SlideCard({ slide: s, index, last, theme, m, t }: { slide: Slide; index
           />
         </div>
       </div>
-      <HeroPreview image={s.imageUrl} text={text} theme={theme} />
+      <HeroPreview image={image} text={text} theme={theme} />
+      <FilePicker onFile={changeImage} busy={action.busy} className="self-start">
+        {m.changeImage}
+      </FilePicker>
       <form onSubmit={submitWith(() => action.save(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: text })))} className="flex flex-col gap-3">
         <TextFields value={text} onChange={setText} m={m} />
         {action.error && <Alert tone="error">{action.error}</Alert>}
@@ -129,14 +140,28 @@ function AddSlide({ theme, m, t }: Shared) {
 
   return (
     <Card className="flex flex-col gap-3 border-dashed border-sl-control">
-      <CardHead title={m.addSlide} hint={m.slideImageHint} />
+      <CardHead title={m.newSlide} hint={`${m.newSlideHint} ${m.slideImageHint}`} />
       <HeroPreview image={pick?.url ?? null} text={{ ...text, title: text.title || m.slideTitlePlaceholder }} theme={theme} />
       <form onSubmit={submitWith(submit)} className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <FilePicker onFile={choose} busy={add.busy}>
             {pick ? m.changeImage : m.chooseImage}
           </FilePicker>
-          {pick && <span className="min-w-0 truncate text-sm text-sl-muted">{pick.file.name}</span>}
+          {pick && (
+            <>
+              <span className="min-w-0 truncate text-sm text-sl-muted">{pick.file.name}</span>
+              <Button
+                tone="ghost"
+                disabled={add.busy}
+                onClick={() => {
+                  URL.revokeObjectURL(pick.url);
+                  setPick(null);
+                }}
+              >
+                {m.removeImage}
+              </Button>
+            </>
+          )}
         </div>
         <TextFields value={text} onChange={setText} m={m} />
         {add.error && <Alert tone="error">{add.error}</Alert>}
