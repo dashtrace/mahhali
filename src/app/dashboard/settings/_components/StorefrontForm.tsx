@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Card, Field, Input, SaveButton, Segmented, Textarea, Toggle } from "@/components/ui";
+import { Alert, Card, Field, Input, SaveButton, Segmented, Select, Textarea, Toggle } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
@@ -17,16 +17,16 @@ type Storefront = {
   facebookUrl: string | null;
   logoMode: string;
   homeSection: string;
+  homeCategoryId: string | null;
   showTestimonials: boolean;
 };
-type Props = { storefront: Storefront; whatsappPhone: string | null; m: ShopMessages; t: CommonMessages };
+type Props = { storefront: Storefront; categories: { id: string; name: string }[]; whatsappPhone: string | null; m: ShopMessages; t: CommonMessages };
 
 const LOGO_MODES = [
   ["image-and-name", "logoImageAndName"],
   ["image-only", "logoImageOnly"],
   ["name-only", "logoNameOnly"],
 ] as const;
-const HOME_SECTIONS = ["bestsellers", "new", "featured", "hidden"] as const;
 const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
 /** A labelled single choice drawn as a segmented control. */
@@ -40,12 +40,13 @@ function Choice({ label, hint, children }: { label: string; hint?: string; child
   );
 }
 
-export function StorefrontForm({ storefront: s, whatsappPhone, m, t }: Props) {
+export function StorefrontForm({ storefront: s, categories, whatsappPhone, m, t }: Props) {
   const [logoMode, setLogoMode] = useState(s.logoMode);
-  const [homeSection, setHomeSection] = useState(s.homeSection);
-  const save = useSave(t.error, { logoMode, homeSection });
+  const save = useSave(t.error, logoMode);
 
   async function submit(f: FormData) {
+    // "category:<id>" picks a category; "category:" follows the first one.
+    const [homeSection, homeCategoryId] = text(f, "highlight").split(":");
     const body = {
       tagline: text(f, "tagline"),
       about: text(f, "about"),
@@ -54,6 +55,7 @@ export function StorefrontForm({ storefront: s, whatsappPhone, m, t }: Props) {
       facebookUrl: text(f, "facebookUrl"),
       logoMode,
       homeSection,
+      ...(homeSection === "category" ? { homeCategoryId: homeCategoryId || null } : {}),
       showTestimonials: f.get("showTestimonials") === "on",
     };
     const phone = text(f, "whatsappPhone") || null;
@@ -74,9 +76,21 @@ export function StorefrontForm({ storefront: s, whatsappPhone, m, t }: Props) {
         <Choice label={m.logoMode} hint={m.logoModeHint}>
           <Segmented label={m.logoMode} items={LOGO_MODES.map(([v, key]) => ({ label: m[key], current: logoMode === v, onClick: () => setLogoMode(v) }))} />
         </Choice>
-        <Choice label={m.homeSection} hint={m.homeSectionHint}>
-          <Segmented label={m.homeSection} items={HOME_SECTIONS.map((v) => ({ label: m[`home${v}`], current: homeSection === v, onClick: () => setHomeSection(v) }))} />
-        </Choice>
+        <Field label={m.homeSection} hint={m.homeSectionHint}>
+          <Select name="highlight" defaultValue={s.homeSection === "category" ? `category:${s.homeCategoryId ?? ""}` : s.homeSection}>
+            <option value="category:">{m.homecategory}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={`category:${c.id}`}>
+                {fill(m.homeCategoryNamed, { name: c.name })}
+              </option>
+            ))}
+            {(["new", "bestsellers", "featured", "hidden"] as const).map((v) => (
+              <option key={v} value={v}>
+                {m[`home${v}`]}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Toggle name="showTestimonials" label={m.showTestimonials} hint={m.showTestimonialsHint} defaultChecked={s.showTestimonials} />
       </Card>
 
