@@ -12,6 +12,7 @@ import { GET as catalogue } from "@/app/api/public/shops/[slug]/catalogue/route"
 import { POST as submitTestimonial } from "@/app/api/public/shops/[slug]/testimonials/route";
 import { GET as listSlides, POST as postSlide } from "@/app/api/shop/slides/route";
 import { DELETE as deleteSlide, PATCH as patchSlide } from "@/app/api/shop/slides/[id]/route";
+import { POST as setSlideImage } from "@/app/api/shop/slides/[id]/image/route";
 import { GET as getStorefront, PATCH as patchStorefront } from "@/app/api/shop/storefront/route";
 import { GET as listTestimonials } from "@/app/api/testimonials/route";
 import { PATCH as moderate } from "@/app/api/testimonials/[id]/route";
@@ -138,6 +139,33 @@ describe("hero slides", () => {
     expect(del.status).toBe(204);
     const files = await readdir(path.join(process.env.UPLOAD_DIR!, owner.shop.id));
     expect(files).toEqual([second.body.imageUrl.split("/").pop()]);
+  });
+
+  it("replaces a slide's image in place and deletes the old file", async () => {
+    const slide = await upload({ kicker: "K", title: "Swap me" });
+    const replace = async (id: string, cookie = owner.cookie, file: Blob | null = new File([PNG], "b.png")) => {
+      const form = new FormData();
+      if (file) form.append("file", file);
+      const res = await setSlideImage(new Request(`http://localhost:3000/api/shop/slides/${id}/image`, { method: "POST", headers: { cookie }, body: form }), {
+        params: Promise.resolve({ id }),
+      });
+      return { status: res.status, body: await res.json() };
+    };
+
+    const res = await replace(slide.body.id);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: slide.body.id, kicker: "K", title: "Swap me", position: slide.body.position });
+    expect(res.body.imageUrl).not.toBe(slide.body.imageUrl);
+    const files = await readdir(path.join(process.env.UPLOAD_DIR!, owner.shop.id));
+    expect(files).toContain(res.body.imageUrl.split("/").pop());
+    expect(files).not.toContain(slide.body.imageUrl.split("/").pop());
+
+    expect((await replace(slide.body.id, owner.cookie, null)).status).toBe(400);
+    expect((await replace(slide.body.id, owner.cookie, new File(["<html>"], "a.png"))).body.error.code).toBe("UNSUPPORTED_FILE");
+    expect((await replace(slide.body.id, manager)).status).toBe(403);
+    // Another shop's slide id is not found, and the slide keeps its image.
+    expect((await replace(slide.body.id, other.cookie)).status).toBe(404);
+    expect((await prisma.heroSlide.findUniqueOrThrow({ where: { id: slide.body.id } })).imageUrl).toBe(res.body.imageUrl);
   });
 
   it("needs a title and a real image, and is owner only", async () => {

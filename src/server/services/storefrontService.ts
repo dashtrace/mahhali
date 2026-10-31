@@ -78,6 +78,21 @@ export const storefrontService = {
     return (await slideRepo.findById(actor.shopId, id))!;
   },
 
+  /** Multipart: `file`. Replaces the slide's image in place; its text and position stay. */
+  async setSlideImage(actor: Actor, id: string, form: FormData) {
+    const slide = await slideRepo.findById(actor.shopId, id);
+    if (!slide) throw notFound("Slide");
+    const imageUrl = await saveUpload(actor.shopId, form.get("file"), "photo");
+    try {
+      if (!(await slideRepo.update(actor.shopId, id, { imageUrl }))) throw notFound("Slide");
+    } catch (error) {
+      await deleteUpload(actor.shopId, imageUrl);
+      throw error;
+    }
+    await deleteUpload(actor.shopId, slide.imageUrl);
+    return { ...slide, imageUrl };
+  },
+
   async deleteSlide(actor: Actor, id: string) {
     const slide = await slideRepo.findById(actor.shopId, id);
     if (!slide || !(await slideRepo.delete(actor.shopId, id))) throw notFound("Slide");

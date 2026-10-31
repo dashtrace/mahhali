@@ -21,6 +21,10 @@ const SlideUpload = z
   })
   .openapi("SlideUpload");
 
+const SlideImageUpload = z
+  .object({ file: z.string().openapi({ format: "binary", description: "PNG, JPEG or WebP, up to 3 MB" }) })
+  .openapi("SlideImageUpload");
+
 // Storefront copy and layout, hero slides, categories and testimonials.
 export function registerStorefront(r: OpenAPIRegistry, { secured, ok, error, errors }: PathHelpers) {
   const json = (schema: z.ZodType) => ({ content: { "application/json": { schema } } });
@@ -74,6 +78,22 @@ export function registerStorefront(r: OpenAPIRegistry, { secured, ok, error, err
     security: secured,
     request: { params: IdParam, body: json(UpdateSlideBody) },
     responses: { 200: ok("Updated slide"), ...errors },
+  });
+  r.registerPath({
+    method: "post",
+    path: "/api/shop/slides/{id}/image",
+    summary: "Replace a slide's image, keeping its text and position (owner)",
+    tags: ["Storefront"],
+    security: secured,
+    request: { params: IdParam, body: { content: { "multipart/form-data": { schema: SlideImageUpload } } } },
+    responses: {
+      200: ok("Updated slide"),
+      400: errors[400],
+      401: errors[401],
+      403: errors[403],
+      404: errors[404],
+      422: error("FILE_TOO_LARGE or UNSUPPORTED_FILE"),
+    },
   });
   r.registerPath({
     method: "delete",
