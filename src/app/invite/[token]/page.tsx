@@ -45,7 +45,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     <AuthFrame locale={locale} icon="users" title={fill(m.joinShop, { shop: invite.shopName })} subtitle={fill(m.invitedAs, { role, email: invite.email })}>
       <div className="flex flex-col gap-4">
         {user && user.email !== invite.email && <Alert tone="warning">{fill(m.signedInAs, { email: user.email, invited: invite.email })}</Alert>}
-        <AcceptForm token={token} hasAccount={invite.hasAccount} m={m} t={t} />
+        <AcceptForm token={token} hasAccount={invite.hasAccount} m={m} t={t} locale={locale} />
       </div>
     </AuthFrame>
   );

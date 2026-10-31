@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PasswordField } from "@/components/PasswordField";
 import { Alert, Button, Field, Input } from "@/components/ui";
+import type { Locale } from "@/i18n/locale";
 import type { authMessages } from "@/i18n/messages/auth";
 import { authClient } from "@/lib/authClient";
 
-export function LoginForm({ m, next }: { m: (typeof authMessages)["en"]; next: string }) {
+export function LoginForm({ m, next, locale }: { m: (typeof authMessages)["en"]; next: string; locale: Locale }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,9 +35,7 @@ export function LoginForm({ m, next }: { m: (typeof authMessages)["en"]; next: s
       <Field label={m.email}>
         <Input name="email" type="email" autoComplete="email" inputMode="email" required dir="ltr" />
       </Field>
-      <Field label={m.password}>
-        <Input name="password" type="password" autoComplete="current-password" required minLength={8} />
-      </Field>
+      <PasswordField label={m.password} locale={locale} />
       <Button type="submit" disabled={pending} block className="mt-1 min-h-12 text-[15px]">
         {pending ? m.signingIn : m.signInButton}
       </Button>

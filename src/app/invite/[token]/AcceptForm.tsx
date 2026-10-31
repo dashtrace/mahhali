@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PasswordField } from "@/components/PasswordField";
 import { Alert, Button, Field, Input } from "@/components/ui";
+import type { Locale } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api, errorMessage } from "@/lib/api";
@@ -11,7 +13,7 @@ import { api, errorMessage } from "@/lib/api";
  * Accepting creates the account (new email) or checks the existing password,
  * and the response signs the person in, acting in the invited shop.
  */
-export function AcceptForm({ token, hasAccount, m, t }: { token: string; hasAccount: boolean; m: ShopMessages; t: CommonMessages }) {
+export function AcceptForm({ token, hasAccount, m, t, locale }: { token: string; hasAccount: boolean; m: ShopMessages; t: CommonMessages; locale: Locale }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,9 +49,7 @@ export function AcceptForm({ token, hasAccount, m, t }: { token: string; hasAcco
           <Input name="name" autoComplete="name" required maxLength={100} />
         </Field>
       )}
-      <Field label={m.password} hint={hasAccount ? undefined : m.passwordHint}>
-        <Input name="password" type="password" autoComplete={hasAccount ? "current-password" : "new-password"} required minLength={8} maxLength={128} />
-      </Field>
+      <PasswordField label={m.password} hint={hasAccount ? undefined : m.passwordHint} isNew={!hasAccount} locale={locale} />
       <Button type="submit" disabled={pending} block className="min-h-12 text-[15px]">
         {pending ? m.accepting : m.accept}
       </Button>

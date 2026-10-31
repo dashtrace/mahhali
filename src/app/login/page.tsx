@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </>
       }
     >
-      <LoginForm m={m} next={safeNext} />
+      <LoginForm m={m} next={safeNext} locale={locale} />
     </AuthFrame>
   );
 }
