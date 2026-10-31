@@ -1,3 +1,4 @@
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { ButtonLink, Alert, PageHeader } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { common } from "@/i18n/messages/common";
@@ -78,6 +79,8 @@ export default async function OrdersBoardPage({
           <CourierFilter couriers={couriers.map((c) => ({ id: c.id, name: c.name }))} value={courierId ?? ""} label={m.filterCourier} allLabel={m.allCouriers} />
         )}
       </div>
+      {/* New guest orders show up without a reload. */}
+      <AutoRefresh seconds={15} />
       <BoardClient
         // Remount on navigation so the phone tab follows ?status=
         key={`${selected}:${q ?? ""}:${courierId ?? ""}`}

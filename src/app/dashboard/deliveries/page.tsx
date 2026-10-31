@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
 import { Alert, Badge, Card, EmptyState, PageHeader, STATUS_TONES, Segmented } from "@/components/ui";
 import { fill } from "@/i18n/locale";
@@ -37,6 +38,7 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
 
   return (
     <>
+      <AutoRefresh seconds={30} />
       <PageHeader title={desk ? t.navDeliveries : m.myDeliveries} subtitle={desk ? m.deliveriesHint : undefined} />
       {actor.role === "delivery" && !actor.courierId && <Alert tone="warning" className="mb-4">{m.noCourierLink}</Alert>}
 

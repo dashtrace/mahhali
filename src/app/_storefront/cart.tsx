@@ -16,11 +16,16 @@ const keyOf = (slug: string) => `cart:v2:${slug}`;
 const legacyKeyOf = (slug: string) => `cart:${slug}`;
 
 const normNote = (note: unknown) => (typeof note === "string" && note.trim() ? note.trim().slice(0, MAX_NOTE) : undefined);
-const sameLine = (a: CartLine, variantId: string, note?: string) => a.variantId === variantId && a.note === normNote(note);
+export const sameLine = (a: CartLine, variantId: string, note?: string) => a.variantId === variantId && a.note === normNote(note);
 
 /** Units of a variant already in the cart, over all its lines. */
 export function qtyOf(lines: CartLine[], variantId: string) {
   return lines.reduce((n, l) => (l.variantId === variantId ? n + l.qty : n), 0);
+}
+
+/** How many more units of a variant fit: up to MAX_QTY and the stock `left`, minus the cart. Negative when the cart holds more than is left. */
+export function roomIn(lines: CartLine[], variantId: string, left = MAX_QTY) {
+  return Math.min(MAX_QTY, left) - qtyOf(lines, variantId);
 }
 
 /** Stored JSON -> valid lines: merges duplicates, drops junk, caps each variant at MAX_QTY. */
@@ -101,8 +106,8 @@ export function useCart(slug: string) {
     return {
       lines,
       count: lines.reduce((n, l) => n + l.qty, 0),
-      /** How many more units of this variant fit. */
-      roomFor: (variantId: string) => MAX_QTY - qtyOf(lines, variantId),
+      /** How many more units of this variant fit, given the stock left when known. */
+      roomFor: (variantId: string, left?: number) => roomIn(lines, variantId, left),
     };
   }, [raw]);
 }
