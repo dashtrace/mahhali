@@ -128,7 +128,6 @@ export const catalogueMessages = defineMessages({
     customRequiredHint: "Customers must fill it before adding to cart.",
     customMaxLength: "Maximum characters",
     customPreview: "Customers see",
-    storefrontSaved: "Saved.",
   },
   ar: {
     productsTitle: "المنتجات",
@@ -256,7 +255,6 @@ export const catalogueMessages = defineMessages({
     customRequiredHint: "على الزبون تعبئته قبل الإضافة إلى السلة.",
     customMaxLength: "الحد الأقصى للأحرف",
     customPreview: "ما يراه الزبائن",
-    storefrontSaved: "تم الحفظ.",
   },
 });
 

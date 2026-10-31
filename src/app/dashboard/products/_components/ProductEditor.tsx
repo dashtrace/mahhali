@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Badge, Button, Card, Field, IconButton, Input, Select, Textarea, cx } from "@/components/ui";
+import { Alert, Badge, Button, Card, Field, IconButton, Input, SaveButton, Select, Textarea, cx } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
@@ -11,7 +11,7 @@ import { formatDateTime, toAmountText } from "@/lib/format";
 import { VariantFields, variantBody, type VariantDraft } from "./CreateProductForm";
 import { FilePicker } from "./FilePicker";
 import { CardHead, ExtrasFields, extrasBody, extrasOf, type Category, type Extras } from "./ProductExtras";
-import { submitWith, useAction } from "./useAction";
+import { submitWith, useAction, useSave } from "./useAction";
 
 type Currency = "USD" | "LBP";
 type Variant = { id: string; size: string | null; colour: string | null; sku: string | null; priceMinor: number; available: number; reserved: number; archived: boolean };
@@ -28,7 +28,7 @@ type Common = { currency: Currency; locale: Locale; m: CatalogueMessages; t: Com
 
 export function ProductEditor({ product, categories, ...c }: { product: Product; categories: Category[] } & Common) {
   const { m, t } = c;
-  const details = useAction(t.error);
+  const details = useSave(t.error);
   const archive = useAction(t.error);
   const archived = product.status === "ARCHIVED";
   const colours = [...new Set(product.variants.map((v) => v.colour).filter((x): x is string => !!x))];
@@ -40,8 +40,9 @@ export function ProductEditor({ product, categories, ...c }: { product: Product;
       <Card>
         <form
           key={`${product.name}|${product.description}`}
+          {...details.form}
           onSubmit={submitWith((f) =>
-            details.run(() =>
+            details.save(() =>
               api(`/api/products/${product.id}`, { method: "PATCH", body: { name: f.get("name"), description: String(f.get("description") ?? "") || null } }),
             ),
           )}
@@ -55,9 +56,7 @@ export function ProductEditor({ product, categories, ...c }: { product: Product;
           <Field label={m.description} hint={t.optional}>
             <Textarea name="description" defaultValue={product.description ?? ""} maxLength={2000} dir="auto" />
           </Field>
-          <Button type="submit" disabled={details.busy} className="self-start">
-            {details.busy ? t.saving : t.save}
-          </Button>
+          <SaveButton state={details} labels={t} className="self-start" />
         </form>
       </Card>
 
@@ -96,36 +95,22 @@ export function ProductEditor({ product, categories, ...c }: { product: Product;
 /** Category, featured, specs and customization, saved together. */
 function StorefrontExtras({ product, categories, m, t }: { product: Product; categories: Category[] } & Common) {
   const [extras, setExtras] = useState<Extras>(() => extrasOf(product));
-  const [done, setDone] = useState(false);
-  const save = useAction(t.error);
+  const save = useSave(t.error, extras);
   return (
     <form
-      onSubmit={submitWith(async () => {
-        setDone(false);
-        setDone(await save.run(() => api(`/api/products/${product.id}`, { method: "PATCH", body: extrasBody(extras) })));
-      })}
+      {...save.form}
+      onSubmit={submitWith(() => save.save(() => api(`/api/products/${product.id}`, { method: "PATCH", body: extrasBody(extras) })))}
       className="flex flex-col gap-4"
     >
-      <ExtrasFields
-        value={extras}
-        onChange={(x) => {
-          setDone(false);
-          setExtras(x);
-        }}
-        categories={categories}
-        m={m}
-      />
+      <ExtrasFields value={extras} onChange={setExtras} categories={categories} m={m} />
       {save.error && <Alert tone="error">{save.error}</Alert>}
-      {done && <Alert tone="success">{m.storefrontSaved}</Alert>}
-      <Button type="submit" disabled={save.busy} className="self-start">
-        {save.busy ? t.saving : t.save}
-      </Button>
+      <SaveButton state={save} labels={t} className="self-start" />
     </form>
   );
 }
 
 function VariantCard({ variant: v, currency, locale, m, t }: { variant: Variant } & Common) {
-  const edit = useAction(t.error);
+  const edit = useSave(t.error);
   const stock = useAction(t.error);
   const [history, setHistory] = useState<Movement[] | null>(null);
   const [stockDone, setStockDone] = useState(false);
@@ -143,8 +128,9 @@ function VariantCard({ variant: v, currency, locale, m, t }: { variant: Variant 
 
       <form
         key={`${v.size}|${v.colour}|${v.sku}|${v.priceMinor}`}
+        {...edit.form}
         onSubmit={submitWith((f) =>
-          edit.run(() =>
+          edit.save(() =>
             api(`/api/variants/${v.id}`, {
               method: "PATCH",
               body: { size: f.get("size"), colour: f.get("colour"), sku: f.get("sku"), price: String(f.get("price")).trim() },
@@ -169,9 +155,9 @@ function VariantCard({ variant: v, currency, locale, m, t }: { variant: Variant 
           </Field>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" tone="secondary" disabled={edit.busy}>
-            {edit.busy ? t.saving : m.saveVariant}
-          </Button>
+          <SaveButton state={edit} labels={t} tone="secondary">
+            {m.saveVariant}
+          </SaveButton>
           <Button tone="ghost" disabled={edit.busy} onClick={() => edit.run(() => api(`/api/variants/${v.id}`, { method: "PATCH", body: { archived: !v.archived } }))}>
             {v.archived ? m.showVariant : m.hideVariant}
           </Button>
