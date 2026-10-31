@@ -57,7 +57,14 @@ export default async function ProductPage({ params }: Params) {
 
   return (
     <ProductProvider
-      product={{ id: product.id, name: product.name, images: product.images, variants: product.variants, customization: product.customization }}
+      product={{
+        id: product.id,
+        name: product.name,
+        options: product.options,
+        images: product.images,
+        variants: product.variants,
+        customization: product.customization,
+      }}
       slug={slug}
       locale={locale}
     >

@@ -17,7 +17,7 @@ import type { StoreProduct } from "../../_components/load";
 // ShopFrame's bottom slot, apart from the rest, so they share state through a
 // provider that wraps the whole frame.
 
-type Product = Pick<StoreProduct, "id" | "name" | "images" | "variants" | "customization">;
+type Product = Pick<StoreProduct, "id" | "name" | "options" | "images" | "variants" | "customization">;
 type Variant = Product["variants"][number];
 type Notice = { tone: "ok" | "warn"; text: string };
 
@@ -191,7 +191,7 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
 
       <div className="mb-2 mt-3 flex items-baseline justify-between gap-2">
         <span id="option-label" className="text-sm font-extrabold">
-          {product.variants.length > 1 ? m.chooseOption : m.option}
+          {product.options.length ? product.options.join(" · ") : product.variants.length > 1 ? m.chooseOption : m.option}
         </span>
         <span className="text-xs text-sl-muted">{m.priceMayVary}</span>
       </div>
