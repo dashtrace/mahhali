@@ -52,6 +52,16 @@ describe("accepting an invite", () => {
     expect(await prisma.invitation.findUniqueOrThrow({ where: { id } })).toMatchObject({ status: "accepted" });
   });
 
+  it("refuses a weak password for a new account and creates nobody", async () => {
+    const owner = await signUpOwner();
+    const email = `weak.${Date.now()}@example.com`;
+    const { token } = await invite(owner, { email, role: "staff" });
+    const res = await accept(token, { name: "Weak", password: "12345678" });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual([expect.objectContaining({ path: "password" })]);
+    expect(await prisma.user.count({ where: { email } })).toBe(0);
+  });
+
   it("works once: a second use and the preview both answer 410 INVITE_USED", async () => {
     const owner = await signUpOwner();
     const { token } = await invite(owner, { email: `once.${Date.now()}@example.com`, role: "staff" });

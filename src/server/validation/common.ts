@@ -1,4 +1,5 @@
 import { emailTypo } from "../domain/email";
+import { passwordProblem, type PasswordProblem } from "../domain/password";
 import { isValidSlug } from "../domain/slug";
 import { normalizePhone } from "../domain/phone";
 import { z } from "./zod";
@@ -41,6 +42,29 @@ export const Email = z
   .superRefine((v, ctx) => {
     const fix = emailTypo(v);
     if (fix) ctx.addIssue({ code: "custom", message: `Check the email address. Did you mean ${fix}?` });
+  });
+
+const WEAK: Record<PasswordProblem, string> = {
+  Short: "Use at least 8 characters.",
+  Common: "This password is too easy to guess.",
+  NoLetter: "Add at least one letter.",
+  NoDigitOrSymbol: "Add a number or a symbol.",
+};
+
+/** Why a new password is refused (English, for API errors), or null. */
+export function weakPassword(password: string): string | null {
+  const problem = passwordProblem(password);
+  return problem && WEAK[problem];
+}
+
+/** A new account's password. The length check stays separate, so a short one gets one message. */
+export const NewPassword = z
+  .string()
+  .min(8)
+  .max(128)
+  .superRefine((v, ctx) => {
+    const why = v.length >= 8 && weakPassword(v);
+    if (why) ctx.addIssue({ code: "custom", message: why });
   });
 
 export const ErrorBody = z

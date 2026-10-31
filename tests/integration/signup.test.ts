@@ -61,6 +61,15 @@ describe("POST /api/signup", () => {
     expect(paths).toEqual(expect.arrayContaining(["email", "shopSlug", "password"]));
   });
 
+  it("refuses an easy-to-guess password with a reason", async () => {
+    const res = await call(signup, "/api/signup", {
+      method: "POST",
+      body: { ...valid, email: "weak@example.com", shopSlug: "weak-shop", password: "12345678" },
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual([{ path: "password", message: "This password is too easy to guess." }]);
+  });
+
   it("refuses a typo in a big provider's domain and names the fix", async () => {
     const res = await call(signup, "/api/signup", {
       method: "POST",
