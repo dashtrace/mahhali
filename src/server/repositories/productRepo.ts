@@ -111,12 +111,8 @@ export const productRepo = {
     return variant;
   },
 
-  /** A variant with the size and colour of its siblings, for duplicate checks. */
   findVariant(shopId: string, id: string, client: Db = db) {
-    return client.variant.findFirst({
-      where: { id, shopId },
-      include: { product: { select: { variants: { select: { id: true, size: true, colour: true } } } } },
-    });
+    return client.variant.findFirst({ where: { id, shopId } });
   },
 
   async updateVariant(

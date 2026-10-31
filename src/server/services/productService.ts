@@ -84,9 +84,7 @@ export const productService = {
   },
 
   async addVariant(actor: Actor, productId: string, input: VariantInput) {
-    const product = await this.get(actor, productId);
-    // Checked here too because Postgres treats two empty sizes as different.
-    if (product.variants.some((v) => v.size === input.size && v.colour === input.colour)) throw duplicateVariant();
+    await this.get(actor, productId);
     const variant = {
       size: input.size,
       colour: input.colour,
@@ -105,9 +103,6 @@ export const productService = {
   async updateVariant(actor: Actor, id: string, input: UpdateVariantInput) {
     const variant = await productRepo.findVariant(actor.shopId, id);
     if (!variant) throw notFound("Variant");
-    const size = input.size === undefined ? variant.size : input.size;
-    const colour = input.colour === undefined ? variant.colour : input.colour;
-    if (variant.product.variants.some((v) => v.id !== id && v.size === size && v.colour === colour)) throw duplicateVariant();
     const { price, ...rest } = input;
     try {
       const updated = await productRepo.updateVariant(actor.shopId, id, {
