@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Alert, Button, Card, Field, Input, Select } from "@/components/ui";
+import { Alert, Card, Field, Input, SaveButton, Select } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
 import { toAmountText } from "@/lib/format";
 import { CardHead } from "../../products/_components/ProductExtras";
-import { submitWith, useAction } from "../../products/_components/useAction";
+import { submitWith, useSave } from "../../products/_components/useAction";
 
 type Settings = {
   name: string;
@@ -24,13 +23,11 @@ const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
 // The WhatsApp number lives on the Storefront tab; leaving it out of this PATCH keeps it as it is.
 export function SettingsForm({ settings: s, catalogueUrl, m, t }: { settings: Settings; catalogueUrl: string; m: ShopMessages; t: CommonMessages }) {
-  const save = useAction(t.error);
-  const [saved, setSaved] = useState(false);
+  const save = useSave(t.error);
   const amount = fill(m.deliveryFee, { currency: s.currency });
   const amountPattern = s.currency === "USD" ? "\\d+(\\.\\d{1,2})?" : "\\d+";
 
   async function submit(f: FormData) {
-    setSaved(false);
     const rate = text(f, "usdLbpRate");
     const hours = text(f, "autoCancelHours");
     const body = {
@@ -42,12 +39,12 @@ export function SettingsForm({ settings: s, catalogueUrl, m, t }: { settings: Se
       // The rate cannot be cleared once set, so an empty box leaves it as it is.
       ...(rate ? { usdLbpRate: rate } : {}),
     };
-    setSaved(await save.run(() => api("/api/shop/settings", { method: "PATCH", body })));
+    await save.save(() => api("/api/shop/settings", { method: "PATCH", body }));
   }
 
   return (
     <Card className="max-w-3xl">
-      <form key={JSON.stringify(s)} onSubmit={submitWith(submit)} className="grid gap-4 sm:grid-cols-2">
+      <form key={JSON.stringify(s)} {...save.form} onSubmit={submitWith(submit)} className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <CardHead title={m.shopDetails} />
         </div>
@@ -81,11 +78,8 @@ export function SettingsForm({ settings: s, catalogueUrl, m, t }: { settings: Se
           <Input name="autoCancelHours" type="number" dir="ltr" min={1} max={720} defaultValue={s.autoCancelHours ?? ""} inputMode="numeric" />
         </Field>
         {save.error && <Alert tone="error" className="sm:col-span-2">{save.error}</Alert>}
-        {saved && <Alert tone="success" className="sm:col-span-2">{t.saved}</Alert>}
         <div className="sm:col-span-2">
-          <Button type="submit" disabled={save.busy}>
-            {save.busy ? t.saving : t.save}
-          </Button>
+          <SaveButton state={save} labels={t} />
         </div>
       </form>
     </Card>
