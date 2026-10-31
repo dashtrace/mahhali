@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
-import { Alert, Button, ButtonLink, Field, Input, Select, Textarea } from "@/components/ui";
+import { useState, useTransition, type FormEvent } from "react";
+import { Alert, Button, ButtonLink, Field, Input, SaveButton, Select, Textarea } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { OrderMessages } from "@/i18n/messages/orders";
 import { ApiError, api, errorMessage } from "@/lib/api";
+import { useSave } from "../../products/_components/useAction";
 import { AddressFields, addressFrom, type AddressValue } from "./AddressFields";
 import { statusLabel } from "./labels";
 
@@ -27,26 +28,29 @@ export function StatusActions({
   t: CommonMessages;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [moving, setMoving] = useState(false);
+  // Stays busy until the refreshed order renders, so the next step can't be sent twice.
+  const [refreshing, startTransition] = useTransition();
+  const busy = moving || refreshing;
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [note, setNote] = useState("");
   const next = allowedNext.find((s) => s !== "CANCELLED" && s !== "DELIVERED" && s !== "RETURNED");
 
   async function move(to: Status, body: { note?: string } = {}) {
-    setBusy(true);
+    setMoving(true);
     setError(null);
     try {
       await api(`/api/orders/${orderId}/transitions`, { body: { to, ...body } });
       setCancelling(false);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       if (e instanceof ApiError && e.code === "COURIER_REQUIRED") {
         setError(m.courierRequired);
         location.hash = "courier";
       } else setError(errorMessage(e, m.actionFailed));
     } finally {
-      setBusy(false);
+      setMoving(false);
     }
   }
 
@@ -112,10 +116,8 @@ export function CourierForm({
   m: OrderMessages;
   t: CommonMessages;
 }) {
-  const router = useRouter();
   const [value, setValue] = useState(courierId ?? "");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const save = useSave(m.actionFailed, value);
 
   if (!couriers.length && !courierId) {
     return (
@@ -130,23 +132,15 @@ export function CourierForm({
     );
   }
 
-  async function save(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await api(`/api/orders/${orderId}`, { method: "PATCH", body: { courierId: value || null } });
-      router.refresh();
-    } catch (err) {
-      setError(errorMessage(err, m.actionFailed));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <form onSubmit={save} className="flex flex-col gap-2">
-      {error && <Alert tone="error">{error}</Alert>}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save.save(() => api(`/api/orders/${orderId}`, { method: "PATCH", body: { courierId: value || null } }));
+      }}
+      className="flex flex-col gap-2"
+    >
+      {save.error && <Alert tone="error">{save.error}</Alert>}
       <Field label={m.courierTitle}>
         <Select value={value} onChange={(e) => setValue(e.target.value)}>
           <option value="">{m.unassigned}</option>
@@ -157,9 +151,9 @@ export function CourierForm({
           ))}
         </Select>
       </Field>
-      <Button type="submit" disabled={busy || value === (courierId ?? "")}>
-        {busy ? t.saving : m.saveCourier}
-      </Button>
+      <SaveButton state={save} labels={t}>
+        {m.saveCourier}
+      </SaveButton>
     </form>
   );
 }
@@ -177,25 +171,13 @@ export function EditOrderForm({
   m: OrderMessages;
   t: CommonMessages;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const save = useSave(m.actionFailed);
 
-  async function save(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    setBusy(true);
-    setError(null);
-    try {
-      await api(`/api/orders/${orderId}`, { method: "PATCH", body: { address: addressFrom(form), notes: String(form.get("notes") ?? "") } });
-      setOpen(false);
-      router.refresh();
-    } catch (err) {
-      setError(errorMessage(err, m.actionFailed));
-    } finally {
-      setBusy(false);
-    }
+    if (await save.save(() => api(`/api/orders/${orderId}`, { method: "PATCH", body: { address: addressFrom(form), notes: String(form.get("notes") ?? "") } }))) setOpen(false);
   }
 
   if (!open) {
@@ -206,19 +188,17 @@ export function EditOrderForm({
     );
   }
   return (
-    <form onSubmit={save} className="flex flex-col gap-3">
-      {error && <Alert tone="error">{error}</Alert>}
+    <form {...save.form} onSubmit={submit} className="flex flex-col gap-3">
+      {save.error && <Alert tone="error">{save.error}</Alert>}
       <AddressFields value={address} m={m} t={t} />
       <Field label={`${m.notes} (${t.optional})`}>
         <Textarea name="notes" maxLength={500} defaultValue={notes ?? ""} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Button tone="secondary" onClick={() => setOpen(false)} disabled={busy}>
+        <Button tone="secondary" onClick={() => setOpen(false)} disabled={save.busy}>
           {t.cancel}
         </Button>
-        <Button type="submit" disabled={busy}>
-          {busy ? t.saving : t.save}
-        </Button>
+        <SaveButton state={save} labels={t} />
       </div>
     </form>
   );

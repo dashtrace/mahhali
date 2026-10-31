@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Alert, Button, Card, Field, Input, Select, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CashMessages } from "@/i18n/messages/money";
@@ -55,7 +55,9 @@ export function RemittanceForm({
   // null: follow the ticked lines; a string once the owner types over it.
   const [handUsd, setHandUsd] = useState<string | null>(null);
   const [handLbp, setHandLbp] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [refreshing, startTransition] = useTransition();
+  const busy = saving || refreshing;
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
@@ -92,7 +94,7 @@ export function RemittanceForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
+    setSaving(true);
     setError(null);
     setDone(false);
     try {
@@ -114,11 +116,11 @@ export function RemittanceForm({
       setReference("");
       await load(courierId);
       setDone(true);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       setError(errorMessage(e, m.saveFailed));
     } finally {
-      setBusy(false);
+      setSaving(false);
     }
   }
 
@@ -214,7 +216,7 @@ export function RemittanceForm({
                 </Field>
               </div>
               <Button type="submit" block disabled={busy || picked.length === 0} className="min-h-12 text-[15px]">
-                {m.save}
+                {busy ? m.saving : m.save}
               </Button>
             </>
           )}
