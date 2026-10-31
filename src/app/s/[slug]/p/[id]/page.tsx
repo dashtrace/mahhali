@@ -90,7 +90,7 @@ export default async function ProductPage({ params }: Params) {
         <div className="grid gap-5 md:grid-cols-2 md:gap-8">
           <Gallery />
           <div className="min-w-0">
-            <h1 className="sl-heading text-[26px] leading-tight">{product.name}</h1>
+            <h1 className="sl-heading text-[22px] leading-tight sm:text-[26px]">{product.name}</h1>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[13px] text-sl-muted">
               {reviews.count > 0 ? (
                 <>

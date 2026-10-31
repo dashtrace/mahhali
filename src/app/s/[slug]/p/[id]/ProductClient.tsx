@@ -127,7 +127,8 @@ export function Gallery() {
   return (
     <section aria-label={m.galleryLabel} className="min-w-0">
       <div
-        className="relative aspect-[1/0.81] touch-pan-y overflow-hidden rounded-[20px] border border-sl-border bg-sl-cat"
+        // A fixed height on phones keeps the price and options in view; the whole photo still shows (contain).
+        className="relative h-56 touch-pan-y overflow-hidden rounded-[20px] border border-sl-border bg-sl-cat sm:h-72 md:aspect-[1/0.81] md:h-auto"
         onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
         onTouchEnd={onTouchEnd}
       >
@@ -157,7 +158,7 @@ export function Gallery() {
                 aria-label={photoName(i)}
                 aria-pressed={i === photo}
                 onClick={() => setPhoto(i)}
-                className="block h-[62px] w-16 overflow-hidden rounded-sl-sm border-2 border-transparent bg-sl-cat aria-pressed:border-sl-accent"
+                className="block size-12 overflow-hidden rounded-sl-sm border-2 border-transparent bg-sl-cat aria-pressed:border-sl-accent sm:h-[62px] sm:w-16"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is */}
                 <img src={img.url} alt="" loading="lazy" className="size-full object-cover" />
@@ -178,7 +179,7 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
 
   return (
     <div>
-      <p className="mb-3 mt-1 text-2xl font-extrabold tabular-nums">
+      <p className="mb-3 mt-1 text-xl font-extrabold tabular-nums sm:text-2xl">
         <bdi>{formatMoney(price, currency, locale)}</bdi>
       </p>
 
