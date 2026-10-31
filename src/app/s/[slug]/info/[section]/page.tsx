@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
-import { Alert, ButtonLink, Card, EmptyState, FilterChip, cx } from "@/components/ui";
+import { ButtonLink, Card, EmptyState, FilterChip, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
@@ -65,7 +65,6 @@ export default async function InfoPage({ params }: Params) {
             ) : (
               <EmptyState title={m.testimonialsEmpty} />
             )}
-            <p className="mt-3 rounded-sl-sm bg-sl-cat px-3 py-2 text-xs leading-normal text-sl-muted">{m.testimonialsConsent}</p>
           </section>
         )}
         <ButtonLink href={`${base}/info/feedback`} tone="outline" className="mt-4">
@@ -85,9 +84,6 @@ export default async function InfoPage({ params }: Params) {
           {Number(fee) > 0 ? <bdi>{fill(m.deliveryFeeLine, { fee: formatMoney(fee, shop.currency, locale) })}</bdi> : m.freeDelivery}
         </p>
         <p className="mt-1 text-sm text-sl-muted">{m.payOnDelivery}</p>
-        <Alert tone="note" className="mt-4 text-[13px]">
-          {m.shippingNote}
-        </Alert>
       </>
     );
   } else if (section === "contact") {
