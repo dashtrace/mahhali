@@ -2,6 +2,7 @@ import { Prisma, type OrderStatus } from "@prisma/client";
 import { auth } from "@/server/auth/auth";
 import { prisma } from "@/server/db";
 import { reviewAuthorName } from "@/server/domain/names";
+import { itemLabel } from "@/server/domain/orders";
 import { PALETTES } from "@/server/domain/theme";
 import { hashToken, randomToken } from "@/server/domain/tokens";
 
@@ -131,7 +132,7 @@ async function order(
           create: o.lines.map((l) => ({
             shopId: shop.id,
             variantId: l.variant.id,
-            nameSnapshot: [l.variant.productName, l.variant.size, l.variant.colour].filter(Boolean).join(" / "),
+            nameSnapshot: itemLabel(l.variant.productName, [l.variant.size, l.variant.colour]),
             unitPriceMinor: l.variant.priceMinor,
             qty: l.qty,
           })),

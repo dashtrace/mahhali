@@ -1,6 +1,7 @@
 import type { OrderStatus } from "@prisma/client";
 import { auth } from "@/server/auth/auth";
 import { prisma } from "@/server/db";
+import { itemLabel } from "@/server/domain/orders";
 import { randomToken } from "@/server/domain/tokens";
 import { cookieFrom } from "./helpers";
 
@@ -113,7 +114,7 @@ export async function seedOrder(shopId: string, o: SeedOrder) {
           create: {
             shopId,
             variantId: variant.id,
-            nameSnapshot: [variant.product.name, variant.size, variant.colour].filter(Boolean).join(" / "),
+            nameSnapshot: itemLabel(variant.product.name, [variant.size, variant.colour]),
             unitPriceMinor: variant.priceMinor,
             qty,
           },

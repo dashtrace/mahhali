@@ -19,9 +19,10 @@ describe("orderTotals", () => {
 
 describe("labels and parsing", () => {
   it("names a line by product, size and colour, skipping the blanks", () => {
-    expect(itemLabel("Linen shirt", "M", "Sand")).toBe("Linen shirt / M / Sand");
-    expect(itemLabel("Ring", null, "Gold")).toBe("Ring / Gold");
-    expect(itemLabel("Bag", null, null)).toBe("Bag");
+    expect(itemLabel("Linen shirt", ["M", "Sand"])).toBe("Linen shirt / M / Sand");
+    expect(itemLabel("Ring", [null, "Gold"])).toBe("Ring / Gold");
+    expect(itemLabel("Sunscreen", ["", "SPF 50"])).toBe("Sunscreen / SPF 50");
+    expect(itemLabel("Bag", [])).toBe("Bag");
   });
 
   it("reads order numbers the way customers type them", () => {
