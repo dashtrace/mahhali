@@ -107,11 +107,14 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
               {m.allProducts}
             </FilterChip>
           </li>
-          <li className="snap-start">
-            <FilterChip href={shopHref(slug, { sort: "bestsellers", ...price })} selected={!cat && sort === "bestsellers"}>
-              {m.sectionBestsellers}
-            </FilterChip>
-          </li>
+          {/* Like Featured: only once something has sold, so a new shop isn't shown an empty collection. */}
+          {(sort === "bestsellers" || products.some((p) => p.soldCount > 0)) && (
+            <li className="snap-start">
+              <FilterChip href={shopHref(slug, { sort: "bestsellers", ...price })} selected={!cat && sort === "bestsellers"}>
+                {m.sectionBestsellers}
+              </FilterChip>
+            </li>
+          )}
           {(sort === "featured" || products.some((p) => p.featured)) && (
             <li className="snap-start">
               <FilterChip href={shopHref(slug, { sort: "featured", ...price })} selected={!cat && sort === "featured"}>
@@ -131,10 +134,13 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
 
       <PriceFilter key={`${minText}|${maxText}`} slug={slug} currency={shop.currency} locale={locale} keep={keep} min={minText} max={maxText} summary={summary} />
 
-      <p aria-live="polite" className="mb-3 text-[13px] text-sl-muted">
-        {total > 0 ? fill(m.showing, { a: first, b: first + items.length - 1, n: total }) : m.noMatches}
-        {priced && <bdi>{` · ${summary}`}</bdi>}
-      </p>
+      {/* A shop with no products gets only the "coming soon" card below. */}
+      {products.length > 0 && (
+        <p aria-live="polite" className="mb-3 text-[13px] text-sl-muted">
+          {total > 0 ? fill(m.showing, { a: first, b: first + items.length - 1, n: total }) : m.noMatches}
+          {priced && <bdi>{` · ${summary}`}</bdi>}
+        </p>
+      )}
 
       {items.length > 0 ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
