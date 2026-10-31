@@ -1203,8 +1203,17 @@
               "bestsellers",
               "new",
               "featured",
+              "category",
               "hidden"
             ]
+          },
+          "homeCategoryId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 64
           },
           "showTestimonials": {
             "type": "boolean"

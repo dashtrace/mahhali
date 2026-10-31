@@ -26,6 +26,7 @@ function storefrontOf(shop: Shop) {
     facebookUrl: shop.facebookUrl,
     logoMode: shop.logoMode,
     homeSection: shop.homeSection,
+    homeCategoryId: shop.homeCategoryId,
     showTestimonials: shop.showTestimonials,
   };
 }
@@ -39,6 +40,7 @@ export const storefrontService = {
   },
 
   async update(actor: Actor, input: StorefrontInput) {
+    if (input.homeCategoryId && !(await categoryRepo.findById(actor.shopId, input.homeCategoryId))) throw notFound("Category");
     return storefrontOf(await shopRepo.update(actor.shopId, input));
   },
 

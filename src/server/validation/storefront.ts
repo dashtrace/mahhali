@@ -30,6 +30,8 @@ export const StorefrontBody = z
     facebookUrl: socialUrl("facebook"),
     logoMode: z.enum(LOGO_MODES).optional(),
     homeSection: z.enum(HOME_SECTIONS).optional(),
+    /** The category a "category" highlight shows; null means the first one. */
+    homeCategoryId: z.string().min(1).max(64).nullable().optional(),
     showTestimonials: z.boolean().optional(),
   })
   .refine((b) => Object.values(b).some((v) => v !== undefined), "Send at least one field to change")

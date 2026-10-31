@@ -228,6 +228,7 @@ export const catalogueService = {
         facebookUrl: shop.facebookUrl,
         logoMode: shop.logoMode as LogoMode,
         homeSection: shop.homeSection as HomeSection,
+        homeCategoryId: shop.homeCategoryId,
         showTestimonials: shop.showTestimonials,
         slides: slides.map((s) => ({ id: s.id, imageUrl: s.imageUrl, kicker: s.kicker, title: s.title, body: s.body })),
         categories: categories.map((c) => ({

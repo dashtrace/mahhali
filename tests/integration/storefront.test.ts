@@ -57,9 +57,23 @@ describe("storefront settings", () => {
       instagramUrl: null,
       facebookUrl: null,
       logoMode: "image-and-name",
-      homeSection: "bestsellers",
+      homeSection: "category",
+      homeCategoryId: null,
       showTestimonials: true,
     });
+  });
+
+  it("highlights one of the shop's own categories on the home page", async () => {
+    const mine = await prisma.category.create({ data: { shopId: owner.shop.id, name: "Highlighted", position: 0 } });
+    const theirs = await prisma.category.create({ data: { shopId: other.shop.id, name: "Not yours", position: 0 } });
+    const res = await patch({ homeSection: "category", homeCategoryId: mine.id });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ homeSection: "category", homeCategoryId: mine.id });
+    expect((await publicCatalogue()).body.shop).toMatchObject({ homeSection: "category", homeCategoryId: mine.id });
+
+    expect((await patch({ homeCategoryId: theirs.id })).status).toBe(404);
+    expect((await patch({ homeCategoryId: null })).body.homeCategoryId).toBeNull();
+    await prisma.category.deleteMany({ where: { id: { in: [mine.id, theirs.id] } } });
   });
 
   it("saves copy, links and layout, and an empty string clears a field", async () => {
