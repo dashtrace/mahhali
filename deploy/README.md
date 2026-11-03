@@ -33,8 +33,11 @@ switches traffic to the new version.
 
 In the GitHub repository settings:
 
-- Secrets: `RAILWAY_TOKEN` (the project token), `CRON_SECRET` (same value as on Railway).
-- Variables: `APP_URL` = `https://<your domain>`, `DEPLOY_ENABLED` = `true`.
+- Environment `production` → environment secret `RAILWAY_TOKEN` (the project token).
+- Repository secret `CRON_SECRET` (same value as on Railway).
+- Repository variables `APP_URL` = `https://<your domain>` and `DEPLOY_ENABLED` = `true`. They must
+  be repository-level: the deploy condition is checked before the job loads its environment, and
+  the scheduled jobs workflow does not use the environment.
 
 Every merge to `main` then runs the tests and deploys. The **Scheduled jobs** workflow calls
 `/api/cron/expire-reservations` and `/api/cron/review-emails` every 10 minutes; run it by hand from

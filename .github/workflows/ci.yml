@@ -54,6 +54,10 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     needs: test
     runs-on: ubuntu-latest
+    # RAILWAY_TOKEN is an environment secret of this GitHub environment.
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
     permissions:
       contents: read
     env:
