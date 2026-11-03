@@ -3,9 +3,9 @@ import path from "node:path";
 import { randomToken } from "../domain/tokens";
 import { badRequest, notFound, unprocessable } from "../http/errors";
 
-// Logos and product photos on local disk (a Docker volume in production, where
-// Caddy serves /uploads directly). Files are named by a random token, so a URL
-// reveals nothing and is never reused.
+// Logos and product photos on local disk (a Railway volume in production, served
+// by src/app/uploads). Files are named by a random token, so a URL reveals
+// nothing and is never reused.
 const TYPES = { png: "image/png", jpg: "image/jpeg", webp: "image/webp", svg: "image/svg+xml" } as const;
 type Ext = keyof typeof TYPES;
 

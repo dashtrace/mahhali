@@ -1,0 +1,21 @@
+name: Scheduled jobs
+
+# Calls the app's cron endpoints on the live deployment (see deploy/README.md).
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Expire reservations and send review emails
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          for job in expire-reservations review-emails; do
+            curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" "$APP_URL/api/cron/$job"
+          done

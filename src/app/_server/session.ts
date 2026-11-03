@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { can, type Action, type ShopRole } from "@/server/domain/policy";
 import { AppError } from "@/server/http/errors";
+import { clientIp } from "@/server/http/rateLimit";
 import { currentUser, resolveActor, resolveAdmin } from "@/server/http/session";
 import type { Actor } from "@/server/http/withRoute";
 
@@ -42,7 +43,7 @@ export async function signedInUser() {
   return currentUser(await headers());
 }
 
-/** The visitor's address as Caddy forwards it, for services that rate-limit public pages. */
+/** The visitor's address, for services that rate-limit public pages. */
 export async function requestIp(): Promise<string> {
-  return (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  return clientIp(await headers());
 }

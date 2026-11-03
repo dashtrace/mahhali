@@ -3985,7 +3985,7 @@
     },
     "/uploads/{shopId}/{file}": {
       "get": {
-        "summary": "An uploaded logo or photo (served by Caddy in production)",
+        "summary": "An uploaded logo or photo",
         "tags": [
           "Public"
         ],

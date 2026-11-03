@@ -16,9 +16,10 @@ export function rateLimit(key: string, limit: number, windowMs: number, now = Da
   if (w.count > limit) throw tooManyRequests(Math.ceil((w.resetAt - now) / 1000));
 }
 
-/** The caller's address as Caddy forwards it. */
-export function clientIp(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+/** The caller's address as Railway's proxy forwards it (X-Real-IP), else the first X-Forwarded-For hop. */
+export function clientIp(req: Request | Pick<Headers, "get">): string {
+  const h = req instanceof Request ? req.headers : req;
+  return h.get("x-real-ip")?.trim() || h.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
 }
 
 export function resetRateLimits() {

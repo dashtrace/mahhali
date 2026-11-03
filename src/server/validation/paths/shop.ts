@@ -110,7 +110,7 @@ export function registerShop(r: OpenAPIRegistry, { secured, ok, error, errors }:
   r.registerPath({
     method: "get",
     path: "/uploads/{shopId}/{file}",
-    summary: "An uploaded logo or photo (served by Caddy in production)",
+    summary: "An uploaded logo or photo",
     tags: ["Public"],
     request: { params: z.object({ shopId: z.string(), file: z.string() }) },
     responses: { 200: { description: "The image" }, 404: errors[404] },

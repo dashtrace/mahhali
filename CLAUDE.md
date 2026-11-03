@@ -19,8 +19,8 @@ Live URL deployed by CI; CI runs tests on every PR; Next.js route handlers (TS) 
 - Shops upload a logo and customise theme.
 - Money: BigInt minor units (USD cents, LBP whole pounds). Shop.currency USD|LBP; usdLbpRate Decimal(14,2) frozen per order; cash collected recorded as USD cents and LBP separately.
 - Phones normalised to E.164 (default LB). Lebanese address fields.
-- Database: plain self-hosted PostgreSQL 16. NOT Supabase or Neon.
-- Deploy: one VPS, Docker Compose (app + postgres + caddy), CI deploys over SSH (gated by repo variable DEPLOY_ENABLED), nightly pg_dump. See deploy/README.md.
+- Database: plain PostgreSQL 16 (Railway's Postgres service). NOT Supabase or Neon.
+- Deploy: Railway, one service from the Dockerfile + Postgres + a volume at /app/uploads. CI runs `railway up` after tests (gated by repo variable DEPLOY_ENABLED); migrations run as the pre-deploy command (railway.json); cron endpoints are called by the Scheduled jobs workflow. See deploy/README.md.
 - NFR wording: state requirements only (atomic/ACID); no "proven by automated test" lines in the requirements doc.
 
 ## Architecture rules (enforced by ESLint no-restricted-imports)
@@ -51,6 +51,6 @@ Done on branch `feat/foundation` (commit 465e71d, 125 tests passing): schema + m
 2. Order board: status transitions (domain/orderStatus.ts), stock effects on ship/cancel/return, courier assignment and filtering.
 3. Delivery role views, mark delivered/failed, COD collection and remittance reconciliation.
 4. Tracking page, review invites (email via Resend), logo/theme, admin views.
-5. Mobile-first UI, Arabic UI, Stripe test-mode pricing page, deploy to VPS.
+5. Mobile-first UI, Arabic UI, Stripe test-mode pricing page, deploy to Railway.
 
-Open questions: confirm 8 Nov deadline, the brief's stretch goal, pilot couriers, VPS provider and domain, team work split.
+Open questions: confirm 8 Nov deadline, the brief's stretch goal, pilot couriers, domain, team work split.

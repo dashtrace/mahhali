@@ -98,8 +98,8 @@ Platform admins (the Mahhali team) use Better Auth's admin role on the user. The
 - **Up to three named options per product** (Size, Colour, SPF…), stored as a text array on the product,
   with one value per option on each variant. A unique `(productId, optionValues)` index stops duplicate
   variants; a full option/value table set would add joins without anything the shops need.
-- **Plain PostgreSQL on one server** with Docker Compose, deployed by CI over SSH. A long-running Node
-  server avoids serverless connection-pool and transaction-timeout problems.
+- **One long-running container plus plain PostgreSQL on Railway**, deployed by CI after the tests
+  pass. A long-running Node server avoids serverless connection-pool and transaction-timeout problems.
 
 ## Status
 

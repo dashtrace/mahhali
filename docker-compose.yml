@@ -1,4 +1,4 @@
-# Local development database. Production uses deploy/docker-compose.prod.yml.
+# Local development database. Production runs on Railway (deploy/README.md).
 services:
   db:
     image: postgres:16

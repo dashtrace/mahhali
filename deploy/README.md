@@ -1,25 +1,42 @@
 # Deploying Mahhali
 
-One Linux server (any VPS with 1 to 2 GB of RAM) runs three containers with Docker Compose:
-PostgreSQL 16, the Next.js app and Caddy for HTTPS. CI builds the image, pushes it to GitHub
-Container Registry and runs `deploy.sh` on the server over SSH.
+The app runs on [Railway](https://railway.com): one service built from the `Dockerfile` and a
+Railway PostgreSQL 16 database. CI runs the tests and then `railway up`, which builds the image,
+runs `prisma migrate deploy` (the pre-deploy command in `railway.json`), checks `/api/health` and
+switches traffic to the new version.
 
-## One-time server setup
+## One-time Railway setup
 
-1. Point the domain's A record at the server.
-2. Install Docker and the Compose plugin.
-3. Create `/opt/mahhali` and copy into it: `docker-compose.prod.yml`, `Caddyfile`, `deploy.sh`, `backup.sh`, `cron.sh`.
-4. Create `/opt/mahhali/.env` from `server.env.example` with real, long random passwords.
-5. Log the server in to the registry so it can pull the private image:
-   `echo <token with read:packages> | docker login ghcr.io -u <github user> --password-stdin`
-6. Add the scheduled jobs and the nightly backup to the deploy user's crontab, and copy
-   `/opt/mahhali/backups` off the server:
+1. Create a project and add a **PostgreSQL** database.
+2. Add an **empty service** named `mahhali`. Do not connect the GitHub repo to it: CI deploys it,
+   so it only ships code that passed the tests.
+3. On the service, add a **volume** mounted at `/app/uploads` (logos and product photos).
+4. Under **Settings → Networking**, generate a domain (or add your own).
+5. Set the service variables:
 
-   ```
-   */15 * * * * /opt/mahhali/cron.sh expire-reservations
-   */10 * * * * /opt/mahhali/cron.sh review-emails
-   0 3 * * *    /opt/mahhali/backup.sh
-   ```
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+   | `BETTER_AUTH_SECRET` | long random string (32+ characters) |
+   | `BETTER_AUTH_URL` | `https://<your domain>` |
+   | `CRON_SECRET` | long random string |
+   | `RAILWAY_RUN_UID` | `0` (the image runs as `node`; this lets it write to the volume) |
+   | `RESEND_API_KEY`, `MAIL_FROM` | optional, see below |
+   | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET` | optional, see below |
+
+6. Turn on backups for the Postgres volume (database service → **Backups**).
+7. Create a **project token** (Project Settings → Tokens) for the environment.
+
+## Turn on deploys from CI
+
+In the GitHub repository settings:
+
+- Secrets: `RAILWAY_TOKEN` (the project token), `CRON_SECRET` (same value as on Railway).
+- Variables: `APP_URL` = `https://<your domain>`, `DEPLOY_ENABLED` = `true`.
+
+Every merge to `main` then runs the tests and deploys. The **Scheduled jobs** workflow calls
+`/api/cron/expire-reservations` and `/api/cron/review-emails` every 10 minutes; run it by hand from
+the Actions tab to test it.
 
 ## Email and billing
 
@@ -31,21 +48,11 @@ Container Registry and runs `deploy.sh` on the server over SSH.
   `checkout.session.completed` and `customer.subscription.deleted` and set `STRIPE_WEBHOOK_SECRET`.
   Locally: `stripe listen --forward-to localhost:3000/api/billing/webhook`.
 
-## Restore from a backup
+## Seed demo data or restore a backup
+
+Copy the database's public connection URL (Postgres service → **Connect**) and run locally:
 
 ```bash
-cd /opt/mahhali
-docker compose -f docker-compose.prod.yml up -d db
-gunzip -c backups/mahhali-YYYY-MM-DD.sql.gz | docker compose -f docker-compose.prod.yml exec -T db psql -U "$POSTGRES_USER" "$POSTGRES_DB"
-docker compose -f docker-compose.prod.yml up -d
+DATABASE_URL="<public url>" npm run db:seed
+gunzip -c mahhali-backup.sql.gz | psql "<public url>"
 ```
-
-## Turn on deploys from CI
-
-In the GitHub repository settings:
-
-- Secrets: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (a key that only this workflow uses).
-- Variables: `DEPLOY_ENABLED` = `true`.
-
-Every merge to `main` then runs the tests, builds the image, and deploys it. Migrations run with
-`prisma migrate deploy` before the new app starts.
