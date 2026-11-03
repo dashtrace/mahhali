@@ -119,6 +119,16 @@
             ],
             "maxLength": 2000
           },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "maxItems": 3,
+            "default": []
+          },
           "variants": {
             "type": "array",
             "items": {
@@ -192,19 +202,14 @@
       "VariantInput": {
         "type": "object",
         "properties": {
-          "size": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
-          },
-          "colour": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
+          "optionValues": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 3,
+            "default": []
           },
           "sku": {
             "type": [
@@ -227,7 +232,8 @@
         },
         "required": [
           "price"
-        ]
+        ],
+        "additionalProperties": false
       },
       "UpdateProductBody": {
         "type": "object",
@@ -309,22 +315,50 @@
           }
         }
       },
+      "SetOptionsBody": {
+        "type": "object",
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "from": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "minLength": 1,
+                  "maxLength": 40
+                }
+              },
+              "required": [
+                "name",
+                "from"
+              ]
+            },
+            "maxItems": 3
+          }
+        },
+        "required": [
+          "options"
+        ]
+      },
       "UpdateVariantBody": {
         "type": "object",
         "properties": {
-          "size": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
-          },
-          "colour": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 40
+          "optionValues": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 3
           },
           "sku": {
             "type": [
@@ -341,7 +375,8 @@
           "archived": {
             "type": "boolean"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "StockAdjustmentBody": {
         "type": "object",
@@ -371,10 +406,10 @@
             "format": "binary",
             "description": "PNG, JPEG or WebP, up to 3 MB"
           },
-          "colour": {
+          "optionValue": {
             "type": "string",
             "maxLength": 40,
-            "description": "The variant colour this photo shows"
+            "description": "The option value this photo shows, e.g. a colour"
           }
         },
         "required": [
@@ -866,6 +901,10 @@
             "type": "string",
             "pattern": "^#[0-9a-fA-F]{6}$"
           },
+          "text": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
           "radius": {
             "type": "string",
             "enum": [
@@ -1199,8 +1238,17 @@
               "bestsellers",
               "new",
               "featured",
+              "category",
               "hidden"
             ]
+          },
+          "homeCategoryId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 64
           },
           "showTestimonials": {
             "type": "boolean"
@@ -1263,6 +1311,19 @@
             "maximum": 100
           }
         }
+      },
+      "SlideImageUpload": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "PNG, JPEG or WebP, up to 3 MB"
+          }
+        },
+        "required": [
+          "file"
+        ]
       },
       "CategoryBody": {
         "type": "object",
@@ -1858,6 +1919,110 @@
         }
       }
     },
+    "/api/products/{id}/options": {
+      "put": {
+        "summary": "Rename, add, remove or reorder a product's options; every variant's values follow (owner, manager)",
+        "tags": [
+          "Products"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOptionsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product with its variants",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another shop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OPTIONS_CHANGED: a `from` name is not one of the current options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "DUPLICATE_VARIANT: two variants would end up with the same values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/products/{id}/variants": {
       "post": {
         "summary": "Add a variant; initial stock is logged (owner, manager)",
@@ -1940,7 +2105,7 @@
             }
           },
           "422": {
-            "description": "DUPLICATE_VARIANT or INVALID_PRICE",
+            "description": "DUPLICATE_VARIANT, OPTION_VALUES_MISMATCH or INVALID_PRICE",
             "content": {
               "application/json": {
                 "schema": {
@@ -1954,7 +2119,7 @@
     },
     "/api/variants/{id}": {
       "patch": {
-        "summary": "Change a variant's price, SKU, size or colour, or archive it (owner, manager)",
+        "summary": "Change a variant's price, SKU or option values, or archive it (owner, manager)",
         "tags": [
           "Products"
         ],
@@ -2034,7 +2199,7 @@
             }
           },
           "422": {
-            "description": "DUPLICATE_VARIANT or INVALID_PRICE",
+            "description": "DUPLICATE_VARIANT, OPTION_VALUES_MISMATCH or INVALID_PRICE",
             "content": {
               "application/json": {
                 "schema": {
@@ -6247,6 +6412,100 @@
           },
           "404": {
             "description": "Not found, or belongs to another shop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shop/slides/{id}/image": {
+      "post": {
+        "summary": "Replace a slide's image, keeping its text and position (owner)",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideImageUpload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated slide",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another shop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "FILE_TOO_LARGE or UNSUPPORTED_FILE",
             "content": {
               "application/json": {
                 "schema": {

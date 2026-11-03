@@ -15,7 +15,7 @@ What V1 must do, and how well. Pilot shops are in Lebanon and price in US dollar
 
 - **FR-5** The owner chooses whether the shop prices in US dollars or Lebanese pounds and sets the exchange rate it uses. The owner can upload a shop logo and choose theme colours; the public catalogue uses them.
 - **FR-6** Each shop has a public catalogue page at its own link, made for the Instagram bio.
-- **FR-7** The owner can add products with photos, and variants by size and colour, each with its own price and stock.
+- **FR-7** The owner can add products with photos and up to three named options (for example Size, Colour or SPF), and variants with a value for each option, each with its own price and stock. Renaming, adding, removing or reordering options keeps every variant's values in step.
 - **FR-8** The catalogue only lets customers pick variants that are in stock.
 
 **Ordering**
@@ -55,7 +55,7 @@ What V1 must do, and how well. Pilot shops are in Lebanon and price in US dollar
 
 **Storefront**
 
-- **FR-26** The owner can set a tagline, an About text, shipping information, links to the shop's Instagram and Facebook pages (only https links to those sites are accepted), how the logo is shown (image and name, image only or name only), and which highlight the home page shows (best sellers, new arrivals, featured products or none).
+- **FR-26** The owner can set a tagline, an About text, shipping information, links to the shop's Instagram and Facebook pages (only https links to those sites are accepted), how the logo is shown (image and name, image only or name only), and which highlight the home page shows (one of the shop's categories, best sellers, new arrivals, featured products or none). New shops show their first category.
 - **FR-27** The owner can add up to 6 promotional banner slides, each with an image (PNG, JPEG or WebP up to 3 MB), a headline, an optional short label and an optional description, and can edit, reorder and remove them.
 - **FR-28** The owner or a manager can create up to 30 named product categories, rename and reorder them, file each product under one category of the same shop, and delete a category without deleting its products.
 - **FR-29** The owner or a manager can mark products as featured and give each product up to 12 specification lines (label and value).
@@ -68,7 +68,7 @@ What V1 must do, and how well. Pilot shops are in Lebanon and price in US dollar
 
 - **NFR-1 Correctness under load.** Every operation that changes stock, order numbers or money runs in a single ACID database transaction, so it happens completely or not at all. When many customers order the last item at the same moment, exactly one order succeeds.
 - **NFR-2 Tenant isolation.** No user of one shop can read or change another shop's data. Only platform admins can see across shops.
-- **NFR-3 Security.** Passwords are hashed; every API route checks the session, the role and the input; the public order endpoint is rate limited; customer tracking and review links cannot be guessed; review links work once, expire after 30 days and are stored only as a hash; looking up an order by number and phone is rate limited, and so is sending shop feedback.
+- **NFR-3 Security.** Passwords are hashed; new passwords have at least 8 characters, a letter and a digit or symbol, and are not a common password; every API route checks the session, the role and the input; the public order endpoint is rate limited; customer tracking and review links cannot be guessed; review links work once, expire after 30 days and are stored only as a hash; looking up an order by number and phone is rate limited, and so is sending shop feedback.
 - **NFR-4 Mobile first.** Every screen works well on a 375 px wide phone, with large tap targets; owners and delivery users will mostly use phones.
 - **NFR-5 Performance.** The public catalogue loads in under 2 seconds on a 4G phone; API responses take under 500 ms for typical shop sizes.
 - **NFR-6 Reliability.** A double tap or a retry on a bad connection never creates a duplicate order; money is stored as whole cents or whole pounds in 64-bit integers, never as decimals, and each order keeps the exchange rate that applied when it was placed.

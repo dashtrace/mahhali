@@ -1,7 +1,8 @@
-import { badRequest, notFound, unprocessable } from "../http/errors";
+import { badRequest, conflict, notFound, unprocessable } from "../http/errors";
 import type { Actor } from "../http/withRoute";
 import { toMinor, type Currency } from "../domain/money";
 import { browseProducts, type BrowseOptions, type HomeSection, type LogoMode } from "../domain/storefront";
+import { remapValues } from "../domain/variants";
 import { productRepo } from "../repositories/productRepo";
 import { shopRepo } from "../repositories/shopRepo";
 import { categoryRepo, slideRepo, testimonialRepo } from "../repositories/storefrontRepo";
@@ -11,13 +12,21 @@ import {
   ImageFields,
   type CreateProductInput,
   type ProductSpec,
+  type SetOptionsInput,
   type StockAdjustmentInput,
   type UpdateProductInput,
   type UpdateVariantInput,
   type VariantInput,
 } from "../validation/product";
 
-const duplicateVariant = () => unprocessable("DUPLICATE_VARIANT", "Each size and colour combination can appear once.");
+const duplicateVariant = () => unprocessable("DUPLICATE_VARIANT", "Each combination of option values can appear once.");
+
+/** A variant holds one value per product option. */
+function checkValues(values: string[] | undefined, options: string[]) {
+  if (values !== undefined && values.length !== options.length) {
+    throw unprocessable("OPTION_VALUES_MISMATCH", `Give one value for each option (${options.length}).`);
+  }
+}
 
 function priceMinor(amount: string, currency: Currency) {
   try {
@@ -55,8 +64,7 @@ export const productService = {
     await checkCategory(actor, input.categoryId);
     const { variants: lines, description, ...fields } = input;
     const variants = lines.map((v) => ({
-      size: v.size,
-      colour: v.colour,
+      optionValues: v.optionValues,
       sku: v.sku,
       priceMinor: priceMinor(v.price, currency),
       available: v.stock,
@@ -85,11 +93,9 @@ export const productService = {
 
   async addVariant(actor: Actor, productId: string, input: VariantInput) {
     const product = await this.get(actor, productId);
-    // Checked here too because Postgres treats two empty sizes as different.
-    if (product.variants.some((v) => v.size === input.size && v.colour === input.colour)) throw duplicateVariant();
+    checkValues(input.optionValues, product.options);
     const variant = {
-      size: input.size,
-      colour: input.colour,
+      optionValues: input.optionValues,
       sku: input.sku,
       priceMinor: priceMinor(input.price, await currencyOf(actor)),
       available: input.stock,
@@ -102,12 +108,37 @@ export const productService = {
     }
   },
 
+  /** Renames, adds, removes or reorders options; every variant, hidden ones too, keeps its values in step. */
+  async setOptions(actor: Actor, productId: string, input: SetOptionsInput) {
+    try {
+      // shortcut: no row lock, so a variant added in the same instant keeps the old value count; lock the product row if that shows up.
+      await transaction(async (tx) => {
+        const product = await productRepo.findById(actor.shopId, productId, tx);
+        if (!product) throw notFound("Product");
+        const from = input.options.map((o) => {
+          if (o.from === null) return null;
+          const i = product.options.indexOf(o.from);
+          if (i < 0) throw conflict("OPTIONS_CHANGED", "The options changed since you opened them. Reload and try again.");
+          return i;
+        });
+        // A rename alone leaves every value where it is.
+        const moved = from.length !== product.options.length || from.some((f, i) => f !== i);
+        const variants = moved ? product.variants.map((v) => ({ id: v.id, optionValues: remapValues(v.optionValues, from) })) : [];
+        await productRepo.setOptions(tx, actor.shopId, productId, input.options.map((o) => o.name), variants);
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw unprocessable("DUPLICATE_VARIANT", "Two variants would end up the same (hidden ones count too). Change or remove one first.");
+      }
+      throw error;
+    }
+    return this.get(actor, productId);
+  },
+
   async updateVariant(actor: Actor, id: string, input: UpdateVariantInput) {
     const variant = await productRepo.findVariant(actor.shopId, id);
     if (!variant) throw notFound("Variant");
-    const size = input.size === undefined ? variant.size : input.size;
-    const colour = input.colour === undefined ? variant.colour : input.colour;
-    if (variant.product.variants.some((v) => v.id !== id && v.size === size && v.colour === colour)) throw duplicateVariant();
+    checkValues(input.optionValues, variant.product.options);
     const { price, ...rest } = input;
     try {
       const updated = await productRepo.updateVariant(actor.shopId, id, {
@@ -136,13 +167,13 @@ export const productService = {
 
   async addImage(actor: Actor, productId: string, form: FormData) {
     await this.get(actor, productId);
-    const fields = ImageFields.safeParse({ colour: form.get("colour") ?? undefined });
+    const fields = ImageFields.safeParse({ optionValue: form.get("optionValue") ?? undefined });
     if (!fields.success) {
       throw badRequest("Invalid form", fields.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
     }
     const url = await saveUpload(actor.shopId, form.get("file"), "photo");
     try {
-      return await productRepo.addImage(actor.shopId, productId, { url, colour: fields.data.colour });
+      return await productRepo.addImage(actor.shopId, productId, { url, optionValue: fields.data.optionValue });
     } catch (error) {
       await deleteUpload(actor.shopId, url);
       throw error;
@@ -187,12 +218,12 @@ async function publicProducts(shopId: string) {
       soldCount: sold.get(p.id) ?? 0,
       createdAt: p.createdAt.toISOString(),
       rating: { average: Number(p.ratingAvg), count: p.ratingCount },
-      images: p.images.map((i) => ({ url: i.url, colour: i.colour })),
+      options: p.options,
+      images: p.images.map((i) => ({ url: i.url, optionValue: i.optionValue })),
       // Customers see how many are left only up to the per-order cap (20), so larger stock stays private.
       variants: p.variants.map((v) => ({
         id: v.id,
-        size: v.size,
-        colour: v.colour,
+        optionValues: v.optionValues,
         priceMinor: v.priceMinor,
         inStock: v.available > 0,
         left: Math.min(v.available, 20),
@@ -228,6 +259,7 @@ export const catalogueService = {
         facebookUrl: shop.facebookUrl,
         logoMode: shop.logoMode as LogoMode,
         homeSection: shop.homeSection as HomeSection,
+        homeCategoryId: shop.homeCategoryId,
         showTestimonials: shop.showTestimonials,
         slides: slides.map((s) => ({ id: s.id, imageUrl: s.imageUrl, kicker: s.kicker, title: s.title, body: s.body })),
         categories: categories.map((c) => ({

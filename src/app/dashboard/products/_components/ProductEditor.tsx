@@ -1,37 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Badge, Button, Card, Field, IconButton, Input, Select, Textarea, cx } from "@/components/ui";
+import { Alert, Badge, Button, Card, Field, IconButton, Input, SaveButton, Select, Textarea, cx } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import type { CommonMessages } from "@/i18n/messages/common";
 import { api } from "@/lib/api";
 import { formatDateTime, toAmountText } from "@/lib/format";
-import { VariantFields, variantBody, type VariantDraft } from "./CreateProductForm";
+import { OptionsFields, VariantFields, blankVariant, variantBody, type VariantDraft } from "./CreateProductForm";
 import { FilePicker } from "./FilePicker";
 import { CardHead, ExtrasFields, extrasBody, extrasOf, type Category, type Extras } from "./ProductExtras";
-import { submitWith, useAction } from "./useAction";
+import { submitWith, useAction, useSave } from "./useAction";
 
 type Currency = "USD" | "LBP";
-type Variant = { id: string; size: string | null; colour: string | null; sku: string | null; priceMinor: number; available: number; reserved: number; archived: boolean };
+type Variant = { id: string; optionValues: string[]; sku: string | null; priceMinor: number; available: number; reserved: number; archived: boolean };
 type Product = {
   id: string;
   name: string;
   description: string | null;
   status: "ACTIVE" | "ARCHIVED";
+  options: string[];
   variants: Variant[];
-  images: { id: string; url: string; colour: string | null }[];
+  images: { id: string; url: string; optionValue: string | null }[];
 } & Parameters<typeof extrasOf>[0];
 type Movement = { id: string; delta: number; reason: "RESERVE" | "RELEASE" | "SHIP" | "RESTOCK" | "ADJUST"; note: string | null; at: string };
 type Common = { currency: Currency; locale: Locale; m: CatalogueMessages; t: CommonMessages };
 
 export function ProductEditor({ product, categories, ...c }: { product: Product; categories: Category[] } & Common) {
   const { m, t } = c;
-  const details = useAction(t.error);
+  const details = useSave(t.error);
   const archive = useAction(t.error);
   const archived = product.status === "ARCHIVED";
-  const colours = [...new Set(product.variants.map((v) => v.colour).filter((x): x is string => !!x))];
+  const values = [...new Set(product.variants.flatMap((v) => v.optionValues).filter(Boolean))];
 
   return (
     <div className="flex max-w-3xl flex-col gap-4">
@@ -40,8 +41,9 @@ export function ProductEditor({ product, categories, ...c }: { product: Product;
       <Card>
         <form
           key={`${product.name}|${product.description}`}
+          {...details.form}
           onSubmit={submitWith((f) =>
-            details.run(() =>
+            details.save(() =>
               api(`/api/products/${product.id}`, { method: "PATCH", body: { name: f.get("name"), description: String(f.get("description") ?? "") || null } }),
             ),
           )}
@@ -55,20 +57,20 @@ export function ProductEditor({ product, categories, ...c }: { product: Product;
           <Field label={m.description} hint={t.optional}>
             <Textarea name="description" defaultValue={product.description ?? ""} maxLength={2000} dir="auto" />
           </Field>
-          <Button type="submit" disabled={details.busy} className="self-start">
-            {details.busy ? t.saving : t.save}
-          </Button>
+          <SaveButton state={details} labels={t} className="self-start" />
         </form>
       </Card>
 
-      <Photos productId={product.id} images={product.images} colours={colours} {...c} />
+      <Photos productId={product.id} images={product.images} values={values} {...c} />
+
+      <Options product={product} {...c} />
 
       <Card className="flex flex-col gap-3">
-        <CardHead title={m.variants} hint={m.variantsHint} />
+        <CardHead title={m.variants} hint={product.options.length ? m.variantsHint : m.variantsHintNone} />
         {product.variants.map((v) => (
-          <VariantCard key={v.id} variant={v} {...c} />
+          <VariantCard key={v.id} variant={v} options={product.options} {...c} />
         ))}
-        <AddVariant productId={product.id} {...c} />
+        {product.options.length > 0 && <AddVariant key={product.options.join("|")} productId={product.id} options={product.options} {...c} />}
       </Card>
 
       <StorefrontExtras product={product} categories={categories} {...c} />
@@ -93,43 +95,66 @@ export function ProductEditor({ product, categories, ...c }: { product: Product;
   );
 }
 
+type OptionRow = { name: string; from: string | null };
+const rowsOf = (options: string[]): OptionRow[] => options.map((name) => ({ name, from: name }));
+
+/** Option names. Each row remembers which current option it was, so a rename keeps every value. */
+function Options({ product, m, t }: { product: Product } & Common) {
+  const [rows, setRows] = useState(() => rowsOf(product.options));
+  // After a save (or a change in another tab) the rows start again from the saved names.
+  const [saved, setSaved] = useState(JSON.stringify(product.options));
+  if (saved !== JSON.stringify(product.options)) {
+    setSaved(JSON.stringify(product.options));
+    setRows(rowsOf(product.options));
+  }
+  const save = useSave(t.error, rows.map((r) => r.name.trim()));
+  return (
+    <Card>
+      <form
+        {...save.form}
+        onSubmit={submitWith(() =>
+          save.save(() => api(`/api/products/${product.id}/options`, { method: "PUT", body: { options: rows.map((r) => ({ ...r, name: r.name.trim() })) } })),
+        )}
+        className="flex flex-col gap-4"
+      >
+        <CardHead title={m.options} hint={`${m.optionsHint} ${m.optionsRemoveHint}`} />
+        {save.error && <Alert tone="error">{save.error}</Alert>}
+        <OptionsFields
+          names={rows.map((r) => r.name)}
+          onRename={(i, name) => setRows(rows.map((r, j) => (j === i ? { ...r, name } : r)))}
+          onAdd={() => setRows([...rows, { name: "", from: null }])}
+          onRemove={(i) => setRows(rows.filter((_, j) => j !== i))}
+          m={m}
+        />
+        <SaveButton state={save} labels={t} className="self-start" />
+      </form>
+    </Card>
+  );
+}
+
 /** Category, featured, specs and customization, saved together. */
 function StorefrontExtras({ product, categories, m, t }: { product: Product; categories: Category[] } & Common) {
   const [extras, setExtras] = useState<Extras>(() => extrasOf(product));
-  const [done, setDone] = useState(false);
-  const save = useAction(t.error);
+  const save = useSave(t.error, extras);
   return (
     <form
-      onSubmit={submitWith(async () => {
-        setDone(false);
-        setDone(await save.run(() => api(`/api/products/${product.id}`, { method: "PATCH", body: extrasBody(extras) })));
-      })}
+      {...save.form}
+      onSubmit={submitWith(() => save.save(() => api(`/api/products/${product.id}`, { method: "PATCH", body: extrasBody(extras) })))}
       className="flex flex-col gap-4"
     >
-      <ExtrasFields
-        value={extras}
-        onChange={(x) => {
-          setDone(false);
-          setExtras(x);
-        }}
-        categories={categories}
-        m={m}
-      />
+      <ExtrasFields value={extras} onChange={setExtras} categories={categories} m={m} />
       {save.error && <Alert tone="error">{save.error}</Alert>}
-      {done && <Alert tone="success">{m.storefrontSaved}</Alert>}
-      <Button type="submit" disabled={save.busy} className="self-start">
-        {save.busy ? t.saving : t.save}
-      </Button>
+      <SaveButton state={save} labels={t} className="self-start" />
     </form>
   );
 }
 
-function VariantCard({ variant: v, currency, locale, m, t }: { variant: Variant } & Common) {
-  const edit = useAction(t.error);
+function VariantCard({ variant: v, options, currency, locale, m, t }: { variant: Variant; options: string[] } & Common) {
+  const edit = useSave(t.error);
   const stock = useAction(t.error);
   const [history, setHistory] = useState<Movement[] | null>(null);
   const [stockDone, setStockDone] = useState(false);
-  const label = [v.size, v.colour].filter(Boolean).join(" / ") || m.noOptions;
+  const label = v.optionValues.filter(Boolean).join(" / ") || m.noOptions;
   const loadHistory = async () => setHistory(await api<Movement[]>(`/api/variants/${v.id}/movements`));
 
   return (
@@ -142,12 +167,13 @@ function VariantCard({ variant: v, currency, locale, m, t }: { variant: Variant 
       </div>
 
       <form
-        key={`${v.size}|${v.colour}|${v.sku}|${v.priceMinor}`}
+        key={JSON.stringify([options, v.optionValues, v.sku, v.priceMinor])}
+        {...edit.form}
         onSubmit={submitWith((f) =>
-          edit.run(() =>
+          edit.save(() =>
             api(`/api/variants/${v.id}`, {
               method: "PATCH",
-              body: { size: f.get("size"), colour: f.get("colour"), sku: f.get("sku"), price: String(f.get("price")).trim() },
+              body: { optionValues: f.getAll("value").map(String), sku: f.get("sku"), price: String(f.get("price")).trim() },
             }),
           ),
         )}
@@ -155,12 +181,11 @@ function VariantCard({ variant: v, currency, locale, m, t }: { variant: Variant 
       >
         {edit.error && <Alert tone="error">{edit.error}</Alert>}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label={m.size}>
-            <Input name="size" defaultValue={v.size ?? ""} maxLength={40} />
-          </Field>
-          <Field label={m.colour}>
-            <Input name="colour" defaultValue={v.colour ?? ""} maxLength={40} />
-          </Field>
+          {options.map((name, i) => (
+            <Field key={i} label={name}>
+              <Input name="value" defaultValue={v.optionValues[i] ?? ""} maxLength={40} dir="auto" />
+            </Field>
+          ))}
           <Field label={fill(m.price, { currency })}>
             <Input name="price" defaultValue={toAmountText(v.priceMinor, currency)} required dir="ltr" inputMode="decimal" />
           </Field>
@@ -169,9 +194,9 @@ function VariantCard({ variant: v, currency, locale, m, t }: { variant: Variant 
           </Field>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" tone="secondary" disabled={edit.busy}>
-            {edit.busy ? t.saving : m.saveVariant}
-          </Button>
+          <SaveButton state={edit} labels={t} tone="secondary">
+            {m.saveVariant}
+          </SaveButton>
           <Button tone="ghost" disabled={edit.busy} onClick={() => edit.run(() => api(`/api/variants/${v.id}`, { method: "PATCH", body: { archived: !v.archived } }))}>
             {v.archived ? m.showVariant : m.hideVariant}
           </Button>
@@ -234,14 +259,13 @@ function VariantCard({ variant: v, currency, locale, m, t }: { variant: Variant 
   );
 }
 
-function AddVariant({ productId, currency, m, t }: { productId: string } & Common) {
-  const blank: VariantDraft = { size: "", colour: "", sku: "", price: "", stock: "0" };
+function AddVariant({ productId, options, currency, m, t }: { productId: string; options: string[] } & Common) {
   const [draft, setDraft] = useState<VariantDraft | null>(null);
   const add = useAction(t.error);
 
   if (!draft) {
     return (
-      <Button tone="secondary" className="self-start" onClick={() => setDraft(blank)}>
+      <Button tone="secondary" className="self-start" onClick={() => setDraft(blankVariant(options))}>
         <Icon name="plus" />
         {m.addVariant}
       </Button>
@@ -256,7 +280,7 @@ function AddVariant({ productId, currency, m, t }: { productId: string } & Commo
     >
       <h3 className="font-bold">{m.addVariant}</h3>
       {add.error && <Alert tone="error">{add.error}</Alert>}
-      <VariantFields value={draft} onChange={setDraft} currency={currency} m={m} />
+      <VariantFields value={draft} onChange={setDraft} options={options} currency={currency} m={m} />
       <div className="flex gap-2">
         <Button type="submit" disabled={add.busy}>
           {add.busy ? t.saving : t.add}
@@ -269,14 +293,14 @@ function AddVariant({ productId, currency, m, t }: { productId: string } & Commo
   );
 }
 
-function Photos({ productId, images, colours, m, t }: { productId: string; images: Product["images"]; colours: string[] } & Common) {
+function Photos({ productId, images, values, m, t }: { productId: string; images: Product["images"]; values: string[] } & Common) {
   const action = useAction(t.error);
-  const [colour, setColour] = useState("");
+  const [value, setValue] = useState("");
 
   async function upload(file: File) {
     const form = new FormData();
     form.set("file", file);
-    if (colour) form.set("colour", colour);
+    if (value) form.set("optionValue", value);
     await action.run(() => api(`/api/products/${productId}/images`, { body: form }));
   }
 
@@ -292,7 +316,7 @@ function Photos({ productId, images, colours, m, t }: { productId: string; image
             <li key={img.id} className="relative overflow-hidden rounded-sl-sm border border-sl-border bg-sl-cat">
               {/* eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is */}
               <img src={img.url} alt="" className="aspect-square w-full object-cover" />
-              {img.colour && <Badge className="absolute bottom-1 start-1">{img.colour}</Badge>}
+              {img.optionValue && <Badge className="absolute bottom-1 start-1">{img.optionValue}</Badge>}
               <IconButton
                 label={m.deletePhoto}
                 icon={<Icon name="x" className="size-4" />}
@@ -305,13 +329,13 @@ function Photos({ productId, images, colours, m, t }: { productId: string; image
         </ul>
       )}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        {colours.length > 0 && (
-          <Field label={m.photoColour} className="sm:w-56">
-            <Select value={colour} onChange={(e) => setColour(e.target.value)}>
-              <option value="">{m.anyColour}</option>
-              {colours.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+        {values.length > 0 && (
+          <Field label={m.photoOption} className="sm:w-56">
+            <Select value={value} onChange={(e) => setValue(e.target.value)}>
+              <option value="">{m.anyOption}</option>
+              {values.map((v) => (
+                <option key={v} value={v}>
+                  {v}
                 </option>
               ))}
             </Select>

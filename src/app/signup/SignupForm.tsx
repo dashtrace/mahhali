@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { EmailField } from "@/components/EmailField";
+import { PasswordField } from "@/components/PasswordField";
 import { Alert, Button, Field, Input, Select, cx } from "@/components/ui";
+import type { Locale } from "@/i18n/locale";
 import type { authMessages } from "@/i18n/messages/auth";
 import { api, errorMessage } from "@/lib/api";
 
@@ -20,7 +23,7 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function SignupForm({ m }: { m: (typeof authMessages)["en"] }) {
+export function SignupForm({ m, locale }: { m: (typeof authMessages)["en"]; locale: Locale }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,12 +64,8 @@ export function SignupForm({ m }: { m: (typeof authMessages)["en"] }) {
       <Field label={m.yourName}>
         <Input name="name" autoComplete="name" required maxLength={100} />
       </Field>
-      <Field label={m.email}>
-        <Input name="email" type="email" autoComplete="email" inputMode="email" required dir="ltr" />
-      </Field>
-      <Field label={m.password} hint={m.passwordHint}>
-        <Input name="password" type="password" autoComplete="new-password" required minLength={8} />
-      </Field>
+      <EmailField label={m.email} required locale={locale} />
+      <PasswordField label={m.password} hint={m.passwordHint} isNew locale={locale} />
       <h2 className={cx(sectionTitle, "mt-1 border-t border-sl-border pt-4")}>{m.shopSection}</h2>
       <Field label={m.shopName}>
         <Input

@@ -29,7 +29,7 @@ export function WishlistGrid({ slug, products, currency, locale }: { slug: strin
       />
     );
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
       {saved.map((p) => (
         <li key={p.id} className="flex">
           <ProductTile slug={slug} product={p} currency={currency} locale={locale} />

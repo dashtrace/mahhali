@@ -63,10 +63,16 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
           value={median === null ? "–" : duration(median, m, locale)}
           hint={median === null ? m.noData : baseline.confirmMinutes !== null ? `${m.before}: ${duration(baseline.confirmMinutes, m, locale)}` : m.confirmHint}
         />
+        {/* The count reads plainly for any range; the per-day average is what the baseline compares with. */}
         <Stat
-          label={m.perDay}
-          value={perDay}
-          hint={baseline.ordersPerDay !== null ? `${m.before}: ${formatNumber(baseline.ordersPerDay, locale)}` : undefined}
+          label={m.orders}
+          value={formatNumber(data.ordersCreated, locale)}
+          hint={[
+            fill(m.perDayValue, { n: perDay }),
+            baseline.ordersPerDay !== null && `${m.before}: ${fill(m.perDayValue, { n: formatNumber(baseline.ordersPerDay, locale) })}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         />
         <div className="col-span-2 sm:col-span-1">
           <Stat

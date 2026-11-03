@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
+import { EmailField } from "@/components/EmailField";
 import { Icon } from "@/components/Icon";
 import { Alert, Button, ButtonLink, Card, EmptyState, Field, IconButton, Input, ProductPhoto, QtyStepper, Select, Textarea } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CheckoutMessages } from "@/i18n/messages/checkout";
+import { common } from "@/i18n/messages/common";
 import { governorateNames } from "@/i18n/messages/store";
 import { ApiError, api, errorMessage, newIdempotencyKey } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
@@ -53,7 +55,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
       line,
       hit,
       name: hit?.product.name ?? m.lineUnavailable,
-      variant: hit ? [hit.variant.size, hit.variant.colour].filter(Boolean).join(" · ") : "",
+      variant: hit ? hit.variant.optionValues.filter(Boolean).join(" · ") : "",
       problem: problemOf(line, hit),
     };
   });
@@ -130,6 +132,9 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
         setError(fill(m.errNoteTooLong, { item: nameOf(one.variantId), max: one.maxLength ?? 0 }));
       } else if (Array.isArray(details) && details.some((d) => d.path === "customer.phone")) {
         setPhoneError(true);
+      } else if (Array.isArray(details) && details.some((d) => d.path === "customer.email")) {
+        // The field checks itself first; this catches what only the server knows.
+        setError(common[locale].emailInvalid);
       } else if (err instanceof ApiError && err.status === 429) {
         setError(m.errRateLimited);
       } else {
@@ -150,7 +155,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
   if (rows.length === 0) {
     return (
       <div className="mx-auto max-w-xl">
-        <h1 className="sl-heading mb-4 text-[28px] leading-tight">{m.cartTitle}</h1>
+        <h1 className="sl-heading mb-4 text-[22px] leading-tight sm:text-[28px]">{m.cartTitle}</h1>
         <EmptyState
           title={m.cartEmpty}
           body={m.cartEmptyBody}
@@ -174,7 +179,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
   if (step === "cart") {
     return (
       <div className="mx-auto max-w-5xl">
-        <h1 className="sl-heading text-[28px] leading-tight">{m.cartTitle}</h1>
+        <h1 className="sl-heading text-[22px] leading-tight sm:text-[28px]">{m.cartTitle}</h1>
         <p className="mt-1 text-sm text-sl-muted">{fill(m.cartItems, { n: count })}</p>
         <div className="mt-4 grid gap-5 md:grid-cols-[minmax(0,1fr)_340px] md:items-start">
           <ul className="divide-y divide-sl-border rounded-sl-lg border border-sl-border bg-sl-panel px-4 shadow-[0_2px_10px_#00000006]">
@@ -255,7 +260,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
         <Icon name="back" className="size-4" />
         {m.backToCart}
       </Link>
-      <h1 className="sl-heading text-[28px] leading-tight">{m.checkoutTitle}</h1>
+      <h1 className="sl-heading text-[22px] leading-tight sm:text-[28px]">{m.checkoutTitle}</h1>
       <p className="mt-1 text-sm text-sl-muted">{m.checkoutLead}</p>
       <form onSubmit={submit} className="mt-4 grid gap-5 md:grid-cols-[minmax(0,1fr)_360px] md:items-start">
         <Card className="flex flex-col gap-4 rounded-[14px] p-5">
@@ -277,9 +282,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
               onChange={() => setPhoneError(false)}
             />
           </Field>
-          <Field label={`${m.email} (${m.optional})`} hint={m.emailHint}>
-            <Input name="email" type="email" maxLength={200} autoComplete="email" dir="ltr" className="rtl:text-end" />
-          </Field>
+          <EmailField label={`${m.email} (${m.optional})`} hint={m.emailHint} locale={locale} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={m.governorate}>
               <Select name="governorate" required defaultValue="">

@@ -3,13 +3,13 @@ import { db, type Db } from "./tx";
 
 // Every function takes shopId and puts it in every where clause.
 const withVariants = {
-  variants: { orderBy: [{ size: "asc" }, { colour: "asc" }] },
+  // cuids sort by creation time, so variants keep the order the owner added them in.
+  variants: { orderBy: { id: "asc" } },
   images: { orderBy: { position: "asc" } },
 } satisfies Prisma.ProductInclude;
 
 export type VariantInput = {
-  size: string | null;
-  colour: string | null;
+  optionValues: string[];
   sku: string | null;
   priceMinor: bigint;
   available: number;
@@ -42,7 +42,7 @@ export const productRepo = {
   async create(
     tx: Db,
     shopId: string,
-    input: { name: string; description: string | null; variants: VariantInput[] } & ProductFields,
+    input: { name: string; description: string | null; options: string[]; variants: VariantInput[] } & ProductFields,
     actorUserId: string,
   ) {
     const { variants, ...fields } = input;
@@ -111,22 +111,29 @@ export const productRepo = {
     return variant;
   },
 
-  /** A variant with the size and colour of its siblings, for duplicate checks. */
   findVariant(shopId: string, id: string, client: Db = db) {
-    return client.variant.findFirst({
-      where: { id, shopId },
-      include: { product: { select: { variants: { select: { id: true, size: true, colour: true } } } } },
-    });
+    return client.variant.findFirst({ where: { id, shopId }, include: { product: { select: { options: true } } } });
   },
 
   async updateVariant(
     shopId: string,
     id: string,
-    data: { size?: string | null; colour?: string | null; sku?: string | null; priceMinor?: bigint; archived?: boolean },
+    data: { optionValues?: string[]; sku?: string | null; priceMinor?: bigint; archived?: boolean },
     client: Db = db,
   ) {
     const { count } = await client.variant.updateMany({ where: { id, shopId }, data });
     return count === 1 ? client.variant.findFirst({ where: { id, shopId } }) : null;
+  },
+
+  /**
+   * Saves a product's option names and its variants' new values, in the caller's transaction.
+   * The unique index is checked row by row, so each row first takes a value no other row holds
+   * (its own id); writing the final values straight away would fail when two variants swap.
+   */
+  async setOptions(tx: Db, shopId: string, productId: string, options: string[], variants: { id: string; optionValues: string[] }[]) {
+    await tx.product.updateMany({ where: { id: productId, shopId }, data: { options } });
+    for (const v of variants) await tx.variant.updateMany({ where: { id: v.id, shopId }, data: { optionValues: [v.id] } });
+    for (const v of variants) await tx.variant.updateMany({ where: { id: v.id, shopId }, data: { optionValues: v.optionValues } });
   },
 
   /**
@@ -153,7 +160,7 @@ export const productRepo = {
     });
   },
 
-  async addImage(shopId: string, productId: string, input: { url: string; colour: string | null }, client: Db = db) {
+  async addImage(shopId: string, productId: string, input: { url: string; optionValue: string | null }, client: Db = db) {
     const { _max } = await client.productImage.aggregate({ where: { shopId, productId }, _max: { position: true } });
     return client.productImage.create({
       data: { shopId, productId, ...input, position: (_max.position ?? -1) + 1 },

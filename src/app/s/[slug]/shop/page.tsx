@@ -67,7 +67,7 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
 
   return (
     <ShopFrame shop={shop} locale={locale}>
-      <h1 className="sl-heading mb-3 mt-1 text-[26px] leading-tight">{title}</h1>
+      <h1 className="sl-heading mb-3 mt-1 text-[22px] leading-tight sm:text-[26px]">{title}</h1>
 
       <form
         action={`/s/${slug}/shop`}
@@ -107,11 +107,14 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
               {m.allProducts}
             </FilterChip>
           </li>
-          <li className="snap-start">
-            <FilterChip href={shopHref(slug, { sort: "bestsellers", ...price })} selected={!cat && sort === "bestsellers"}>
-              {m.sectionBestsellers}
-            </FilterChip>
-          </li>
+          {/* Like Featured: only once something has sold, so a new shop isn't shown an empty collection. */}
+          {(sort === "bestsellers" || products.some((p) => p.soldCount > 0)) && (
+            <li className="snap-start">
+              <FilterChip href={shopHref(slug, { sort: "bestsellers", ...price })} selected={!cat && sort === "bestsellers"}>
+                {m.sectionBestsellers}
+              </FilterChip>
+            </li>
+          )}
           {(sort === "featured" || products.some((p) => p.featured)) && (
             <li className="snap-start">
               <FilterChip href={shopHref(slug, { sort: "featured", ...price })} selected={!cat && sort === "featured"}>
@@ -131,13 +134,16 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
 
       <PriceFilter key={`${minText}|${maxText}`} slug={slug} currency={shop.currency} locale={locale} keep={keep} min={minText} max={maxText} summary={summary} />
 
-      <p aria-live="polite" className="mb-3 text-[13px] text-sl-muted">
-        {total > 0 ? fill(m.showing, { a: first, b: first + items.length - 1, n: total }) : m.noMatches}
-        {priced && <bdi>{` · ${summary}`}</bdi>}
-      </p>
+      {/* A shop with no products gets only the "coming soon" card below. */}
+      {products.length > 0 && (
+        <p aria-live="polite" className="mb-3 text-[13px] text-sl-muted">
+          {total > 0 ? fill(m.showing, { a: first, b: first + items.length - 1, n: total }) : m.noMatches}
+          {priced && <bdi>{` · ${summary}`}</bdi>}
+        </p>
+      )}
 
       {items.length > 0 ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
           {items.map((p) => (
             <li key={p.id} className="flex">
               <ProductTile slug={slug} product={p} currency={shop.currency} locale={locale} priceMinor={priced ? p.matchPriceMinor : undefined} />

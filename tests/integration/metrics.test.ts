@@ -43,6 +43,8 @@ describe("metrics", () => {
       from: "2026-10-01",
       to: "2026-10-02",
       medianConfirmMinutes: 20,
+      ordersCreated: 5,
+      // The orders predate the test shop's sign-up, so it counts as open from the first one.
       ordersPerDay: 2.5,
       ordersByStatus: { NEW: 1, CONFIRMED: 2, PACKED: 0, OUT_FOR_DELIVERY: 0, DELIVERED: 1, CANCELLED: 1, RETURNED: 0 },
       codGaps: { count: 1, sumMinor: 2500 },

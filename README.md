@@ -35,7 +35,7 @@ Try it:
 curl -c cookies.txt -X POST localhost:3000/api/signup -H 'content-type: application/json' \
   -d '{"name":"Rami","email":"rami@example.com","password":"correct-horse-battery","shopName":"Rami Leather","shopSlug":"rami-leather","currency":"USD"}'
 curl -b cookies.txt -X POST localhost:3000/api/products -H 'content-type: application/json' \
-  -d '{"name":"Wallet","variants":[{"colour":"Brown","price":"35","stock":4}]}'
+  -d '{"name":"Wallet","options":["Colour"],"variants":[{"optionValues":["Brown"],"price":"35","stock":4}]}'
 curl localhost:3000/api/public/shops/rami-leather/catalogue
 ```
 
@@ -95,8 +95,9 @@ Platform admins (the Mahhali team) use Better Auth's admin role on the user. The
 - **Money as integers.** US dollars in cents, Lebanese pounds in whole pounds, all `bigint` because
   pound amounts pass 2^31. Each order freezes the shop's exchange rate; cash collected is recorded in
   the currency it was paid in and converted at that rate during reconciliation.
-- **Variants as size and colour columns**, not a generic option system: simpler to query and validate,
-  and it is what the shops sell.
+- **Up to three named options per product** (Size, Colour, SPF…), stored as a text array on the product,
+  with one value per option on each variant. A unique `(productId, optionValues)` index stops duplicate
+  variants; a full option/value table set would add joins without anything the shops need.
 - **Plain PostgreSQL on one server** with Docker Compose, deployed by CI over SSH. A long-running Node
   server avoids serverless connection-pool and transaction-timeout problems.
 

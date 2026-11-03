@@ -22,7 +22,7 @@ export default async function SignupPage() {
         </>
       }
     >
-      <SignupForm m={m} />
+      <SignupForm m={m} locale={locale} />
     </AuthFrame>
   );
 }

@@ -42,7 +42,7 @@ Every table except the Better Auth tables (\`USER\`, \`SESSION\`, \`ACCOUNT\`, \
 Lebanese pounds in whole pounds.
 
 Rules the database enforces: unique \`(shopId, number)\` and \`(shopId, idempotencyKey)\` on orders,
-unique \`(productId, size, colour)\` on variants, unique \`orderId\` on remittance lines and review invites,
+unique \`(productId, optionValues)\` on variants, at most 3 options per product, unique \`orderId\` on remittance lines and review invites,
 unique \`orderItemId\` on reviews, and CHECK constraints keeping stock and prices at zero or above,
 quantities above zero and ratings between 1 and 5.
 

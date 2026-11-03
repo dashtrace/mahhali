@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
-import { Alert, ButtonLink, Card, EmptyState, FilterChip, cx } from "@/components/ui";
+import { ButtonLink, Card, EmptyState, FilterChip, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
-import { formatMoney, whatsappLink } from "@/lib/format";
+import { whatsappLink } from "@/lib/format";
 import { INFO_SECTIONS, ShopFrame } from "../../../../_storefront/ShopFrame";
 import { loadStore } from "../../_components/load";
-import { TestimonialCard } from "../../_components/tiles";
+import { ShippingPolicy, TestimonialCard } from "../../_components/tiles";
 import { FeedbackForm } from "./FeedbackForm";
 
 type Section = (typeof INFO_SECTIONS)[number];
@@ -65,7 +65,6 @@ export default async function InfoPage({ params }: Params) {
             ) : (
               <EmptyState title={m.testimonialsEmpty} />
             )}
-            <p className="mt-3 rounded-sl-sm bg-sl-cat px-3 py-2 text-xs leading-normal text-sl-muted">{m.testimonialsConsent}</p>
           </section>
         )}
         <ButtonLink href={`${base}/info/feedback`} tone="outline" className="mt-4">
@@ -75,19 +74,10 @@ export default async function InfoPage({ params }: Params) {
       </>
     );
   } else if (section === "shipping") {
-    const fee = shop.deliveryFeeMinor;
     content = (
       <>
         <h2 className={h2}>{m.shippingHeading}</h2>
-        <p className={body}>{shop.shippingInfo || fill(m.shippingEmpty, { shop: shop.name })}</p>
-        <p className="flex items-center gap-2 text-sm font-bold">
-          <Icon name="truck" className="size-5 text-sl-accent" />
-          {Number(fee) > 0 ? <bdi>{fill(m.deliveryFeeLine, { fee: formatMoney(fee, shop.currency, locale) })}</bdi> : m.freeDelivery}
-        </p>
-        <p className="mt-1 text-sm text-sl-muted">{m.payOnDelivery}</p>
-        <Alert tone="note" className="mt-4 text-[13px]">
-          {m.shippingNote}
-        </Alert>
+        <ShippingPolicy shop={shop} locale={locale} />
       </>
     );
   } else if (section === "contact") {
@@ -161,7 +151,7 @@ export default async function InfoPage({ params }: Params) {
       <div className="mx-auto max-w-2xl">
         <header className="mb-4 mt-2">
           <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.17em] text-sl-accent rtl:tracking-normal">{fill(m.infoEyebrow, { shop: shop.name })}</p>
-          <h1 className="sl-heading mb-2 text-[28px] leading-tight">{t[TITLE[section]]}</h1>
+          <h1 className="sl-heading mb-2 text-[22px] leading-tight sm:text-[28px]">{t[TITLE[section]]}</h1>
           <p className="text-sm leading-relaxed text-sl-muted">{intro}</p>
         </header>
         <Card className="min-h-40 rounded-[17px] px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.035)] sm:px-6">{content}</Card>

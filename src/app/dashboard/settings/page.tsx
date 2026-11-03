@@ -6,7 +6,7 @@ import { MAX_SLIDES } from "@/server/domain/storefront";
 import { plain } from "@/server/http/json";
 import { appUrl } from "@/server/mail/mailer";
 import { shopService } from "@/server/services/shopService";
-import { storefrontService } from "@/server/services/storefrontService";
+import { categoryService, storefrontService } from "@/server/services/storefrontService";
 import { pageActor } from "../../_server/session";
 import { readTheme } from "../../_server/theme";
 import { Branding } from "./_components/Branding";
@@ -46,8 +46,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       return <SettingsForm settings={plain(settings)} catalogueUrl={appUrl(`/s/${settings.slug}`)} m={m} t={t} />;
     }
     if (tab === "storefront") {
-      const [storefront, settings] = await Promise.all([storefrontService.settings(actor), shopService.settings(actor)]);
-      return <StorefrontForm storefront={storefront} whatsappPhone={settings.whatsappPhone} m={m} t={t} />;
+      const [storefront, settings, categories] = await Promise.all([storefrontService.settings(actor), shopService.settings(actor), categoryService.list(actor)]);
+      return <StorefrontForm storefront={storefront} categories={categories} whatsappPhone={settings.whatsappPhone} m={m} t={t} />;
     }
     if (tab === "slides") {
       const [slides, branding] = await Promise.all([storefrontService.slides(actor), shopService.branding(actor)]);

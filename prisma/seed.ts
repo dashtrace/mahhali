@@ -2,6 +2,7 @@ import { Prisma, type OrderStatus } from "@prisma/client";
 import { auth } from "@/server/auth/auth";
 import { prisma } from "@/server/db";
 import { reviewAuthorName } from "@/server/domain/names";
+import { itemLabel } from "@/server/domain/orders";
 import { PALETTES } from "@/server/domain/theme";
 import { hashToken, randomToken } from "@/server/domain/tokens";
 
@@ -25,19 +26,20 @@ function member(shopId: string, userId: string, role: string, courierId?: string
   return prisma.membership.create({ data: { id: crypto.randomUUID(), shopId, userId, role, courierId } });
 }
 
-type Option = { size?: string; colour?: string; price: number; stock: number };
+/** One variant: a value per product option, in order. */
+type Row = { values: string[]; price: number; stock: number };
 
-async function product(shopId: string, name: string, description: string, options: Option[]) {
+async function product(shopId: string, name: string, description: string, options: string[], rows: Row[]) {
   return prisma.product.create({
     data: {
       shopId,
       name,
       description,
+      options,
       variants: {
-        create: options.map((o) => ({
+        create: rows.map((o) => ({
           shopId,
-          size: o.size ?? null,
-          colour: o.colour ?? null,
+          optionValues: o.values,
           priceMinor: BigInt(o.price),
           available: o.stock,
           stockMovements: { create: { shopId, delta: o.stock, reason: "ADJUST" as const, note: "Opening stock" } },
@@ -131,7 +133,7 @@ async function order(
           create: o.lines.map((l) => ({
             shopId: shop.id,
             variantId: l.variant.id,
-            nameSnapshot: [l.variant.productName, l.variant.size, l.variant.colour].filter(Boolean).join(" / "),
+            nameSnapshot: itemLabel(l.variant.productName, l.variant.optionValues),
             unitPriceMinor: l.variant.priceMinor,
             qty: l.qty,
           })),
@@ -233,41 +235,41 @@ async function main() {
 
   const flat = (p: Awaited<ReturnType<typeof product>>): Variant[] => p.variants.map((v) => ({ ...v, productName: p.name }));
   const shirt = flat(
-    await product(shop.id, "Linen shirt", "Breathable Lebanese linen, cut loose for summer evenings in Gemmayzeh.", [
-      { size: "S", colour: "Sand", price: 3500, stock: 6 },
-      { size: "M", colour: "Sand", price: 3500, stock: 9 },
-      { size: "L", colour: "Sand", price: 3500, stock: 4 },
-      { size: "M", colour: "Olive", price: 3500, stock: 5 },
-      { size: "L", colour: "Olive", price: 3500, stock: 1 },
+    await product(shop.id, "Linen shirt", "Breathable Lebanese linen, cut loose for summer evenings in Gemmayzeh.", ["Size", "Colour"], [
+      { values: ["S", "Sand"], price: 3500, stock: 6 },
+      { values: ["M", "Sand"], price: 3500, stock: 9 },
+      { values: ["L", "Sand"], price: 3500, stock: 4 },
+      { values: ["M", "Olive"], price: 3500, stock: 5 },
+      { values: ["L", "Olive"], price: 3500, stock: 1 },
     ]),
   );
   const abaya = flat(
-    await product(shop.id, "Embroidered abaya", "Hand-embroidered by artisans in Tripoli. One size, relaxed fit.", [
-      { colour: "Black", price: 8900, stock: 3 },
-      { colour: "Navy", price: 8900, stock: 2 },
+    await product(shop.id, "Embroidered abaya", "Hand-embroidered by artisans in Tripoli. One size, relaxed fit.", ["Colour"], [
+      { values: ["Black"], price: 8900, stock: 3 },
+      { values: ["Navy"], price: 8900, stock: 2 },
     ]),
   );
   const tote = flat(
-    await product(shop.id, "Cedar tote bag", "Heavy cotton canvas with a printed cedar. Fits a laptop.", [
-      { colour: "Natural", price: 1800, stock: 25 },
-      { colour: "Black", price: 1800, stock: 12 },
+    await product(shop.id, "Cedar tote bag", "Heavy cotton canvas with a printed cedar. Fits a laptop.", ["Colour"], [
+      { values: ["Natural"], price: 1800, stock: 25 },
+      { values: ["Black"], price: 1800, stock: 12 },
     ]),
   );
   const scarf = flat(
-    await product(shop.id, "Silk keffiyeh scarf", "A silk take on the classic pattern.", [
-      { colour: "Red", price: 2900, stock: 7 },
-      { colour: "Black", price: 2900, stock: 0 },
+    await product(shop.id, "Silk keffiyeh scarf", "A silk take on the classic pattern.", ["Colour"], [
+      { values: ["Red"], price: 2900, stock: 7 },
+      { values: ["Black"], price: 2900, stock: 0 },
     ]),
   );
   const tee = flat(
-    await product(shop.id, "Beirut 961 tee", "Organic cotton tee, printed in Bourj Hammoud.", [
-      { size: "S", price: 1500, stock: 10 },
-      { size: "M", price: 1500, stock: 14 },
-      { size: "L", price: 1500, stock: 8 },
-      { size: "XL", price: 1500, stock: 3 },
+    await product(shop.id, "Beirut 961 tee", "Organic cotton tee, printed in Bourj Hammoud.", ["Size"], [
+      { values: ["S"], price: 1500, stock: 10 },
+      { values: ["M"], price: 1500, stock: 14 },
+      { values: ["L"], price: 1500, stock: 8 },
+      { values: ["XL"], price: 1500, stock: 3 },
     ]),
   );
-  await product(shop.id, "Winter wool coat", "Last season. Archived, kept for old orders.", [{ size: "M", colour: "Camel", price: 12000, stock: 0 }]).then(
+  await product(shop.id, "Winter wool coat", "Last season. Archived, kept for old orders.", ["Size", "Colour"], [{ values: ["M", "Camel"], price: 12000, stock: 0 }]).then(
     (p) => prisma.product.update({ where: { id: p.id }, data: { status: "ARCHIVED" } }),
   );
 
@@ -414,12 +416,12 @@ async function main() {
   });
   await member(zaatar.id, zaatarOwnerId, "owner");
   const z = flat(
-    await product(zaatar.id, "زعتر بلدي", "زعتر من جبال الجنوب، مطحون مع السماق والسمسم.", [
-      { size: "250g", price: 450_000, stock: 40 },
-      { size: "500g", price: 850_000, stock: 25 },
+    await product(zaatar.id, "زعتر بلدي", "زعتر من جبال الجنوب، مطحون مع السماق والسمسم.", ["الوزن"], [
+      { values: ["250g"], price: 450_000, stock: 40 },
+      { values: ["500g"], price: 850_000, stock: 25 },
     ]),
   );
-  const oil = flat(await product(zaatar.id, "زيت زيتون بكر", "عصرة أولى من الكورة.", [{ size: "1L", price: 1_200_000, stock: 15 }]));
+  const oil = flat(await product(zaatar.id, "زيت زيتون بكر", "عصرة أولى من الكورة.", ["الحجم"], [{ values: ["1L"], price: 1_200_000, stock: 15 }]));
   const zCourier = await prisma.courier.create({ data: { shopId: zaatar.id, type: "INDIVIDUAL", name: "أبو حسن", phone: "+96170111222" } });
   await order(zaatar, zaatarOwnerId, { customer: c(3), lines: [{ variant: z[0], qty: 2 }], status: "NEW", daysAgo: 0 });
   await order(zaatar, zaatarOwnerId, { customer: c(5), lines: [{ variant: oil[0], qty: 1 }, { variant: z[1], qty: 1 }], status: "DELIVERED", daysAgo: 2, courierId: zCourier.id, courierName: zCourier.name });

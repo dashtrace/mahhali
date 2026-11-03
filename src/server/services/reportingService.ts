@@ -65,18 +65,21 @@ export const reportingService = {
     const shop = await requireShop(actor);
     const now = new Date();
     const period = periodOf(query.from, query.to, now);
-    const [byStatus, confirmations, cod] = await Promise.all([
+    const [byStatus, confirmations, cod, firstOrderAt] = await Promise.all([
       reportingRepo.countByStatus(shop.id, period),
       reportingRepo.confirmations(shop.id, period),
       reconcileShop(shop, period, undefined, now),
+      reportingRepo.firstOrderAt(shop.id),
     ]);
     const counts = new Map(byStatus.map((s) => [s.status, s._count._all]));
     const created = byStatus.reduce((sum, s) => sum + s._count._all, 0);
+    const openedAt = firstOrderAt && firstOrderAt < shop.createdAt ? firstOrderAt : shop.createdAt;
     return {
       from: period.from,
       to: period.to,
       medianConfirmMinutes: medianConfirmMinutes(confirmations),
-      ordersPerDay: ordersPerDay(created, period),
+      ordersCreated: created,
+      ordersPerDay: ordersPerDay(created, period, openedAt, now),
       ordersByStatus: Object.fromEntries(ORDER_STATUSES.map((s) => [s, counts.get(s) ?? 0])),
       codGaps: cod.totals.gaps,
       // The "before" numbers the owner gave at sign-up.

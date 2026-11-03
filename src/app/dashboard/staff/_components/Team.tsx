@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
-import { Alert, Badge, Button, Card, EmptyState, Field, Input, Select } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Field, Input, SaveButton, Select } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { CopyLink } from "../../_components/Board";
-import { submitWith, useAction } from "../../products/_components/useAction";
+import { submitWith, useAction, useSave } from "../../products/_components/useAction";
 
 type Role = "owner" | "manager" | "staff" | "delivery";
 type Ref = { id: string; name: string };
@@ -95,7 +95,7 @@ export function Team({ members, invitations, couriers, meId, locale, m, t }: { m
 
 function MemberCard({ member, isMe, couriers, m, t }: { member: Member; isMe: boolean; couriers: Ref[] } & Msgs) {
   const [role, setRole] = useState(member.role);
-  const action = useAction(t.error);
+  const action = useSave(t.error, role);
   const locked = member.role === "owner" || isMe;
   // A courier they act for may since have been deactivated; keep it pickable.
   const options = member.courier && !couriers.some((c) => c.id === member.courier!.id) ? [...couriers, member.courier] : couriers;
@@ -121,8 +121,9 @@ function MemberCard({ member, isMe, couriers, m, t }: { member: Member; isMe: bo
       {!locked && (
         <form
           key={`${member.role}|${member.courier?.id}`}
+          {...action.form}
           onSubmit={submitWith((f) =>
-            action.run(() =>
+            action.save(() =>
               api(`/api/staff/${member.id}`, {
                 method: "PATCH",
                 body: { role, courierId: role === "delivery" ? String(f.get("courierId") ?? "") || null : null },
@@ -136,9 +137,7 @@ function MemberCard({ member, isMe, couriers, m, t }: { member: Member; isMe: bo
             <RoleFields role={role} courierId={member.courier?.id} couriers={options} onRole={setRole} m={m} t={t} />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" tone="secondary" disabled={action.busy}>
-              {action.busy ? t.saving : t.save}
-            </Button>
+            <SaveButton state={action} labels={t} tone="secondary" />
             <Button
               tone="ghost"
               className="text-sl-danger"

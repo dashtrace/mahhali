@@ -26,6 +26,7 @@ function storefrontOf(shop: Shop) {
     facebookUrl: shop.facebookUrl,
     logoMode: shop.logoMode,
     homeSection: shop.homeSection,
+    homeCategoryId: shop.homeCategoryId,
     showTestimonials: shop.showTestimonials,
   };
 }
@@ -39,6 +40,7 @@ export const storefrontService = {
   },
 
   async update(actor: Actor, input: StorefrontInput) {
+    if (input.homeCategoryId && !(await categoryRepo.findById(actor.shopId, input.homeCategoryId))) throw notFound("Category");
     return storefrontOf(await shopRepo.update(actor.shopId, input));
   },
 
@@ -76,6 +78,21 @@ export const storefrontService = {
       }
     });
     return (await slideRepo.findById(actor.shopId, id))!;
+  },
+
+  /** Multipart: `file`. Replaces the slide's image in place; its text and position stay. */
+  async setSlideImage(actor: Actor, id: string, form: FormData) {
+    const slide = await slideRepo.findById(actor.shopId, id);
+    if (!slide) throw notFound("Slide");
+    const imageUrl = await saveUpload(actor.shopId, form.get("file"), "photo");
+    try {
+      if (!(await slideRepo.update(actor.shopId, id, { imageUrl }))) throw notFound("Slide");
+    } catch (error) {
+      await deleteUpload(actor.shopId, imageUrl);
+      throw error;
+    }
+    await deleteUpload(actor.shopId, slide.imageUrl);
+    return { ...slide, imageUrl };
   },
 
   async deleteSlide(actor: Actor, id: string) {

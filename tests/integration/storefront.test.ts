@@ -12,6 +12,7 @@ import { GET as catalogue } from "@/app/api/public/shops/[slug]/catalogue/route"
 import { POST as submitTestimonial } from "@/app/api/public/shops/[slug]/testimonials/route";
 import { GET as listSlides, POST as postSlide } from "@/app/api/shop/slides/route";
 import { DELETE as deleteSlide, PATCH as patchSlide } from "@/app/api/shop/slides/[id]/route";
+import { POST as setSlideImage } from "@/app/api/shop/slides/[id]/image/route";
 import { GET as getStorefront, PATCH as patchStorefront } from "@/app/api/shop/storefront/route";
 import { GET as listTestimonials } from "@/app/api/testimonials/route";
 import { PATCH as moderate } from "@/app/api/testimonials/[id]/route";
@@ -56,9 +57,23 @@ describe("storefront settings", () => {
       instagramUrl: null,
       facebookUrl: null,
       logoMode: "image-and-name",
-      homeSection: "bestsellers",
+      homeSection: "category",
+      homeCategoryId: null,
       showTestimonials: true,
     });
+  });
+
+  it("highlights one of the shop's own categories on the home page", async () => {
+    const mine = await prisma.category.create({ data: { shopId: owner.shop.id, name: "Highlighted", position: 0 } });
+    const theirs = await prisma.category.create({ data: { shopId: other.shop.id, name: "Not yours", position: 0 } });
+    const res = await patch({ homeSection: "category", homeCategoryId: mine.id });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ homeSection: "category", homeCategoryId: mine.id });
+    expect((await publicCatalogue()).body.shop).toMatchObject({ homeSection: "category", homeCategoryId: mine.id });
+
+    expect((await patch({ homeCategoryId: theirs.id })).status).toBe(404);
+    expect((await patch({ homeCategoryId: null })).body.homeCategoryId).toBeNull();
+    await prisma.category.deleteMany({ where: { id: { in: [mine.id, theirs.id] } } });
   });
 
   it("saves copy, links and layout, and an empty string clears a field", async () => {
@@ -140,6 +155,33 @@ describe("hero slides", () => {
     expect(files).toEqual([second.body.imageUrl.split("/").pop()]);
   });
 
+  it("replaces a slide's image in place and deletes the old file", async () => {
+    const slide = await upload({ kicker: "K", title: "Swap me" });
+    const replace = async (id: string, cookie = owner.cookie, file: Blob | null = new File([PNG], "b.png")) => {
+      const form = new FormData();
+      if (file) form.append("file", file);
+      const res = await setSlideImage(new Request(`http://localhost:3000/api/shop/slides/${id}/image`, { method: "POST", headers: { cookie }, body: form }), {
+        params: Promise.resolve({ id }),
+      });
+      return { status: res.status, body: await res.json() };
+    };
+
+    const res = await replace(slide.body.id);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: slide.body.id, kicker: "K", title: "Swap me", position: slide.body.position });
+    expect(res.body.imageUrl).not.toBe(slide.body.imageUrl);
+    const files = await readdir(path.join(process.env.UPLOAD_DIR!, owner.shop.id));
+    expect(files).toContain(res.body.imageUrl.split("/").pop());
+    expect(files).not.toContain(slide.body.imageUrl.split("/").pop());
+
+    expect((await replace(slide.body.id, owner.cookie, null)).status).toBe(400);
+    expect((await replace(slide.body.id, owner.cookie, new File(["<html>"], "a.png"))).body.error.code).toBe("UNSUPPORTED_FILE");
+    expect((await replace(slide.body.id, manager)).status).toBe(403);
+    // Another shop's slide id is not found, and the slide keeps its image.
+    expect((await replace(slide.body.id, other.cookie)).status).toBe(404);
+    expect((await prisma.heroSlide.findUniqueOrThrow({ where: { id: slide.body.id } })).imageUrl).toBe(res.body.imageUrl);
+  });
+
   it("needs a title and a real image, and is owner only", async () => {
     expect((await upload({ title: "" })).status).toBe(400);
     expect((await upload({ title: "x".repeat(81) })).status).toBe(400);
@@ -184,7 +226,7 @@ describe("categories", () => {
   it("files products under the shop's own categories only, and deleting one leaves them uncategorised", async () => {
     const mine = await create("Necklaces");
     const theirs = await call(createCategory, "/api/categories", { method: "POST", cookie: other.cookie, body: { name: "Secret" } });
-    const variants = [{ size: "M", price: "10", stock: 1 }];
+    const variants = [{ price: "10", stock: 1 }];
     const refused = await call(createProduct, "/api/products", {
       method: "POST",
       cookie: owner.cookie,
@@ -358,8 +400,8 @@ describe("catalogueService.browse", () => {
   beforeAll(async () => {
     shop = await signUpOwner();
     // A cheap variant that is sold out must not make the product match a low price range.
-    const { product } = await seedVariant(shop.shop.id, { name: "Hoodie", size: "S", priceMinor: 1000n, available: 0 });
-    await prisma.variant.create({ data: { shopId: shop.shop.id, productId: product.id, size: "L", priceMinor: 6000n, available: 3 } });
+    const { product } = await seedVariant(shop.shop.id, { name: "Hoodie", options: ["Size"], optionValues: ["S"], priceMinor: 1000n, available: 0 });
+    await prisma.variant.create({ data: { shopId: shop.shop.id, productId: product.id, optionValues: ["L"], priceMinor: 6000n, available: 3 } });
     const { variant: tee } = await seedVariant(shop.shop.id, { name: "Tee", priceMinor: 1500n, available: 4 });
     await seedOrder(shop.shop.id, { variantId: tee.id, qty: 2 });
     await seedOrder(shop.shop.id, { variantId: tee.id, qty: 5, status: "RETURNED" });

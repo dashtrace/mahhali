@@ -12,8 +12,8 @@ import { plain } from "@/server/http/json";
 import { reviewService } from "@/server/services/reviewService";
 import { ShopFrame } from "../../../../_storefront/ShopFrame";
 import { loadStore } from "../../_components/load";
-import { ProductTile } from "../../_components/tiles";
-import { Gallery, ProductBar, ProductOptions, ProductProvider } from "./ProductClient";
+import { ProductTile, ShippingPolicy } from "../../_components/tiles";
+import { Gallery, PolicySheet, ProductBar, ProductOptions, ProductProvider } from "./ProductClient";
 
 type Params = { params: Promise<{ slug: string; id: string }> };
 
@@ -57,7 +57,14 @@ export default async function ProductPage({ params }: Params) {
 
   return (
     <ProductProvider
-      product={{ id: product.id, name: product.name, images: product.images, variants: product.variants, customization: product.customization }}
+      product={{
+        id: product.id,
+        name: product.name,
+        options: product.options,
+        images: product.images,
+        variants: product.variants,
+        customization: product.customization,
+      }}
       slug={slug}
       locale={locale}
     >
@@ -90,7 +97,7 @@ export default async function ProductPage({ params }: Params) {
         <div className="grid gap-5 md:grid-cols-2 md:gap-8">
           <Gallery />
           <div className="min-w-0">
-            <h1 className="sl-heading text-[26px] leading-tight">{product.name}</h1>
+            <h1 className="sl-heading text-[22px] leading-tight sm:text-[26px]">{product.name}</h1>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[13px] text-sl-muted">
               {reviews.count > 0 ? (
                 <>
@@ -134,10 +141,9 @@ export default async function ProductPage({ params }: Params) {
               <p>
                 <strong>{m.shippingTitle}</strong> · <span className="text-sl-muted">{m.shippingLine}</span>
               </p>
-              <Link href={`${base}/info/shipping`} className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-extrabold text-sl-accent hover:underline">
-                {fill(m.shippingLink, { shop: shop.name })}
-                <Icon name="arrow" className="size-3.5" />
-              </Link>
+              <PolicySheet label={fill(m.shippingLink, { shop: shop.name })} title={m.shippingHeading}>
+                <ShippingPolicy shop={shop} locale={locale} />
+              </PolicySheet>
             </div>
           </Card>
 

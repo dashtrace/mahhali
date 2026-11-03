@@ -12,7 +12,7 @@ const listInclude = {
 
 const detailInclude = {
   ...listInclude,
-  items: { include: { variant: { select: { id: true, productId: true, size: true, colour: true } } } },
+  items: { include: { variant: { select: { id: true, productId: true, optionValues: true } } } },
   events: { orderBy: { at: "asc" } },
   customer: { select: { id: true, name: true, phone: true, email: true, _count: { select: { orders: true } } } },
 } satisfies Prisma.OrderInclude;

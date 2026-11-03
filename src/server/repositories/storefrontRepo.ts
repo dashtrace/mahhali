@@ -28,7 +28,7 @@ export const slideRepo = {
     return tx.heroSlide.create({ data: { ...data, shopId, position: (existing._max.position ?? -1) + 1 }, select: slideFields });
   },
 
-  async update(shopId: string, id: string, data: { kicker?: string | null; title?: string; body?: string | null }, client: Db = db) {
+  async update(shopId: string, id: string, data: { imageUrl?: string; kicker?: string | null; title?: string; body?: string | null }, client: Db = db) {
     const { count } = await client.heroSlide.updateMany({ where: { id, shopId }, data });
     return count === 1;
   },

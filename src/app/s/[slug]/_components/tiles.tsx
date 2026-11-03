@@ -1,9 +1,10 @@
 import { WishButton } from "@/app/_storefront/wishlist";
+import { Icon } from "@/components/Icon";
 import { Badge, ProductCard, cx } from "@/components/ui";
-import type { Locale } from "@/i18n/locale";
+import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
 import { formatDate, formatMoney } from "@/lib/format";
-import type { StoreProduct } from "./load";
+import type { StoreProduct, StoreShop } from "./load";
 
 // Shared by the home strips, the shop grid, the wishlist (a client page) and
 // "You may also like". No directive, so it renders on either side.
@@ -47,6 +48,22 @@ export function ProductTile({
       locale={locale}
       layout={layout}
     />
+  );
+}
+
+/** The shop's shipping & returns terms (Shipping page, and the product page's sheet). */
+export function ShippingPolicy({ shop, locale }: { shop: Pick<StoreShop, "name" | "shippingInfo" | "deliveryFeeMinor" | "currency">; locale: Locale }) {
+  const m = storeMessages[locale];
+  const fee = shop.deliveryFeeMinor;
+  return (
+    <>
+      <p className="mb-3.5 whitespace-pre-line break-words text-sm leading-[1.85] text-sl-muted">{shop.shippingInfo || fill(m.shippingEmpty, { shop: shop.name })}</p>
+      <p className="flex items-center gap-2 text-sm font-bold">
+        <Icon name="truck" className="size-5 text-sl-accent" />
+        {Number(fee) > 0 ? <bdi>{fill(m.deliveryFeeLine, { fee: formatMoney(fee, shop.currency, locale) })}</bdi> : m.freeDelivery}
+      </p>
+      <p className="mt-1 text-sm text-sl-muted">{m.payOnDelivery}</p>
+    </>
   );
 }
 

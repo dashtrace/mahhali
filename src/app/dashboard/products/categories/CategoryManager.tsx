@@ -1,12 +1,12 @@
 "use client";
 
-import { Alert, Button, Card, EmptyState, IconButton, Input } from "@/components/ui";
+import { Alert, Button, Card, EmptyState, IconButton, Input, SaveButton } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { fill } from "@/i18n/locale";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import type { CommonMessages } from "@/i18n/messages/common";
 import { api } from "@/lib/api";
-import { submitWith, useAction } from "../_components/useAction";
+import { submitWith, useAction, useSave } from "../_components/useAction";
 
 type Category = { id: string; name: string; count: number };
 type Props = { categories: Category[]; canWrite: boolean; max: number; m: CatalogueMessages; t: CommonMessages };
@@ -49,7 +49,7 @@ export function CategoryManager({ categories, canWrite, max, m, t }: Props) {
         <Card className="p-0">
           <ol className="divide-y divide-sl-border">
             {categories.map((c, i) => (
-              <Row key={`${c.id}|${c.name}|${i}`} category={c} index={i} last={i === categories.length - 1} canWrite={canWrite} m={m} t={t} />
+              <Row key={c.id} category={c} index={i} last={i === categories.length - 1} canWrite={canWrite} m={m} t={t} />
             ))}
           </ol>
         </Card>
@@ -59,7 +59,7 @@ export function CategoryManager({ categories, canWrite, max, m, t }: Props) {
 }
 
 function Row({ category: c, index, last, canWrite, m, t }: { category: Category; index: number; last: boolean; canWrite: boolean; m: CatalogueMessages; t: CommonMessages }) {
-  const action = useAction(t.error);
+  const action = useSave(t.error);
   const move = (position: number) => action.run(() => api(`/api/categories/${c.id}`, { method: "PATCH", body: { position } }));
   const count = <span className="text-xs text-sl-muted tabular-nums">{fill(m.categoryCount, { n: c.count })}</span>;
 
@@ -73,14 +73,15 @@ function Row({ category: c, index, last, canWrite, m, t }: { category: Category;
   }
   return (
     <li className="flex flex-col gap-2 px-3 py-3 sm:px-4">
+      {/* Keyed by name: a rename from the server re-baselines what counts as unsaved. */}
       <form
-        onSubmit={submitWith((f) => action.run(() => api(`/api/categories/${c.id}`, { method: "PATCH", body: { name: String(f.get("name") ?? "").trim() } })))}
+        key={c.name}
+        {...action.form}
+        onSubmit={submitWith((f) => action.save(() => api(`/api/categories/${c.id}`, { method: "PATCH", body: { name: String(f.get("name") ?? "").trim() } })))}
         className="flex items-center gap-2"
       >
         <Input name="name" aria-label={fill(m.renameCategory, { name: c.name })} defaultValue={c.name} required maxLength={40} className="min-w-0" />
-        <Button type="submit" tone="secondary" disabled={action.busy} className="shrink-0">
-          {t.save}
-        </Button>
+        <SaveButton state={action} labels={t} tone="secondary" className="shrink-0" />
       </form>
       <div className="flex items-center gap-1.5">
         {count}

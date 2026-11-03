@@ -19,6 +19,7 @@ export function readTheme(value: unknown): Theme {
     primary: color(t.primary, DEFAULT_THEME.primary),
     accent: color(t.accent, DEFAULT_THEME.accent),
     background: color(t.background, DEFAULT_THEME.background),
+    ...(typeof t.text === "string" && HEX.test(t.text) ? { text: t.text } : {}),
     radius: (RADII as readonly unknown[]).includes(t.radius) ? (t.radius as Theme["radius"]) : DEFAULT_THEME.radius,
     font: (FONTS as readonly unknown[]).includes(t.font) ? (t.font as Theme["font"]) : DEFAULT_THEME.font,
   };
@@ -36,6 +37,8 @@ export function themeTone(value: unknown): "light" | "dark" {
  */
 export function themeVars(value: unknown, scope: "page" | "chrome" = "page"): CSSProperties {
   const t = readTheme(value);
+  // Muted text, borders and controls are mixed from this in globals.css, so they follow it.
+  const ink = t.text ?? inkFor(t.background);
   const vars: Record<string, string> = {
     "--brand": t.primary,
     "--brand-ink": t.background,
@@ -45,10 +48,10 @@ export function themeVars(value: unknown, scope: "page" | "chrome" = "page"): CS
   };
   if (scope === "page") {
     vars["--surface"] = t.background;
-    vars["--ink"] = inkFor(t.background);
+    vars["--ink"] = ink;
     vars["--font-shop"] = FONT[t.font];
     vars["--sl-bg"] = t.background;
-    vars["--sl-fg"] = inkFor(t.background);
+    vars["--sl-fg"] = ink;
     vars["--sl-accent"] = t.primary;
     vars["--sl-accent-ink"] = t.background;
     vars["--sl-r"] = RADIUS[t.radius];

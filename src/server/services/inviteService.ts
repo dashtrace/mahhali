@@ -1,6 +1,6 @@
 import { auth } from "../auth/auth";
 import { hashToken, randomToken } from "../domain/tokens";
-import { AppError, conflict, notFound } from "../http/errors";
+import { AppError, badRequest, conflict, notFound } from "../http/errors";
 import { json } from "../http/json";
 import { rateLimit } from "../http/rateLimit";
 import type { Actor } from "../http/withRoute";
@@ -9,6 +9,7 @@ import { invitationRepo } from "../repositories/invitationRepo";
 import { membershipRepo } from "../repositories/membershipRepo";
 import { shopRepo } from "../repositories/shopRepo";
 import { isUniqueViolation, transaction } from "../repositories/tx";
+import { weakPassword } from "../validation/common";
 import type { AcceptInviteInput, InviteInput } from "../validation/team";
 import { courierForRole } from "./staffService";
 
@@ -104,6 +105,9 @@ export const inviteService = {
     const invite = await findOpenInvite(token);
 
     const existing = await invitationRepo.findUserByEmail(invite.email);
+    // Only a new account's password is checked: an existing one signs in with what it has.
+    const weak = existing ? null : weakPassword(input.password);
+    if (weak) throw badRequest("Invalid body", [{ path: "password", message: weak }]);
     const authResponse = existing
       ? await auth.api.signInEmail({ body: { email: invite.email, password: input.password }, asResponse: true })
       : await auth.api.signUpEmail({ body: { name: input.name, email: invite.email, password: input.password }, asResponse: true });

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Button, Card, Field, Input, Segmented, Textarea, Toggle } from "@/components/ui";
+import { Alert, Card, Field, Input, SaveButton, Segmented, Select, Textarea, Toggle } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
 import { CardHead } from "../../products/_components/ProductExtras";
-import { submitWith, useAction } from "../../products/_components/useAction";
+import { submitWith, useSave } from "../../products/_components/useAction";
 
 type Storefront = {
   tagline: string | null;
@@ -17,16 +17,16 @@ type Storefront = {
   facebookUrl: string | null;
   logoMode: string;
   homeSection: string;
+  homeCategoryId: string | null;
   showTestimonials: boolean;
 };
-type Props = { storefront: Storefront; whatsappPhone: string | null; m: ShopMessages; t: CommonMessages };
+type Props = { storefront: Storefront; categories: { id: string; name: string }[]; whatsappPhone: string | null; m: ShopMessages; t: CommonMessages };
 
 const LOGO_MODES = [
   ["image-and-name", "logoImageAndName"],
   ["image-only", "logoImageOnly"],
   ["name-only", "logoNameOnly"],
 ] as const;
-const HOME_SECTIONS = ["bestsellers", "new", "featured", "hidden"] as const;
 const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
 /** A labelled single choice drawn as a segmented control. */
@@ -40,14 +40,13 @@ function Choice({ label, hint, children }: { label: string; hint?: string; child
   );
 }
 
-export function StorefrontForm({ storefront: s, whatsappPhone, m, t }: Props) {
-  const save = useAction(t.error);
-  const [saved, setSaved] = useState(false);
+export function StorefrontForm({ storefront: s, categories, whatsappPhone, m, t }: Props) {
   const [logoMode, setLogoMode] = useState(s.logoMode);
-  const [homeSection, setHomeSection] = useState(s.homeSection);
+  const save = useSave(t.error, logoMode);
 
   async function submit(f: FormData) {
-    setSaved(false);
+    // "category:<id>" picks a category; "category:" follows the first one.
+    const [homeSection, homeCategoryId] = text(f, "highlight").split(":");
     const body = {
       tagline: text(f, "tagline"),
       about: text(f, "about"),
@@ -56,20 +55,19 @@ export function StorefrontForm({ storefront: s, whatsappPhone, m, t }: Props) {
       facebookUrl: text(f, "facebookUrl"),
       logoMode,
       homeSection,
+      ...(homeSection === "category" ? { homeCategoryId: homeCategoryId || null } : {}),
       showTestimonials: f.get("showTestimonials") === "on",
     };
     const phone = text(f, "whatsappPhone") || null;
     // Two endpoints: the number belongs to the shop settings (it also feeds the order board).
-    setSaved(
-      await save.run(async () => {
-        await api("/api/shop/storefront", { method: "PATCH", body });
-        if (phone !== whatsappPhone) await api("/api/shop/settings", { method: "PATCH", body: { whatsappPhone: phone } });
-      }),
-    );
+    await save.save(async () => {
+      await api("/api/shop/storefront", { method: "PATCH", body });
+      if (phone !== whatsappPhone) await api("/api/shop/settings", { method: "PATCH", body: { whatsappPhone: phone } });
+    });
   }
 
   return (
-    <form key={JSON.stringify([s, whatsappPhone])} onSubmit={submitWith(submit)} className="flex max-w-3xl flex-col gap-4">
+    <form key={JSON.stringify([s, whatsappPhone])} {...save.form} onSubmit={submitWith(submit)} className="flex max-w-3xl flex-col gap-4">
       <Card className="flex flex-col gap-4">
         <CardHead title={m.storefrontTitle} hint={m.storefrontHint} />
         <Field label={m.tagline} hint={m.taglineHint}>
@@ -78,9 +76,21 @@ export function StorefrontForm({ storefront: s, whatsappPhone, m, t }: Props) {
         <Choice label={m.logoMode} hint={m.logoModeHint}>
           <Segmented label={m.logoMode} items={LOGO_MODES.map(([v, key]) => ({ label: m[key], current: logoMode === v, onClick: () => setLogoMode(v) }))} />
         </Choice>
-        <Choice label={m.homeSection} hint={m.homeSectionHint}>
-          <Segmented label={m.homeSection} items={HOME_SECTIONS.map((v) => ({ label: m[`home${v}`], current: homeSection === v, onClick: () => setHomeSection(v) }))} />
-        </Choice>
+        <Field label={m.homeSection} hint={m.homeSectionHint}>
+          <Select name="highlight" defaultValue={s.homeSection === "category" ? `category:${s.homeCategoryId ?? ""}` : s.homeSection}>
+            <option value="category:">{m.homecategory}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={`category:${c.id}`}>
+                {fill(m.homeCategoryNamed, { name: c.name })}
+              </option>
+            ))}
+            {(["new", "bestsellers", "featured", "hidden"] as const).map((v) => (
+              <option key={v} value={v}>
+                {m[`home${v}`]}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Toggle name="showTestimonials" label={m.showTestimonials} hint={m.showTestimonialsHint} defaultChecked={s.showTestimonials} />
       </Card>
 
@@ -108,10 +118,7 @@ export function StorefrontForm({ storefront: s, whatsappPhone, m, t }: Props) {
       </Card>
 
       {save.error && <Alert tone="error">{save.error}</Alert>}
-      {saved && <Alert tone="success">{t.saved}</Alert>}
-      <Button type="submit" disabled={save.busy} className="self-start">
-        {save.busy ? t.saving : t.save}
-      </Button>
+      <SaveButton state={save} labels={t} className="self-start" />
     </form>
   );
 }

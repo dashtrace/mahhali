@@ -9,9 +9,10 @@ beforeAll(resetDb);
 const tshirt = {
   name: "Linen shirt",
   description: "Hand-dyed",
+  options: ["Size", "Colour"],
   variants: [
-    { size: "S", colour: "Sand", price: "24.50", stock: 3 },
-    { size: "M", colour: "Sand", price: "24.50", stock: 0 },
+    { optionValues: ["S", "Sand"], price: "24.50", stock: 3 },
+    { optionValues: ["M", "Sand"], price: "24.50", stock: 0 },
   ],
 };
 
@@ -33,20 +34,24 @@ describe("products", () => {
     const res = await call(createProduct, "/api/products", {
       method: "POST",
       cookie: owner.cookie,
-      body: { name: "Scarf", variants: [{ colour: "Red", price: "450000.50", stock: 1 }] },
+      body: { name: "Scarf", options: ["Colour"], variants: [{ optionValues: ["Red"], price: "450000.50", stock: 1 }] },
     });
     expect(res.status).toBe(422);
     expect(res.body.error.code).toBe("INVALID_PRICE");
   });
 
-  it("refuses the same size and colour twice", async () => {
+  it("refuses the same values twice, a value count that does not match the options, and bad option names", async () => {
     const owner = await signUpOwner();
-    const res = await call(createProduct, "/api/products", {
-      method: "POST",
-      cookie: owner.cookie,
-      body: { name: "Ring", variants: [{ size: "7", price: "10" }, { size: "7", price: "12" }] },
-    });
-    expect(res.status).toBe(400);
+    const create = (body: object) => call(createProduct, "/api/products", { method: "POST", cookie: owner.cookie, body: { name: "Ring", ...body } });
+    const twice = await create({ options: ["Size"], variants: [{ optionValues: ["7"], price: "10" }, { optionValues: ["7"], price: "12" }] });
+    expect(twice.status).toBe(400);
+    expect((await create({ options: ["Size"], variants: [{ optionValues: [], price: "10" }] })).status).toBe(400);
+    expect((await create({ options: ["Size", "size"], variants: [{ optionValues: ["7", "8"], price: "10" }] })).status).toBe(400);
+    const four = ["A", "B", "C", "D"];
+    expect((await create({ options: four, variants: [{ optionValues: four, price: "10" }] })).status).toBe(400);
+    const spf = await create({ options: ["SPF"], variants: [{ optionValues: ["SPF 30"], price: "10" }, { optionValues: ["SPF 50"], price: "12" }] });
+    expect(spf.status).toBe(201);
+    expect(spf.body.options).toEqual(["SPF"]);
   });
 
   it("lets staff read products but not create them", async () => {
@@ -73,14 +78,16 @@ describe("products", () => {
     await call(createProduct, "/api/products", {
       method: "POST",
       cookie: owner.cookie,
-      body: { ...tshirt, name: "Big batch", variants: [{ size: "L", price: "10.00", stock: 500 }] },
+      body: { ...tshirt, name: "Big batch", variants: [{ optionValues: ["L", "Sand"], price: "10.00", stock: 500 }] },
     });
     const res = await call(catalogue, `/api/public/shops/${owner.shop.slug}/catalogue`, {}, { slug: owner.shop.slug });
     expect(res.status).toBe(200);
     const byName = (name: string) => res.body.products.find((p: { name: string }) => p.name === name);
+    expect(byName("Linen shirt").options).toEqual(["Size", "Colour"]);
+    // In the order they were added.
     expect(byName("Linen shirt").variants).toEqual([
-      expect.objectContaining({ size: "M", inStock: false, left: 0 }),
-      expect.objectContaining({ size: "S", inStock: true, left: 3 }),
+      expect.objectContaining({ optionValues: ["S", "Sand"], inStock: true, left: 3 }),
+      expect.objectContaining({ optionValues: ["M", "Sand"], inStock: false, left: 0 }),
     ]);
     expect(byName("Big batch").variants).toEqual([expect.objectContaining({ inStock: true, left: 20 })]);
     expect(JSON.stringify(res.body)).not.toContain("available");

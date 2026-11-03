@@ -28,7 +28,8 @@ const Hex = z
   .transform((v) => v.toLowerCase());
 
 export const ThemeBody = z
-  .object({ primary: Hex, accent: Hex, background: Hex, radius: z.enum(RADII), font: z.enum(FONTS) })
+  // Leaving out `text` keeps body text automatic (black or white for the background).
+  .object({ primary: Hex, accent: Hex, background: Hex, text: Hex.optional(), radius: z.enum(RADII), font: z.enum(FONTS) })
   .openapi("Theme");
 
 export const BrandingBody = z

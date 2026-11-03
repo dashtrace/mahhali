@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
-import { MAX_QTY, addToCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
+import { MAX_QTY, addToCart, leftAfterCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
 import { Icon } from "@/components/Icon";
+import { Sheet } from "@/components/Sheet";
 import { Button, ProductPhoto, QtyStepper, Textarea, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages, type StoreMessages } from "@/i18n/messages/store";
@@ -16,16 +17,21 @@ import type { StoreProduct } from "../../_components/load";
 // ShopFrame's bottom slot, apart from the rest, so they share state through a
 // provider that wraps the whole frame.
 
-type Product = Pick<StoreProduct, "id" | "name" | "images" | "variants" | "customization">;
+type Product = Pick<StoreProduct, "id" | "name" | "options" | "images" | "variants" | "customization">;
 type Variant = Product["variants"][number];
 type Notice = { tone: "ok" | "warn"; text: string };
 
 const SWIPE_PX = 38;
 const MAX_NOTE = 500;
 
-const variantName = (v: Variant, m: StoreMessages) => [v.size, v.colour].filter(Boolean).join(" · ") || m.standard;
+const variantName = (v: Variant, m: StoreMessages) => v.optionValues.filter(Boolean).join(" · ") || m.standard;
 /** "In stock" while at least MAX_QTY are left (the count is capped there), else how many are left. */
 const stockText = (v: Variant, m: StoreMessages) => (!v.inStock ? m.soldOut : v.left < MAX_QTY ? fill(m.onlyLeft, { n: v.left }) : m.inStock);
+/** The line under the quantity: what can still be added after the cart (the full count once it's all in the cart). */
+const stockLine = (v: Variant, inCart: number, m: StoreMessages) => {
+  const n = leftAfterCart(v.left, inCart);
+  return n === null ? m.inStock : fill(m.onlyLeft, { n: n || v.left });
+};
 
 function useProductState(product: Product, slug: string, locale: Locale) {
   const m = storeMessages[locale];
@@ -44,12 +50,12 @@ function useProductState(product: Product, slug: string, locale: Locale) {
   const custom = product.customization;
   const noteMax = custom ? Math.min(MAX_NOTE, custom.maxLength) : 0;
 
-  /** Picking an option resets the quantity and shows that colour's photo when there is one. */
+  /** Picking an option resets the quantity and shows a photo of one of its values (e.g. its colour) when there is one. */
   function pick(v: Variant) {
     setVariantId(v.id);
     setQty(1);
     setNotice(null);
-    const i = v.colour ? product.images.findIndex((img) => img.colour === v.colour) : -1;
+    const i = product.images.findIndex((img) => !!img.optionValue && v.optionValues.includes(img.optionValue));
     if (i >= 0) setPhoto(i);
   }
 
@@ -127,7 +133,8 @@ export function Gallery() {
   return (
     <section aria-label={m.galleryLabel} className="min-w-0">
       <div
-        className="relative aspect-[1/0.81] touch-pan-y overflow-hidden rounded-[20px] border border-sl-border bg-sl-cat"
+        // A fixed height on phones keeps the price and options in view; the whole photo still shows (contain).
+        className="relative h-56 touch-pan-y overflow-hidden rounded-[20px] border border-sl-border bg-sl-cat sm:h-72 md:aspect-[1/0.81] md:h-auto"
         onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
         onTouchEnd={onTouchEnd}
       >
@@ -157,7 +164,7 @@ export function Gallery() {
                 aria-label={photoName(i)}
                 aria-pressed={i === photo}
                 onClick={() => setPhoto(i)}
-                className="block h-[62px] w-16 overflow-hidden rounded-sl-sm border-2 border-transparent bg-sl-cat aria-pressed:border-sl-accent"
+                className="block size-12 overflow-hidden rounded-sl-sm border-2 border-transparent bg-sl-cat aria-pressed:border-sl-accent sm:h-[62px] sm:w-16"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is */}
                 <img src={img.url} alt="" loading="lazy" className="size-full object-cover" />
@@ -178,13 +185,13 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
 
   return (
     <div>
-      <p className="mb-3 mt-1 text-2xl font-extrabold tabular-nums">
+      <p className="mb-3 mt-1 text-xl font-extrabold tabular-nums sm:text-2xl">
         <bdi>{formatMoney(price, currency, locale)}</bdi>
       </p>
 
       <div className="mb-2 mt-3 flex items-baseline justify-between gap-2">
         <span id="option-label" className="text-sm font-extrabold">
-          {product.variants.length > 1 ? m.chooseOption : m.option}
+          {product.options.length ? product.options.join(" · ") : product.variants.length > 1 ? m.chooseOption : m.option}
         </span>
         <span className="text-xs text-sl-muted">{m.priceMayVary}</span>
       </div>
@@ -214,7 +221,7 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
               <span aria-hidden className="text-sl-ok">
                 ●{" "}
               </span>
-              {stockText(variant, m)}
+              {stockLine(variant, inCart, m)}
             </>
           ) : (
             <span className="text-sl-danger">{m.outOfStock}</span>
@@ -261,6 +268,29 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
         </section>
       )}
     </div>
+  );
+}
+
+/** The shipping & returns policy in a bottom sheet, so reading it keeps the chosen option, quantity and note. */
+export function PolicySheet({ label, title, children }: { label: string; title: string; children: ReactNode }) {
+  const { locale } = useProduct();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className="inline-flex min-h-11 items-center gap-1.5 text-start text-[13px] font-extrabold text-sl-accent hover:underline"
+      >
+        {label}
+        <Icon name="arrow" className="size-3.5" />
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={title} locale={locale} side="bottom">
+        {children}
+      </Sheet>
+    </>
   );
 }
 

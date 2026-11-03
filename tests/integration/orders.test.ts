@@ -95,6 +95,9 @@ describe("placing a guest order", () => {
     const { variant } = await seedVariant(owner.shop.id);
     const badPhone = await placeOrder(owner.shop.slug, orderBody([{ variantId: variant.id }], { customer: { name: "A", phone: "123" } }));
     expect(badPhone.status).toBe(400);
+    const typo = await placeOrder(owner.shop.slug, orderBody([{ variantId: variant.id }], { customer: { name: "A", phone: "71123456", email: "fatima@gmail.cam" } }));
+    expect(typo.status).toBe(400);
+    expect(typo.body.error.details[0]).toMatchObject({ path: "customer.email", message: expect.stringContaining("fatima@gmail.com") });
     const badPlace = orderBody([{ variantId: variant.id }]);
     badPlace.address.governorate = "Atlantis";
     expect((await placeOrder(owner.shop.slug, badPlace)).status).toBe(400);

@@ -22,7 +22,7 @@ export default async function NewOrderPage() {
       .filter((v) => !v.archived)
       .map((v) => ({
         id: v.id,
-        label: itemLabel(p.name, v.size, v.colour),
+        label: itemLabel(p.name, v.optionValues),
         priceMinor: Number(v.priceMinor),
         available: v.available,
         // The same customization rules the storefront enforces (the API checks them too).

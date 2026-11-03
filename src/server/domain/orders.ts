@@ -9,9 +9,9 @@ export function orderTotals(lines: PricedLine[], deliveryFeeMinor: bigint) {
   return { subtotalMinor, deliveryFeeMinor, totalMinor, codMinor: totalMinor };
 }
 
-/** "Linen shirt / M / Sand": what the customer bought, frozen on the order line. */
-export function itemLabel(productName: string, size: string | null, colour: string | null): string {
-  return [productName, size, colour].filter(Boolean).join(" / ");
+/** "Linen shirt / M / Sand": what the customer bought, frozen on the order line. Blank values are skipped. */
+export function itemLabel(productName: string, values: (string | null)[]): string {
+  return [productName, ...values].filter(Boolean).join(" / ");
 }
 
 /** "#1042", "1042" -> 1042; anything else -> null. */

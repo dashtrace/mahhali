@@ -52,6 +52,12 @@ describe("validateTheme", () => {
     expect(validateTheme({ primary: "#767676", accent: "#000000", background: "#ffffff" })).toEqual([]);
   });
 
+  it("checks a chosen text colour against the background", () => {
+    const base = { primary: "#1e3a8a", accent: "#b45309", background: "#ffffff" };
+    expect(validateTheme({ ...base, text: "#999999" })).toEqual([{ pair: "body text on background", foreground: "#999999", background: "#ffffff", ratio: 2.85 }]);
+    expect(validateTheme({ ...base, text: "#333333" })).toEqual([]);
+  });
+
   it("refuses a pale brand colour on a light page and accepts it on a dark one", () => {
     expect(validateTheme({ primary: "#f9a8d4", accent: "#1e3a8a", background: "#ffffff" })).toHaveLength(1);
     expect(validateTheme({ primary: "#f9a8d4", accent: "#fbbf24", background: "#111827" })).toEqual([]);

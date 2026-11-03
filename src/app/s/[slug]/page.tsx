@@ -3,9 +3,10 @@ import Link from "next/link";
 import { EmptyState, SectionHeader } from "@/components/ui";
 import { common } from "@/i18n/messages/common";
 import { storeMessages, type StoreMessages } from "@/i18n/messages/store";
+import { homeHighlight } from "@/server/domain/storefront";
 import { ShopFrame } from "../../_storefront/ShopFrame";
 import { HeroCarousel } from "./_components/HeroCarousel";
-import { loadStore, type StoreProduct } from "./_components/load";
+import { loadStore, type StoreProduct, type StoreShop } from "./_components/load";
 import { ProductTile, TestimonialCard } from "./_components/tiles";
 
 type Params = { params: Promise<{ slug: string }> };
@@ -17,22 +18,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return { title: shop.name, description: shop.tagline ?? undefined };
 }
 
-/**
- * The owner's highlight strip. Best sellers fall back to new arrivals until
- * something sells, and so does an empty featured list.
- */
-function highlight(products: StoreProduct[], mode: string, m: StoreMessages) {
-  if (mode === "hidden") return null;
-  if (mode === "bestsellers") {
-    const sold = products.filter((p) => p.soldCount > 0).sort((a, b) => b.soldCount - a.soldCount);
-    if (sold.length) return { title: m.sectionBestsellers, sort: "bestsellers", items: sold };
-  }
-  if (mode === "featured") {
-    const featured = products.filter((p) => p.featured);
-    if (featured.length) return { title: m.sectionFeatured, sort: "featured", items: featured };
-  }
-  // Products arrive newest first.
-  return products.length ? { title: m.sectionNew, sort: "new", items: products } : null;
+/** The owner's highlight strip, with its title and the "View all" filter on the shop page. */
+function highlight(shop: StoreShop, products: StoreProduct[], m: StoreMessages) {
+  const h = homeHighlight(products, shop.categories, shop.homeSection, shop.homeCategoryId);
+  if (!h) return null;
+  if (h.kind === "category") return { title: h.category.name, query: `cat=${encodeURIComponent(h.category.id)}`, items: h.items };
+  const title = { bestsellers: m.sectionBestsellers, featured: m.sectionFeatured, new: m.sectionNew }[h.kind];
+  return { title, query: `sort=${h.kind}`, items: h.items };
 }
 
 export default async function ShopHomePage({ params }: Params) {
@@ -40,7 +32,7 @@ export default async function ShopHomePage({ params }: Params) {
   const { shop, products, testimonials } = await loadStore(slug);
   const locale = shop.locale;
   const m = storeMessages[locale];
-  const section = highlight(products, shop.homeSection, m);
+  const section = highlight(shop, products, m);
   const base = `/s/${slug}`;
 
   return (
@@ -70,7 +62,7 @@ export default async function ShopHomePage({ params }: Params) {
           <SectionHeader
             id="home-highlight"
             title={section.title}
-            href={section.items.length > 3 ? `${base}/shop?sort=${section.sort}` : undefined}
+            href={section.items.length > 3 ? `${base}/shop?${section.query}` : undefined}
             linkLabel={common[locale].viewAll}
           />
           <ul className="sl-scroll-row -mx-4 gap-2.5 px-4 pb-3">

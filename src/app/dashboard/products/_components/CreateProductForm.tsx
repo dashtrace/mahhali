@@ -12,23 +12,73 @@ import { CardHead, ExtrasFields, blankExtras, extrasBody, type Category, type Ex
 import { submitWith } from "./useAction";
 
 type Currency = "USD" | "LBP";
-export type VariantDraft = { size: string; colour: string; sku: string; price: string; stock: string };
-const blank: VariantDraft = { size: "", colour: "", sku: "", price: "", stock: "0" };
+export type VariantDraft = { optionValues: string[]; sku: string; price: string; stock: string };
+export const blankVariant = (options: string[]): VariantDraft => ({ optionValues: options.map(() => ""), sku: "", price: "", stock: "0" });
 
 /** The API body for one variant row. */
-export const variantBody = (v: VariantDraft) => ({ size: v.size, colour: v.colour, sku: v.sku, price: v.price.trim(), stock: Number(v.stock) || 0 });
+export const variantBody = (v: VariantDraft) => ({ optionValues: v.optionValues, sku: v.sku, price: v.price.trim(), stock: Number(v.stock) || 0 });
 
-/** Size, colour, SKU, price and opening stock for one variant. */
-export function VariantFields({ value, onChange, currency, m }: { value: VariantDraft; onChange: (v: VariantDraft) => void; currency: Currency; m: CatalogueMessages }) {
-  const set = (k: keyof VariantDraft) => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...value, [k]: e.target.value });
+/** The product's option names (at most 3), each with a remove button. */
+export function OptionsFields({
+  names,
+  onRename,
+  onAdd,
+  onRemove,
+  m,
+}: {
+  names: string[];
+  onRename: (i: number, name: string) => void;
+  onAdd: () => void;
+  onRemove: (i: number) => void;
+  m: CatalogueMessages;
+}) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-      <Field label={m.size}>
-        <Input value={value.size} onChange={set("size")} maxLength={40} placeholder={m.sizePlaceholder} />
-      </Field>
-      <Field label={m.colour}>
-        <Input value={value.colour} onChange={set("colour")} maxLength={40} placeholder={m.colourPlaceholder} />
-      </Field>
+    <>
+      {names.map((name, i) => (
+        <div key={i} className="flex items-end gap-2">
+          <Field label={fill(m.optionN, { n: i + 1 })} className="flex-1">
+            <Input value={name} onChange={(e) => onRename(i, e.target.value)} required maxLength={40} placeholder={m.optionPlaceholder} dir="auto" />
+          </Field>
+          <IconButton label={m.removeOption} icon="x" onClick={() => onRemove(i)} />
+        </div>
+      ))}
+      {names.length < 3 && (
+        <Button tone="secondary" className="self-start" onClick={onAdd}>
+          <Icon name="plus" />
+          {m.addOption}
+        </Button>
+      )}
+    </>
+  );
+}
+
+/** One value per option, then price, opening stock and SKU for one variant. */
+export function VariantFields({
+  value,
+  onChange,
+  options,
+  currency,
+  m,
+}: {
+  value: VariantDraft;
+  onChange: (v: VariantDraft) => void;
+  options: string[];
+  currency: Currency;
+  m: CatalogueMessages;
+}) {
+  const set = (k: Exclude<keyof VariantDraft, "optionValues">) => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...value, [k]: e.target.value });
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {options.map((name, i) => (
+        <Field key={i} label={name || fill(m.optionN, { n: i + 1 })}>
+          <Input
+            value={value.optionValues[i] ?? ""}
+            onChange={(e) => onChange({ ...value, optionValues: options.map((_, j) => (j === i ? e.target.value : (value.optionValues[j] ?? ""))) })}
+            maxLength={40}
+            dir="auto"
+          />
+        </Field>
+      ))}
       <Field label={fill(m.price, { currency })}>
         <Input value={value.price} onChange={set("price")} required dir="ltr" inputMode="decimal" pattern={currency === "USD" ? "\\d+(\\.\\d{1,2})?" : "\\d+"} />
       </Field>
@@ -44,7 +94,10 @@ export function VariantFields({ value, onChange, currency, m }: { value: Variant
 
 export function CreateProductForm({ currency, categories, m, t }: { currency: Currency; categories: Category[]; m: CatalogueMessages; t: CommonMessages }) {
   const router = useRouter();
-  const [rows, setRows] = useState<VariantDraft[]>([blank]);
+  const [options, setOptions] = useState<string[]>([]);
+  const [rows, setRows] = useState<VariantDraft[]>([blankVariant([])]);
+  // Adding or removing an option adds or removes that value in every row, so rows stay in step.
+  const values = (f: (v: string[]) => string[]) => setRows(rows.map((r) => ({ ...r, optionValues: f(r.optionValues) })));
   const [extras, setExtras] = useState<Extras>(blankExtras);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +107,13 @@ export function CreateProductForm({ currency, categories, m, t }: { currency: Cu
     setError(null);
     try {
       const product = await api<{ id: string }>("/api/products", {
-        body: { name: form.get("name"), description: String(form.get("description") ?? "") || null, variants: rows.map(variantBody), ...extrasBody(extras) },
+        body: {
+          name: form.get("name"),
+          description: String(form.get("description") ?? "") || null,
+          options: options.map((o) => o.trim()),
+          variants: rows.map(variantBody),
+          ...extrasBody(extras),
+        },
       });
       router.push(`/dashboard/products/${product.id}`);
     } catch (e) {
@@ -75,7 +134,23 @@ export function CreateProductForm({ currency, categories, m, t }: { currency: Cu
         </Field>
       </Card>
       <Card className="flex flex-col gap-4">
-        <CardHead title={m.variants} hint={m.variantsHint} />
+        <CardHead title={m.options} hint={m.optionsHint} />
+        <OptionsFields
+          names={options}
+          onRename={(i, name) => setOptions(options.map((o, j) => (j === i ? name : o)))}
+          onAdd={() => {
+            setOptions([...options, ""]);
+            values((v) => [...v, ""]);
+          }}
+          onRemove={(i) => {
+            setOptions(options.filter((_, j) => j !== i));
+            values((v) => v.filter((_, j) => j !== i));
+          }}
+          m={m}
+        />
+      </Card>
+      <Card className="flex flex-col gap-4">
+        <CardHead title={m.variants} hint={options.length ? m.variantsHint : m.variantsHintNone} />
         {rows.map((row, i) => (
           <fieldset key={i} className="flex flex-col gap-2 rounded-sl border border-sl-border bg-sl-bg p-3">
             <legend className="sr-only">{fill(m.variantN, { n: i + 1 })}</legend>
@@ -85,13 +160,16 @@ export function CreateProductForm({ currency, categories, m, t }: { currency: Cu
               </span>
               {rows.length > 1 && <IconButton label={m.removeVariant} icon="x" onClick={() => setRows(rows.filter((_, j) => j !== i))} />}
             </div>
-            <VariantFields value={row} onChange={(v) => setRows(rows.map((r, j) => (j === i ? v : r)))} currency={currency} m={m} />
+            <VariantFields value={row} onChange={(v) => setRows(rows.map((r, j) => (j === i ? v : r)))} options={options} currency={currency} m={m} />
           </fieldset>
         ))}
-        <Button tone="secondary" className="self-start" onClick={() => setRows([...rows, { ...blank, price: rows.at(-1)?.price ?? "" }])}>
-          <Icon name="plus" />
-          {m.addVariant}
-        </Button>
+        {/* Without options a second variant would be the same as the first. */}
+        {options.length > 0 && (
+          <Button tone="secondary" className="self-start" onClick={() => setRows([...rows, { ...blankVariant(options), price: rows.at(-1)?.price ?? "" }])}>
+            <Icon name="plus" />
+            {m.addVariant}
+          </Button>
+        )}
       </Card>
       <ExtrasFields value={extras} onChange={setExtras} categories={categories} m={m} />
       {error && <Alert tone="error">{error}</Alert>}

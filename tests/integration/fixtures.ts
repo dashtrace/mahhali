@@ -1,6 +1,7 @@
 import type { OrderStatus } from "@prisma/client";
 import { auth } from "@/server/auth/auth";
 import { prisma } from "@/server/db";
+import { itemLabel } from "@/server/domain/orders";
 import { randomToken } from "@/server/domain/tokens";
 import { cookieFrom } from "./helpers";
 
@@ -9,17 +10,17 @@ import { cookieFrom } from "./helpers";
 
 export async function seedVariant(
   shopId: string,
-  opts: { name?: string; size?: string | null; colour?: string | null; priceMinor?: bigint; available?: number } = {},
+  opts: { name?: string; options?: string[]; optionValues?: string[]; priceMinor?: bigint; available?: number } = {},
 ) {
   const product = await prisma.product.create({
     data: {
       shopId,
       name: opts.name ?? "Linen shirt",
+      options: opts.options ?? ["Size", "Colour"],
       variants: {
         create: {
           shopId,
-          size: opts.size === undefined ? "M" : opts.size,
-          colour: opts.colour === undefined ? "Sand" : opts.colour,
+          optionValues: opts.optionValues ?? ["M", "Sand"],
           priceMinor: opts.priceMinor ?? 2500n,
           available: opts.available ?? 5,
         },
@@ -113,7 +114,7 @@ export async function seedOrder(shopId: string, o: SeedOrder) {
           create: {
             shopId,
             variantId: variant.id,
-            nameSnapshot: [variant.product.name, variant.size, variant.colour].filter(Boolean).join(" / "),
+            nameSnapshot: itemLabel(variant.product.name, variant.optionValues),
             unitPriceMinor: variant.priceMinor,
             qty,
           },

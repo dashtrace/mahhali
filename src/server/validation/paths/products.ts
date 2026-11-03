@@ -4,6 +4,7 @@ import {
   CreateProductBody,
   ImageParams,
   ListProductsQuery,
+  SetOptionsBody,
   StockAdjustmentBody,
   UpdateProductBody,
   UpdateVariantBody,
@@ -15,7 +16,7 @@ import type { PathHelpers } from "./helpers";
 const ImageUpload = z
   .object({
     file: z.string().openapi({ format: "binary", description: "PNG, JPEG or WebP, up to 3 MB" }),
-    colour: z.string().max(40).optional().openapi({ description: "The variant colour this photo shows" }),
+    optionValue: z.string().max(40).optional().openapi({ description: "The option value this photo shows, e.g. a colour" }),
   })
   .openapi("ImageUpload");
 
@@ -67,22 +68,36 @@ export function registerProducts(r: OpenAPIRegistry, { secured, ok, error, error
     responses: { 200: ok("Archived product"), ...errors },
   });
   r.registerPath({
+    method: "put",
+    path: "/api/products/{id}/options",
+    summary: "Rename, add, remove or reorder a product's options; every variant's values follow (owner, manager)",
+    tags: ["Products"],
+    security: secured,
+    request: { params: IdParam, body: { content: { "application/json": { schema: SetOptionsBody } } } },
+    responses: {
+      200: ok("Product with its variants"),
+      ...errors,
+      409: error("OPTIONS_CHANGED: a `from` name is not one of the current options"),
+      422: error("DUPLICATE_VARIANT: two variants would end up with the same values"),
+    },
+  });
+  r.registerPath({
     method: "post",
     path: "/api/products/{id}/variants",
     summary: "Add a variant; initial stock is logged (owner, manager)",
     tags: ["Products"],
     security: secured,
     request: { params: IdParam, body: { content: { "application/json": { schema: VariantBody } } } },
-    responses: { 201: ok("Created variant"), ...errors, 422: error("DUPLICATE_VARIANT or INVALID_PRICE") },
+    responses: { 201: ok("Created variant"), ...errors, 422: error("DUPLICATE_VARIANT, OPTION_VALUES_MISMATCH or INVALID_PRICE") },
   });
   r.registerPath({
     method: "patch",
     path: "/api/variants/{id}",
-    summary: "Change a variant's price, SKU, size or colour, or archive it (owner, manager)",
+    summary: "Change a variant's price, SKU or option values, or archive it (owner, manager)",
     tags: ["Products"],
     security: secured,
     request: { params: IdParam, body: { content: { "application/json": { schema: UpdateVariantBody } } } },
-    responses: { 200: ok("Updated variant"), ...errors, 422: error("DUPLICATE_VARIANT or INVALID_PRICE") },
+    responses: { 200: ok("Updated variant"), ...errors, 422: error("DUPLICATE_VARIANT, OPTION_VALUES_MISMATCH or INVALID_PRICE") },
   });
   r.registerPath({
     method: "post",
