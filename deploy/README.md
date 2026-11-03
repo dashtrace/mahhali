@@ -25,7 +25,9 @@ switches traffic to the new version.
    | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET` | optional, see below |
 
 6. Turn on backups for the Postgres volume (database service → **Backups**).
-7. Create a **project token** (Project Settings → Tokens) for the environment.
+7. Create a **project token**: open the project, click **Settings** (top right of the project
+   canvas, not your account settings), then **Tokens**, pick the `production` environment and
+   create it. Account tokens from your profile page do not work here.
 
 ## Turn on deploys from CI
 

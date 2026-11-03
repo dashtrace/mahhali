@@ -54,7 +54,6 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     needs: test
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
     permissions:
       contents: read
     env:
@@ -62,4 +61,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Railway builds the Dockerfile, runs migrations (railway.json) and swaps in the new version.
-      - run: railway up --ci --service mahhali
+      # CLI pinned: 5.3.0 rejects project tokens in CI ("Not signed in").
+      - run: npx -y @railway/cli@5.2.0 up --ci --service mahhali
