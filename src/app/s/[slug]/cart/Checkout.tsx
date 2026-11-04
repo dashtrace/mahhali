@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { EmailField } from "@/components/EmailField";
 import { Icon } from "@/components/Icon";
-import { Alert, Button, ButtonLink, Card, EmptyState, Field, IconButton, Input, ProductPhoto, QtyStepper, Select, Textarea } from "@/components/ui";
+import { Alert, Button, ButtonLink, Field, Input, ProductPhoto, QtyStepper, Select, Textarea } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CheckoutMessages } from "@/i18n/messages/checkout";
 import { common } from "@/i18n/messages/common";
@@ -16,6 +16,7 @@ import { GOVERNORATES } from "@/server/domain/lebanon";
 import { checkNote } from "@/server/domain/storefront";
 import { clearCart, qtyOf, removeLine, setQty, useCart, type CartLine } from "../../../_storefront/cart";
 import type { CatalogueProduct } from "../../../_storefront/data";
+import { PageEmpty, PageHead } from "../_components/tiles";
 
 type Props = {
   slug: string;
@@ -31,7 +32,6 @@ type Hit = { product: CatalogueProduct; variant: CatalogueProduct["variants"][nu
 type Row = { line: CartLine; hit: Hit | undefined; name: string; variant: string; problem: string | null };
 
 const noSubscribe = () => () => {};
-const backLink = "inline-flex min-h-11 items-center gap-1 text-sm font-bold text-sl-accent";
 const noteBox = "whitespace-pre-wrap break-words rounded-[5px] border-s-[3px] border-sl-accent bg-sl-cat px-2.5 py-1.5 text-xs leading-relaxed";
 
 /** The cart (step "cart") and the guest checkout form (step "checkout") over the same lines. */
@@ -154,22 +154,27 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
 
   if (rows.length === 0) {
     return (
-      <div className="mx-auto max-w-xl">
-        <h1 className="sl-heading mb-4 text-[22px] leading-tight sm:text-[28px]">{m.cartTitle}</h1>
-        <EmptyState
+      <>
+        <PageHead eyebrow={m.cartEyebrow} title={m.cartTitle} lead={fill(m.cartItems, { n: count })} />
+        <PageEmpty
           title={m.cartEmpty}
           body={m.cartEmptyBody}
-          action={<ButtonLink href={`/s/${slug}/shop`}>{m.browseShop}</ButtonLink>}
+          action={
+            <Link href={`/s/${slug}/shop`} className="sl-text-cta">
+              {m.browseShop}
+              <Icon name="arrowOut" className="sl-arrow-out" />
+            </Link>
+          }
         />
-      </div>
+      </>
     );
   }
 
   const totals = (
-    <dl className="flex flex-col gap-2 text-sm">
-      <Line label={m.subtotal} value={money(subtotal)} />
+    <dl>
+      <Line label={m.subtotal} value={<b>{money(subtotal)}</b>} />
       <Line label={m.deliveryFee} value={deliveryFeeMinor === 0 ? m.free : money(deliveryFeeMinor)} />
-      <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-sl-border pt-3 text-base font-extrabold">
+      <div className="sl-totals-row sl-totals-final">
         <dt>{m.total}</dt>
         <dd className="tabular-nums">{money(subtotal + deliveryFeeMinor)}</dd>
       </div>
@@ -178,43 +183,28 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
 
   if (step === "cart") {
     return (
-      <div className="mx-auto max-w-5xl">
-        <h1 className="sl-heading text-[22px] leading-tight sm:text-[28px]">{m.cartTitle}</h1>
-        <p className="mt-1 text-sm text-sl-muted">{fill(m.cartItems, { n: count })}</p>
-        <div className="mt-4 grid gap-5 md:grid-cols-[minmax(0,1fr)_340px] md:items-start">
-          <ul className="divide-y divide-sl-border rounded-sl-lg border border-sl-border bg-sl-panel px-4 shadow-[0_2px_10px_#00000006]">
+      <>
+        <PageHead eyebrow={m.cartEyebrow} title={m.cartTitle} lead={fill(m.cartItems, { n: count })} />
+        <div className="sl-cart-layout">
+          <ul>
             {rows.map((r) => (
-              <li key={`${r.line.variantId}:${r.line.note ?? ""}`} className="flex gap-3 py-4">
+              <li key={`${r.line.variantId}:${r.line.note ?? ""}`} className="sl-cart-line">
                 <Thumb url={r.hit?.product.images[0]?.url} name={r.name} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      {r.hit ? (
-                        <Link href={`/s/${slug}/p/${r.hit.product.id}`} className="font-bold leading-snug hover:underline">
-                          {r.name}
-                        </Link>
-                      ) : (
-                        <span className="font-bold leading-snug">{r.name}</span>
-                      )}
-                      {r.hit && (
-                        <p className="mt-0.5 text-xs text-sl-muted">
-                          {r.variant && `${r.variant} · `}
-                          <bdi>{fill(m.each, { price: money(r.hit.variant.priceMinor) })}</bdi>
-                        </p>
-                      )}
-                    </div>
-                    <IconButton
-                      label={fill(m.removeItem, { item: r.name })}
-                      icon="x"
-                      onClick={() => removeLine(slug, r.line.variantId, r.line.note)}
-                    />
-                  </div>
-                  {r.line.note && <NoteLine label={r.hit?.product.customization?.label} note={r.line.note} className="mt-2" />}
-                  {r.problem && <p className="mt-2 text-xs font-semibold text-sl-danger">{r.problem}</p>}
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    {r.hit?.variant.inStock ? (
+                <div className="min-w-0">
+                  <h3>{r.hit ? <Link href={`/s/${slug}/p/${r.hit.product.id}`}>{r.name}</Link> : r.name}</h3>
+                  {r.hit && (
+                    <p className="sl-cart-meta">
+                      <bdi>{fill(m.each, { price: money(r.hit.variant.priceMinor) })}</bdi>
+                      {` · ${r.variant || m.standard}`}
+                    </p>
+                  )}
+                  {r.line.note && <NoteLine label={r.hit?.product.customization?.label} note={r.line.note} className="mb-2.5" />}
+                  {r.problem && <p className="mb-2.5 text-xs font-semibold text-sl-danger">{r.problem}</p>}
+                  <div className="sl-cart-controls">
+                    {r.hit?.variant.inStock && (
                       <QtyStepper
                         shape="square"
+                        className="sl-cart-qty"
                         value={r.line.qty}
                         min={1}
                         max={Math.max(1, r.line.qty + roomFor(r.line.variantId, r.hit.variant.left))}
@@ -225,48 +215,54 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
                         locale={locale}
                         label={r.name}
                       />
-                    ) : (
-                      <span />
                     )}
-                    <span className="font-extrabold tabular-nums">{r.hit ? money(r.hit.variant.priceMinor * r.line.qty) : null}</span>
+                    <button
+                      type="button"
+                      aria-label={fill(m.removeItem, { item: r.name })}
+                      className="sl-cart-remove"
+                      onClick={() => removeLine(slug, r.line.variantId, r.line.note)}
+                    >
+                      {common[locale].remove}
+                    </button>
                   </div>
                 </div>
+                <span className="sl-cart-cost tabular-nums">{r.hit ? money(r.hit.variant.priceMinor * r.line.qty) : null}</span>
               </li>
             ))}
           </ul>
-          <Card className="flex flex-col gap-4 rounded-[14px] p-5 md:sticky md:top-20">
+          <aside className="sl-cart-summary sl-on-surface">
+            <h2>{m.summaryTitle}</h2>
             {totals}
-            <p className="text-xs leading-normal text-sl-muted">{m.cartNote}</p>
-            {blocked && <Alert tone="warning">{m.fixCart}</Alert>}
+            {blocked && <Alert tone="warning" className="mt-3.5">{m.fixCart}</Alert>}
             <ButtonLink
               href={`/s/${slug}/cart?step=checkout`}
               block
-              className="min-h-12 text-[15px]"
+              className="sl-action sl-action-text"
               aria-disabled={blocked || undefined}
               tabIndex={blocked ? -1 : undefined}
             >
               {m.toCheckout}
-              <Icon name="arrow" className="size-4" />
+              <Icon name="arrowOut" className="sl-arrow-out" />
             </ButtonLink>
-          </Card>
+            <p className="sl-summary-note">{m.cartNote}</p>
+          </aside>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <Link href={`/s/${slug}/cart`} className={backLink}>
-        <Icon name="back" className="size-4" />
+    <>
+      <Link href={`/s/${slug}/cart`} className="sl-subback">
+        <Icon name="arrowBack" className="size-3.5" />
         {m.backToCart}
       </Link>
-      <h1 className="sl-heading text-[22px] leading-tight sm:text-[28px]">{m.checkoutTitle}</h1>
-      <p className="mt-1 text-sm text-sl-muted">{m.checkoutLead}</p>
-      <form onSubmit={submit} className="mt-4 grid gap-5 md:grid-cols-[minmax(0,1fr)_360px] md:items-start">
-        <Card className="flex flex-col gap-4 rounded-[14px] p-5">
-          <h2 className="text-base font-bold">{m.deliveryInfo}</h2>
+      <PageHead eyebrow={m.checkoutEyebrow} title={m.checkoutTitle} lead={m.checkoutLead} />
+      <form onSubmit={submit} className="sl-cart-layout">
+        <div className="sl-checkout-form min-w-0">
+          <h2 className="sl-section-title">{m.contactDetails}</h2>
           <Field label={m.name}>
-            <Input name="name" required maxLength={80} autoComplete="name" />
+            <Input name="name" required maxLength={80} autoComplete="name" placeholder={m.namePlaceholder} />
           </Field>
           <Field label={m.phone} hint={m.phoneHint} error={phoneError ? m.phoneInvalid : undefined}>
             <Input
@@ -283,7 +279,8 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
             />
           </Field>
           <EmailField label={`${m.email} (${m.optional})`} hint={m.emailHint} locale={locale} />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <h2 className="sl-section-title">{m.deliveryInfo}</h2>
+          <div className="grid gap-x-3 sm:grid-cols-2">
             <Field label={m.governorate}>
               <Select name="governorate" required defaultValue="">
                 <option value="" disabled>
@@ -301,12 +298,12 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
             </Field>
           </div>
           <Field label={m.area}>
-            <Input name="area" required maxLength={80} autoComplete="address-level2" />
+            <Input name="area" required maxLength={80} autoComplete="address-level2" placeholder={m.areaPlaceholder} />
           </Field>
           <Field label={m.street}>
-            <Input name="street" required maxLength={120} autoComplete="address-line1" />
+            <Input name="street" required maxLength={120} autoComplete="address-line1" placeholder={m.streetPlaceholder} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-x-3">
             <Field label={`${m.building} (${m.optional})`}>
               <Input name="building" maxLength={40} />
             </Field>
@@ -320,19 +317,30 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
           <Field label={`${m.notes} (${m.optional})`}>
             <Textarea name="notes" maxLength={500} />
           </Field>
-        </Card>
+          <p className="sl-checkout-help">{m.cod}</p>
+          {blocked && (
+            <Alert tone="warning" className="mb-3.5">
+              {m.fixCart}{" "}
+              <Link href={`/s/${slug}/cart`} className="font-bold underline underline-offset-2">
+                {m.backToCart}
+              </Link>
+            </Alert>
+          )}
+          {error && <Alert tone="error" className="mb-3.5">{error}</Alert>}
+          <Button type="submit" block className="sl-action sl-action-text" disabled={busy || blocked}>
+            {busy ? m.placing : m.placeOrder}
+            <Icon name="arrowOut" className="sl-arrow-out" />
+          </Button>
+        </div>
 
-        <Card className="flex flex-col gap-4 rounded-[14px] p-5 md:sticky md:top-20">
-          <h2 className="text-base font-bold">{m.reviewItems}</h2>
-          <ul className="rounded-sl bg-sl-cat px-3">
+        <aside className="sl-cart-summary sl-on-surface">
+          <h2>{m.reviewItems}</h2>
+          <ul>
             {rows.map((r) => (
-              <li
-                key={`${r.line.variantId}:${r.line.note ?? ""}`}
-                className="flex justify-between gap-3 border-b border-sl-border py-2.5 text-sm last:border-0"
-              >
+              <li key={`${r.line.variantId}:${r.line.note ?? ""}`} className="sl-totals-row">
                 <div className="min-w-0">
-                  <span className="font-bold">{r.name}</span>
-                  <span className="text-sl-muted">
+                  <span>
+                    {r.name}
                     {r.variant && ` · ${r.variant}`} × {r.line.qty}
                   </span>
                   {r.line.note && (
@@ -343,36 +351,21 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
                   )}
                   {r.problem && <p className="mt-1 text-xs font-semibold text-sl-danger">{r.problem}</p>}
                 </div>
-                <span className="shrink-0 font-bold tabular-nums">{r.hit ? money(r.hit.variant.priceMinor * r.line.qty) : null}</span>
+                <strong className="shrink-0 tabular-nums">{r.hit ? money(r.hit.variant.priceMinor * r.line.qty) : null}</strong>
               </li>
             ))}
           </ul>
-          <dl className="text-sm">
-            <Line label={m.payment} value={<span className="font-bold">{m.cod}</span>} />
-          </dl>
           {totals}
-          {blocked && (
-            <Alert tone="warning">
-              {m.fixCart}{" "}
-              <Link href={`/s/${slug}/cart`} className="font-bold underline underline-offset-2">
-                {m.backToCart}
-              </Link>
-            </Alert>
-          )}
-          {error && <Alert tone="error">{error}</Alert>}
-          <Button type="submit" block className="min-h-12 text-[15px]" disabled={busy || blocked}>
-            {busy ? m.placing : m.placeOrder}
-          </Button>
-        </Card>
+        </aside>
       </form>
-    </div>
+    </>
   );
 }
 
 function Line({ label, value }: { label: ReactNode; value: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-sl-muted">{label}</dt>
+    <div className="sl-totals-row">
+      <dt>{label}</dt>
       <dd className="tabular-nums">{value}</dd>
     </div>
   );
@@ -380,7 +373,7 @@ function Line({ label, value }: { label: ReactNode; value: ReactNode }) {
 
 function Thumb({ url, name }: { url: string | undefined; name: string }) {
   return (
-    <span className="size-[72px] shrink-0 overflow-hidden rounded-sl">
+    <span className="sl-cart-thumb">
       <ProductPhoto src={url} name={name} />
     </span>
   );

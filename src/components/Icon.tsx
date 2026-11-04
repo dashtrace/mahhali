@@ -27,6 +27,7 @@ const PATHS = {
   grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
   cart: "M2 3h2l3 13h13l2-10H5M8 21h.01M18 21h.01",
   arrow: "M4 12h16M14 6l6 6-6 6",
+  arrowBack: "M20 12H4M10 6l-6 6 6 6",
   arrowOut: "M6 18L18 6M8 6h10v10",
   back: "M15 18l-6-6 6-6",
   next: "M9 18l6-6-6-6",
@@ -47,7 +48,7 @@ const PATHS = {
 export type IconName = keyof typeof PATHS;
 
 // Icons that point along the reading direction flip in Arabic.
-const MIRRORED: ReadonlySet<IconName> = new Set(["arrow", "arrowOut", "back", "next"]);
+const MIRRORED: ReadonlySet<IconName> = new Set(["arrow", "arrowBack", "arrowOut", "back", "next"]);
 
 /** `solid` fills the shape (active tab, saved heart). Decorative: label the control around it. */
 export function Icon({ name, className = "size-5", solid }: { name: IconName; className?: string; solid?: boolean }) {
