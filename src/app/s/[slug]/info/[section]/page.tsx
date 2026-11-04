@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Icon } from "@/components/Icon";
-import { ButtonLink, Card, EmptyState, FilterChip, cx } from "@/components/ui";
+import { EmptyState, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
@@ -66,10 +67,10 @@ export default async function InfoPage({ params }: Params) {
             )}
           </section>
         )}
-        <ButtonLink href={`${base}/info/feedback`} tone="outline" className="mt-4">
+        <Link href={`${base}/info/feedback`} className="sl-text-cta mt-4">
           {m.shareFeedback}
-          <Icon name="arrow" className="size-4" />
-        </ButtonLink>
+          <Icon name="arrowOut" className="sl-arrow-out" />
+        </Link>
       </>
     );
   } else if (section === "shipping") {
@@ -100,27 +101,26 @@ export default async function InfoPage({ params }: Params) {
   }
 
   return (
-    <ShopFrame shop={shop} locale={locale}>
-      <nav aria-label={t.shopInfo} className="mb-3">
+    <ShopFrame shop={shop} locale={locale} page="sl-narrow-page">
+      <p className="sl-page-eyebrow">{fill(m.infoEyebrow, { shop: shop.name })}</p>
+      <h1 className="sl-page-title">
+        {t[TITLE[section]]}
+        <span className="sl-dot">.</span>
+      </h1>
+      <p className="sl-page-lead">{intro}</p>
+      <nav aria-label={t.shopInfo}>
         {/* Wraps rather than scrolls: four chips, and the current one must never sit half off-screen. */}
-        <ul className="flex flex-wrap gap-2 py-1">
+        <ul className="sl-info-tabs">
           {INFO_SECTIONS.map((s) => (
             <li key={s}>
-              <FilterChip href={`${base}/info/${s}`} selected={s === section}>
+              <Link href={`${base}/info/${s}`} className="sl-pill" aria-current={s === section ? "page" : undefined}>
                 {t[TITLE[s]]}
-              </FilterChip>
+              </Link>
             </li>
           ))}
         </ul>
       </nav>
-      <div className="mx-auto max-w-2xl">
-        <header className="mb-4 mt-2">
-          <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.17em] text-sl-accent rtl:tracking-normal">{fill(m.infoEyebrow, { shop: shop.name })}</p>
-          <h1 className="sl-heading mb-2 text-[22px] leading-tight sm:text-[28px]">{t[TITLE[section]]}</h1>
-          <p className="text-sm leading-relaxed text-sl-muted">{intro}</p>
-        </header>
-        <Card className="min-h-40 rounded-[17px] px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.035)] sm:px-6">{content}</Card>
-      </div>
+      <div className="sl-review-panel">{content}</div>
     </ShopFrame>
   );
 }
