@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { DEFAULT_THEME, FONTS, RADII, inkFor, type Theme } from "@/server/domain/theme";
+import { DEFAULT_THEME, FONTS, MIN_CONTRAST, RADII, contrastRatio, inkFor, type Theme } from "@/server/domain/theme";
 
 const RADIUS: Record<Theme["radius"], string> = { none: "0", sm: "0.375rem", md: "0.75rem", lg: "1rem", full: "1.5rem" };
 const FONT: Record<Theme["font"], string> = {
@@ -32,14 +32,49 @@ export function themeTone(value: unknown): "light" | "dark" {
   return inkFor(readTheme(value).background) === "#ffffff" ? "dark" : "light";
 }
 
+/** sRGB mix of p% a with the rest b, the same maths as CSS color-mix(in srgb, ...). */
+function mix(a: string, b: string, p: number): string {
+  const channel = (hex: string, i: number) => parseInt(hex.slice(i, i + 2), 16);
+  const mixed = [1, 3, 5].map((i) => Math.round((channel(a, i) * p + channel(b, i) * (100 - p)) / 100));
+  return `#${mixed.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** The smallest mix of ink into the background that still reads as text on that background. */
+function derivedMuted(ink: string, background: string): string {
+  for (let p = 55; p < 100; p++) {
+    const muted = mix(ink, background, p);
+    if (contrastRatio(muted, background) >= MIN_CONTRAST) return muted;
+  }
+  return ink;
+}
+
 /**
- * CSS variables for a shop's pages. Labels on primary and accent use the page
- * background colour, the pairing validateTheme checked for contrast.
- * The sl-* base tokens go on an element with class "sl-shop", which derives the rest.
+ * The storefront colour roles: the saved value when set, otherwise derived, so
+ * shops saved before the roles existed keep working. --sl-ornament is decoration,
+ * never text. Muted text is only guaranteed on the page; use --sl-fg on --sl-surface.
+ */
+export function storefrontTokens(t: Theme) {
+  const ink = t.text ?? inkFor(t.background);
+  const band = t.dark ?? mix(t.primary, ink, 80);
+  return {
+    "--sl-accent": t.primary,
+    "--sl-accent-ink": t.buttonText ?? t.background,
+    "--sl-ornament": t.accent,
+    "--sl-surface": t.surface ?? mix(t.primary, t.background, 8),
+    "--sl-muted": t.muted ?? derivedMuted(ink, t.background),
+    "--sl-band": band,
+    "--sl-band-ink": t.darkText ?? (contrastRatio(t.background, band) >= MIN_CONTRAST ? t.background : inkFor(band)),
+    "--sl-line": t.border ?? mix(ink, t.background, 11),
+  };
+}
+
+/**
+ * CSS variables for a shop's pages. The sl-* tokens go on an element with class
+ * "sl-shop", which derives the rest.
  */
 export function themeVars(value: unknown, scope: "page" | "chrome" = "page"): CSSProperties {
   const t = readTheme(value);
-  // Muted text, borders and controls are mixed from this in globals.css, so they follow it.
+  // Borders and controls are mixed from this in globals.css, so they follow it.
   const ink = t.text ?? inkFor(t.background);
   const vars: Record<string, string> = {
     "--brand": t.primary,
@@ -54,9 +89,8 @@ export function themeVars(value: unknown, scope: "page" | "chrome" = "page"): CS
     vars["--font-shop"] = FONT[t.font];
     vars["--sl-bg"] = t.background;
     vars["--sl-fg"] = ink;
-    vars["--sl-accent"] = t.primary;
-    vars["--sl-accent-ink"] = t.background;
     vars["--sl-r"] = RADIUS[t.radius];
+    Object.assign(vars, storefrontTokens(t));
   }
   return vars as CSSProperties;
 }

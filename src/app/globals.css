@@ -14,9 +14,10 @@
 /*
  * Design tokens (see spec-foundation.md). The platform (dashboard, admin, auth,
  * marketing) uses the slate/blue owner-panel palette below. A storefront sets
- * --sl-bg, --sl-fg, --sl-accent, --sl-accent-ink and --sl-r inline from the
- * shop's validated theme (themeVars) and gets the rest derived in .sl-shop, so
- * any palette, including the dark "night" preset, keeps its contrast.
+ * --sl-bg, --sl-fg, --sl-r and the colour roles (storefrontTokens: accent, ornament,
+ * surface, muted, band, line) inline from the shop's validated theme (themeVars)
+ * and gets the rest derived in .sl-shop, so any palette, including the dark "night"
+ * preset, keeps its contrast. The roles new to the storefront exist only inside .sl-shop.
  */
 :root {
   --sl-bg: #eef0f1;
@@ -52,7 +53,6 @@
 /* Light shops: warm panels, serif display headings. */
 .sl-shop {
   --sl-panel: color-mix(in srgb, #ffffff 55%, var(--sl-bg));
-  --sl-muted: color-mix(in srgb, var(--sl-fg) 62%, var(--sl-bg));
   --sl-cat: color-mix(in srgb, var(--sl-accent) 10%, var(--sl-bg));
   --sl-border: color-mix(in srgb, var(--sl-fg) 11%, var(--sl-bg));
   --sl-control: color-mix(in srgb, var(--sl-fg) 30%, var(--sl-bg));
@@ -88,6 +88,11 @@
   --color-sl-muted: var(--sl-muted);
   --color-sl-accent: var(--sl-accent);
   --color-sl-accent-ink: var(--sl-accent-ink);
+  --color-sl-ornament: var(--sl-ornament);
+  --color-sl-surface: var(--sl-surface);
+  --color-sl-band: var(--sl-band);
+  --color-sl-band-ink: var(--sl-band-ink);
+  --color-sl-line: var(--sl-line);
   --color-sl-cat: var(--sl-cat);
   --color-sl-border: var(--sl-border);
   --color-sl-control: var(--sl-control);
