@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Button } from "@/components/ui";
+import { Alert } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 
 /** Starts Stripe Checkout and leaves the app for its hosted page. */
@@ -10,9 +10,10 @@ export function UpgradeButton({ label, busyLabel, fallback }: { label: string; b
   const [error, setError] = useState<string | null>(null);
   return (
     <>
-      {error && <Alert tone="error">{error}</Alert>}
-      <Button
-        block
+      {error && <Alert tone="error" className="mb-2.5">{error}</Alert>}
+      <button
+        type="button"
+        className="btn primary full"
         disabled={busy}
         onClick={async () => {
           setBusy(true);
@@ -27,7 +28,7 @@ export function UpgradeButton({ label, busyLabel, fallback }: { label: string; b
         }}
       >
         {busy ? busyLabel : label}
-      </Button>
+      </button>
     </>
   );
 }

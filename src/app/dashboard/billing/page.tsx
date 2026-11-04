@@ -1,5 +1,4 @@
-import { Alert, Badge, Card, PageHeader, cx } from "@/components/ui";
-import { Icon } from "@/components/Icon";
+import { Alert, PageHeader } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { shopMessages } from "@/i18n/messages/shop";
 import { common } from "@/i18n/messages/common";
@@ -24,70 +23,61 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const used = Object.values(metrics.ordersByStatus).reduce((a, b) => a + b, 0);
   const plan: PlanId = me.shop.plan === "pro" ? "pro" : "free";
   const limit = orderLimit(plan);
+  const features = {
+    free: [fill(m.featureLimit, { n: PLANS.free.monthlyOrderLimit }), m.featureCatalogue, m.featureCash],
+    pro: [m.featureUnlimited, m.featureEverything, m.featureGrowing],
+  };
 
   return (
     <>
-      <PageHeader title={m.billingTitle} />
+      <PageHeader title={m.billingTitle} subtitle={m.billingSubtitle} />
       {checkout === "success" && <Alert tone="success" className="mb-4">{m.checkoutSuccess}</Alert>}
       {checkout === "cancelled" && <Alert className="mb-4">{m.checkoutCancelled}</Alert>}
 
-      <Card className="mb-5 flex flex-col gap-4 p-5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-extrabold uppercase tracking-[0.15em] text-sl-muted rtl:tracking-normal">{m.currentPlan}</span>
-          <Badge tone={plan === "pro" ? "violet" : "blue"}>{m[`plan${plan}`]}</Badge>
+      <div className="plan-hero">
+        <div className="between">
+          <span className="eyebrow">{m.yourCurrentPlan}</span>
+          <span className="mini-badge green">{m[`plan${plan}`]}</span>
         </div>
-        <div>
-          <p className="text-sm text-sl-muted">{m.usage}</p>
-          <p className="text-[28px] font-extrabold tabular-nums">
-            {limit === null ? fill(m.unlimitedUsage, { used }) : fill(m.usageOf, { used, limit })}
-          </p>
-          {limit !== null && (
-            <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-sl-cat" role="progressbar" aria-label={m.usage} aria-valuemin={0} aria-valuemax={limit} aria-valuenow={used}>
-              <div className={cx("h-full rounded-full", used >= limit ? "bg-sl-danger" : "bg-sl-accent")} style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} />
+        <div className="mt-[13px] flex items-center gap-[9px]">
+          <strong>{used}</strong>
+          <span className="hint">{limit === null ? m.usageUnlimited : fill(m.usageOfLimit, { limit })}</span>
+        </div>
+        {limit !== null && (
+          <>
+            <div className="bar-half" role="progressbar" aria-label={m.usage} aria-valuemin={0} aria-valuemax={limit} aria-valuenow={Math.min(used, limit)}>
+              <span style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} />
             </div>
-          )}
-        </div>
-        {limit !== null && used >= limit && <Alert tone="error">{m.limitReached}</Alert>}
-        {limit !== null && used < limit && used >= limit * 0.8 && <Alert tone="warning">{m.nearLimit}</Alert>}
-      </Card>
+            <p className="hint">{fill(m.usageLeft, { n: Math.max(0, limit - used) })}</p>
+            {used >= limit && <div className="callout mb-0">{m.limitReached}</div>}
+            {used < limit && used >= limit * 0.8 && <div className="callout mb-0">{m.nearLimit}</div>}
+          </>
+        )}
+      </div>
 
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <div className="plan-grid mt-5">
         {Object.values(PLANS).map((p) => (
-          <li key={p.id}>
-            <section
-              aria-labelledby={`plan-${p.id}`}
-              className={cx(
-                "flex h-full flex-col gap-3 rounded-[17px] bg-sl-panel p-5 shadow-[0_2px_10px_#00000006]",
-                p.id === plan ? "border-2 border-sl-accent" : "border border-sl-border",
-              )}
-            >
-              <div>
-                <h2 id={`plan-${p.id}`} className="sl-heading text-xl">
-                  {m[`plan${p.id}`]}
-                </h2>
-                <p className="mt-1 text-[28px] font-extrabold tabular-nums">{m[`price${p.id}`]}</p>
-              </div>
-              <ul className="flex flex-1 flex-col gap-2 border-t border-sl-border pt-3 text-sm">
-                {[p.monthlyOrderLimit === null ? m.featureUnlimited : fill(m.featureLimit, { n: p.monthlyOrderLimit }), m.featureAll].map((f) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-sl-cat text-sl-accent">
-                      <Icon name="check" className="size-3.5" />
-                    </span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              {p.id === "pro" && plan === "pro" && <Alert tone="success">{m.onPro}</Alert>}
-              {p.id === "pro" && plan !== "pro" && (
-                <>
-                  <UpgradeButton label={m.upgrade} busyLabel={m.redirecting} fallback={common[locale].error} />
-                  <p className="text-xs text-sl-muted">{m.testMode}</p>
-                </>
-              )}
-            </section>
-          </li>
+          <section key={p.id} aria-labelledby={`plan-${p.id}`} className="card">
+            <h2 id={`plan-${p.id}`}>{m[`plan${p.id}`]}</h2>
+            <p className="bold mb-[1em] text-[30px]">
+              {m[`price${p.id}`]} <span className="hint">{m.perMonth}</span>
+            </p>
+            <hr className="separator" />
+            {features[p.id].map((f) => (
+              <p key={f} className="mb-[1em]">
+                ✓ {f}
+              </p>
+            ))}
+            {p.id === plan && <span className="mini-badge green">{m.yourCurrentPlan}</span>}
+            {p.id === "pro" && plan !== "pro" && (
+              <>
+                <UpgradeButton label={m.upgrade} busyLabel={m.redirecting} fallback={common[locale].error} />
+                <p className="hint mt-2.5 mb-0">{m.testMode}</p>
+              </>
+            )}
+          </section>
         ))}
-      </ul>
+      </div>
     </>
   );
 }

@@ -13,17 +13,19 @@ export const metadata = { title: "Team" };
 export default async function StaffPage() {
   const actor = await pageActor("staff.manage", "/dashboard/staff");
   const locale = await getLocale();
+  const m = shopMessages[locale];
   const [team, couriers] = await Promise.all([staffService.list(actor), courierService.list(actor, { active: true })]);
+  const now = new Date();
   return (
     <>
-      <PageHeader title={shopMessages[locale].teamTitle} />
+      <PageHeader title={m.teamTitle} subtitle={m.teamSubtitle} />
       <Team
         members={plain(team.members)}
-        invitations={plain(team.invitations)}
+        invitations={plain(team.invitations.map((i) => ({ ...i, expired: i.expiresAt < now })))}
         couriers={couriers.map((c) => ({ id: c.id, name: c.name }))}
         meId={actor.userId}
         locale={locale}
-        m={shopMessages[locale]}
+        m={m}
         t={common[locale]}
       />
     </>
