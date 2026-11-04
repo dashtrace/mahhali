@@ -35,12 +35,14 @@ export function HeroCarousel({
   locale: Locale;
 }) {
   const m = storeMessages[locale];
-  const [index, setIndex] = useState(0);
+  const [current, setIndex] = useState(0);
   const [stopped, setStopped] = useState(false);
   const holdUntil = useRef(0);
   const paused = useRef(false);
   const touchX = useRef<number | null>(null);
   const count = slides.length;
+  // The preview can remove the slide being shown.
+  const index = count ? current % count : 0;
 
   useEffect(() => {
     if (count < 2 || stopped) return;
