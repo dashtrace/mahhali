@@ -148,6 +148,7 @@
   .sl-dash .palette-card {
     border: 1px solid var(--line);
     background: white;
+    color: #000;
     border-radius: 11px;
     padding: 12px;
     min-width: 146px;
@@ -198,6 +199,7 @@
   .sl-dash .slide-actions button {
     border: 1px solid var(--line);
     background: #fff;
+    color: #000;
     border-radius: 7px;
     padding: 7px 10px;
     font-size: 11px;
@@ -251,8 +253,18 @@
       justify-content: center;
       margin-top: 0;
     }
+    /* What the bottom sheet draws besides the frame fits inside its 85dvh, so only the frame scrolls. */
     .sl-dash .phone-screen {
-      height: min(480px, calc(85dvh - 190px));
+      height: min(480px, calc(85dvh - 245px));
+    }
+  }
+  /* A short phone: the frame needs the note's room more. */
+  @media (max-width: 780px) and (max-height: 740px) {
+    .sl-dash .preview-note {
+      display: none;
+    }
+    .sl-dash .phone-screen {
+      height: calc(85dvh - 180px);
     }
   }
 }
