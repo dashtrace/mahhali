@@ -9,7 +9,6 @@ import { accountService } from "@/server/services/accountService";
 import { reportingService } from "@/server/services/reportingService";
 import { fill } from "@/i18n/locale";
 import { pageActor, signedInUser } from "../_server/session";
-import { themeVars } from "../_server/theme";
 import { DashIcon, type DashIconName } from "./_components/DashIcon";
 import { AllPages, BottomNav, SideNav, type NavGroup } from "./_components/Nav";
 import { openIssues } from "./cash/openIssues";
@@ -75,9 +74,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const roleLabel = { owner: t.roleOwner, manager: t.roleManager, staff: t.roleStaff, delivery: t.roleDelivery }[actor.role];
 
   // The dashboard's own neutral palette (dashboard.css); the shop shows through its logo and name.
-  // themeVars still feeds --brand/--radius to pages not yet on the sl-* tokens.
   return (
-    <div style={themeVars(me.shop.theme, "chrome")} className={`sl-dash ${dmSans.variable}`}>
+    <div className={`sl-dash ${dmSans.variable}`}>
       <header className="topbar">
         <div className="brand-left">
           <AllPages
