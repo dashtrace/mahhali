@@ -72,7 +72,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             {p.id === "pro" && plan !== "pro" && (
               <>
                 <UpgradeButton label={m.upgrade} busyLabel={m.redirecting} fallback={common[locale].error} />
-                <p className="hint mt-2.5 mb-0">{m.testMode}</p>
+                <p className="hint mt-2.5">{m.testMode}</p>
               </>
             )}
           </section>

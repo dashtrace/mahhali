@@ -51,7 +51,7 @@ export default async function RemittancePage({ params }: { params: Promise<{ id:
       <PageHeader
         title={fill(m.remittanceTitle, { ref: remittanceRef(r.id, r.reference) })}
         subtitle={`${courier} · ${dayMonthYear(r.receivedAt.toISOString(), locale)}`}
-        actions={<span className={`mini-badge ${diff ? "red" : "green"}`}>{diff ? m.needsReview : m.settled}</span>}
+        actions={<span className="mini-badge gray">{diff ? m.needsReview : m.settled}</span>}
       />
       <div className="split3">
         {stats.map((s) => (
@@ -63,7 +63,7 @@ export default async function RemittancePage({ params }: { params: Promise<{ id:
           </div>
         ))}
       </div>
-      <section className="card mt-[15px]">
+      <section className="card">
         <h2>{m.flaggedTitle}</h2>
         <p className="hint">{diff ? fill(diff < 0n ? m.flaggedShort : m.flaggedOver, { amount: amount(diff) }) : m.flaggedNone}</p>
         <div className="line-list">

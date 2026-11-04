@@ -214,7 +214,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <div className="min-w-0">
           <div className="card">
             <h2>{m.itemsTotal}</h2>
-            <div className="line-list">
+            <div>
               {o.items.map((i) => (
                 <div key={i.id} className="line-item pt-3.5">
                   <div className="min-w-0">
@@ -256,7 +256,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
           <div className="card">
             <h2>{m.history}</h2>
-            <div className="line-list">
+            <div>
               {o.events.map((e) => (
                 <div key={e.id} className="line-item pt-3.5">
                   <div className="min-w-0">
