@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { ArrowOut } from "@/components/Icon";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
-import { fill, type Locale } from "@/i18n/locale";
+import type { Locale } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
 import { ApiError, api, errorMessage } from "@/lib/api";
@@ -45,7 +45,7 @@ export function FeedbackForm({ slug, locale }: { slug: string; locale: Locale })
       <Field label={m.yourName}>
         <Input name="authorName" required maxLength={60} autoComplete="name" placeholder={m.yourNamePlaceholder} />
       </Field>
-      <Field label={m.yourFeedback} hint={fill(m.feedbackCounter, { n: message.length, max: MAX })}>
+      <Field label={m.yourFeedback}>
         <Textarea
           name="message"
           required
