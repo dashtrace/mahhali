@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { MAX_QTY, fromLegacy, leftAfterCart, parseLines, qtyOf, roomIn, withLine } from "@/app/_storefront/cart";
+import { quickAddVariant } from "@/app/s/[slug]/_components/QuickAdd";
 import { cx, pageTokens } from "@/components/ui";
+
+describe("quickAddVariant", () => {
+  const v = (id: string, inStock = true) => ({ id, inStock });
+
+  it("adds only a single in-stock variant with no required note", () => {
+    expect(quickAddVariant({ variants: [v("a")] })?.id).toBe("a");
+    expect(quickAddVariant({ variants: [v("a")], customization: { required: false } })?.id).toBe("a");
+  });
+
+  it("sends a choice, a required note or sold-out stock to the product page", () => {
+    expect(quickAddVariant({ variants: [v("a"), v("b")] })).toBeNull();
+    expect(quickAddVariant({ variants: [v("a")], customization: { required: true } })).toBeNull();
+    expect(quickAddVariant({ variants: [v("a", false)] })).toBeNull();
+    expect(quickAddVariant({ variants: [] })).toBeNull();
+  });
+});
 
 describe("cx", () => {
   it("lets a later class replace an earlier one of the same group", () => {

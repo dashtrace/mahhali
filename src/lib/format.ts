@@ -41,6 +41,10 @@ export function formatDate(value: string | Date, locale: Locale = "en"): string 
   return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium" }).format(new Date(value));
 }
 
+export function formatMonth(value: string | Date, locale: Locale = "en"): string {
+  return new Intl.DateTimeFormat(intl(locale), { month: "short", year: "numeric" }).format(new Date(value));
+}
+
 export function formatNumber(value: number, locale: Locale = "en", digits = 0): string {
   return new Intl.NumberFormat(intl(locale), { maximumFractionDigits: digits }).format(value);
 }
