@@ -8,13 +8,14 @@ import { useEffect, type RefObject } from "react";
  */
 export function useCancelOnLeave(timer: RefObject<ReturnType<typeof setTimeout> | undefined>) {
   useEffect(() => {
+    const cancel = () => clearTimeout(timer.current);
     const onClick = (e: MouseEvent) => {
-      if ((e.target as Element).closest("a")) clearTimeout(timer.current);
+      if ((e.target as Element).closest("a")) cancel();
     };
     addEventListener("click", onClick, true);
     return () => {
       removeEventListener("click", onClick, true);
-      clearTimeout(timer.current);
+      cancel();
     };
   }, [timer]);
 }

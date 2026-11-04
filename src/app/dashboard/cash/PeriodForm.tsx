@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useCancelOnLeave } from "@/components/useCancelOnLeave";
 import { Field } from "../products/_components/kit";
 
@@ -28,6 +28,17 @@ export function PeriodForm({
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [badRange, setBadRange] = useState(false);
   useCancelOnLeave(timer);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // The fields are uncontrolled, so a URL change from elsewhere (a courier link, browser Back) is
+  // copied in; otherwise the next change sends the stale values. Never into the field being typed in.
+  useEffect(() => {
+    for (const [name, value] of Object.entries({ from, to, courierId: courierId ?? "" })) {
+      const field = formRef.current?.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+      if (field && field !== document.activeElement) field.value = value;
+    }
+    setBadRange(false);
+  }, [from, to, courierId]);
 
   function apply(form: HTMLFormElement) {
     const params = new URLSearchParams();
@@ -46,7 +57,7 @@ export function PeriodForm({
   }
 
   return (
-    <form className="card" onChange={changed}>
+    <form ref={formRef} className="card" onChange={changed}>
       <div className="split3">
         <Field label={labels.from}>
           <input type="date" name="from" className="control" defaultValue={from} />
