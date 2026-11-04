@@ -39,10 +39,13 @@ export default async function OrdersBoardPage({
   const courierId = sp.courierId || undefined;
 
   const statuses = view === "history" ? HISTORY : ACTIVE;
-  const [lists, allCouriers] = await Promise.all([
+  const [lists, allCouriers, found] = await Promise.all([
     Promise.all(statuses.map((status) => orderService.list(actor, { status, courierId, q, limit: PAGE_SIZE }))),
     courierService.list(actor, {}),
+    // Search covers every status, as each view lists only some. shortcut: the newest 50 matches only, add paging if searches often pass that.
+    q ? orderService.list(actor, { courierId, q, limit: 50 }) : null,
   ]);
+  const elsewhere = found ? found.orders.filter((o) => !statuses.includes(o.status)) : [];
   const couriers = can(actor.role, "order.assignCourier") ? allCouriers.filter((c) => c.active) : null;
   const pages = Object.fromEntries(statuses.map((s, i) => [s, { orders: lists[i].orders, nextCursor: lists[i].nextCursor }]));
   const viewHref = (v: string, search = q) =>
@@ -106,6 +109,7 @@ export default async function OrdersBoardPage({
         selected={selected}
         q={q}
         courierId={courierId}
+        elsewhere={plain(elsewhere) as never}
         assign={couriers && { couriers: couriers.map((c) => ({ id: c.id, name: c.name })), canAddCourier: can(actor.role, "courier.write") }}
         locale={locale}
         m={m}

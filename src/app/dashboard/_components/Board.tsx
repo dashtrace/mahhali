@@ -44,6 +44,8 @@ type Props = {
   selected: Status;
   q?: string;
   courierId?: string;
+  /** Search matches in statuses this view doesn't list. */
+  elsewhere: BoardOrder[];
   assign: AssignProps;
   locale: Locale;
   m: OrderMessages;
@@ -54,7 +56,7 @@ type Props = {
  * Phones: status tabs and one list at a time.
  * Wide screens: four columns with drag and drop, or the history table.
  */
-export function BoardClient({ view, pages, counts, selected, q, courierId, assign, locale, m, t }: Props) {
+export function BoardClient({ view, pages, counts, selected, q, courierId, elsewhere, assign, locale, m, t }: Props) {
   const router = useRouter();
   const statuses = view === "history" ? HISTORY : ACTIVE;
   const [tab, setTab] = useState<Status>(statuses.includes(selected) ? selected : statuses[0]);
@@ -129,7 +131,14 @@ export function BoardClient({ view, pages, counts, selected, q, courierId, assig
     <p className="load-note">{total === null ? fill(m.showingX, { x: shown }) : fill(m.showingOf, { x: shown, n: total })}</p>
   );
 
-  if (q && statuses.every((s) => !listOf(s).length)) return <div className="empty">{m.noMatch}</div>;
+  const alsoFound = elsewhere.length > 0 && (
+    <div className="card mt-4">
+      <b className="mb-[13px] block">{m.alsoFound}</b>
+      <OrderTable rows={elsewhere} label={label} locale={locale} m={m} />
+    </div>
+  );
+
+  if (q && statuses.every((s) => !listOf(s).length)) return alsoFound || <div className="empty">{m.noMatch}</div>;
 
   const list = listOf(tab);
   const left = remaining(tab);
@@ -166,40 +175,7 @@ export function BoardClient({ view, pages, counts, selected, q, courierId, assig
             <span className="hint">{m.historyHint}</span>
           </div>
           {allRows.length ? (
-            <div className="table-scroll">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{m.colOrder}</th>
-                    <th>{m.colCustomer}</th>
-                    <th>{m.colStatus}</th>
-                    <th>{m.colTotal}</th>
-                    <th aria-label={m.details} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {allRows.map((o) => (
-                    <tr key={o.id}>
-                      <td>
-                        <b>#{o.number}</b>
-                      </td>
-                      <td>
-                        <bdi>{o.customerName}</bdi>
-                      </td>
-                      <td>
-                        <StatusBadge status={o.status} label={label(o.status)} />
-                      </td>
-                      <td>{formatMoney(o.totalMinor, o.currency, locale)}</td>
-                      <td>
-                        <Link href={`/dashboard/orders/${o.id}`} className="btn tiny">
-                          {m.details}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <OrderTable rows={allRows} label={label} locale={locale} m={m} />
           ) : (
             <div className="empty">{m.noOrdersShort}</div>
           )}
@@ -243,7 +219,47 @@ export function BoardClient({ view, pages, counts, selected, q, courierId, assig
           )}
         </div>
       </div>
+      {alsoFound}
     </>
+  );
+}
+
+function OrderTable({ rows, label, locale, m }: { rows: BoardOrder[]; label: (s: Status) => string; locale: Locale; m: OrderMessages }) {
+  return (
+    <div className="table-scroll">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>{m.colOrder}</th>
+            <th>{m.colCustomer}</th>
+            <th>{m.colStatus}</th>
+            <th>{m.colTotal}</th>
+            <th aria-label={m.details} />
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((o) => (
+            <tr key={o.id}>
+              <td>
+                <b>#{o.number}</b>
+              </td>
+              <td>
+                <bdi>{o.customerName}</bdi>
+              </td>
+              <td>
+                <StatusBadge status={o.status} label={label(o.status)} />
+              </td>
+              <td>{formatMoney(o.totalMinor, o.currency, locale)}</td>
+              <td>
+                <Link href={`/dashboard/orders/${o.id}`} className="btn tiny">
+                  {m.details}
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
