@@ -125,7 +125,7 @@ export function ShopFrame({
         </div>
       </footer>
 
-      {whatsapp && <WhatsAppFab slug={shop.slug} href={whatsapp} locale={locale} />}
+      {whatsapp && overlay && <WhatsAppFab href={whatsapp} locale={locale} />}
     </div>
   );
 }

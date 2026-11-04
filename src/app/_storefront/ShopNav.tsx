@@ -77,10 +77,9 @@ export function TrackPill({ slug, locale }: { slug: string; locale: Locale }) {
   );
 }
 
-/** Floating WhatsApp button, on the shop's home page only (as in the mockup). */
-export function WhatsAppFab({ slug, href, locale }: { slug: string; href: string; locale: Locale }) {
+/** Floating WhatsApp button, shown by ShopFrame on the shop's home page only (as in the mockup). */
+export function WhatsAppFab({ href, locale }: { href: string; locale: Locale }) {
   const t = common[locale];
-  if (activeTab(usePathname(), slug) !== "home") return null;
   return (
     <a
       href={href}
