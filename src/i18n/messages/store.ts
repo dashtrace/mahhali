@@ -158,6 +158,11 @@ export const storeMessages = defineMessages({
     testimonialsTitle: "What our customers say",
     testimonialsNote: "General feedback about this shop's service. These are not product ratings.",
     aboutLink: "More about us",
+    discoverStory: "Discover our story",
+    storyHeading: "Our story",
+    readStories: "Read customer stories",
+    stayHeading: "Stay in touch",
+    stayBody: "Say hello, ask a question or see what's new.",
 
     // Shop listing
     allProducts: "All products",
@@ -423,6 +428,11 @@ export const storeMessages = defineMessages({
     testimonialsTitle: "ماذا يقول زبائننا",
     testimonialsNote: "آراء عامة في خدمة هذا المتجر، وليست تقييمات للمنتجات.",
     aboutLink: "المزيد عنّا",
+    discoverStory: "اكتشف قصتنا",
+    storyHeading: "قصتنا",
+    readStories: "اقرأ آراء زبائننا",
+    stayHeading: "ابقَ على تواصل",
+    stayBody: "سلّم علينا، اسأل، أو اطّلع على كل جديد.",
 
     allProducts: "كل المنتجات",
     categoryFallback: "فئة",
