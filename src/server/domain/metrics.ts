@@ -7,10 +7,10 @@ export type Period = { from: string; to: string; start: Date; end: Date };
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
-/** YYYY-MM-DD bounds, the last 30 days (today included) when missing. */
-export function periodOf(from: string | undefined, to: string | undefined, now: Date): Period {
+/** YYYY-MM-DD bounds, the last `days` days (today included, 30 by default) when missing. */
+export function periodOf(from: string | undefined, to: string | undefined, now: Date, days = 30): Period {
   const end = new Date(Date.parse(to ?? isoDay(now)) + DAY_MS);
-  const start = from ? new Date(Date.parse(from)) : new Date(end.getTime() - 30 * DAY_MS);
+  const start = from ? new Date(Date.parse(from)) : new Date(end.getTime() - days * DAY_MS);
   return { from: isoDay(start), to: isoDay(new Date(end.getTime() - DAY_MS)), start, end };
 }
 

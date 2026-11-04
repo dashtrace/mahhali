@@ -1,6 +1,7 @@
 import { GOVERNORATES } from "../domain/lebanon";
 import { ORDER_STATUSES } from "../domain/orderStatus";
 import { Amount, Email, Phone } from "./common";
+import { fromNotAfterTo, range, rangeMessage } from "./money";
 import { z } from "./zod";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -107,11 +108,15 @@ export const DeliveredBody = z.object(Collected).openapi("DeliveredBody");
 
 export const FailedBody = z.object({ reason: text(300) }).openapi("FailedBody");
 
-export const DeliveryOrdersQuery = z.object({
-  view: z.enum(["active", "done"]).default("active"),
-  /** Desk roles only: one courier's run. */
-  courierId: z.string().min(1).max(64).optional(),
-});
+export const DeliveryOrdersQuery = z
+  .object({
+    view: z.enum(["active", "done"]).default("active"),
+    /** Desk roles only: one courier's run. */
+    courierId: z.string().min(1).max(64).optional(),
+    /** view=done only. YYYY-MM-DD, inclusive, in UTC; recent activity from the last 7 days when both are absent. */
+    ...range,
+  })
+  .refine(fromNotAfterTo, rangeMessage);
 
 export type PlaceOrderInput = z.infer<typeof PlaceOrderBody>;
 export type ManualOrderInput = z.infer<typeof ManualOrderBody>;

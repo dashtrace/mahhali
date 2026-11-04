@@ -3166,6 +3166,7 @@
     "/api/delivery/orders": {
       "get": {
         "summary": "A courier's run: delivery users see only their courier's orders",
+        "description": "from and to apply to view=done: delivered orders by delivery day, returned orders by last update. A lone to covers the 7 days ending that day; a lone from runs to today.",
         "tags": [
           "Delivery"
         ],
@@ -3197,6 +3198,26 @@
             "required": false,
             "name": "courierId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-01"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-01"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
           }
         ],
         "responses": {
@@ -3205,6 +3226,16 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
               }
             }
           },

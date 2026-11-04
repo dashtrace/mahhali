@@ -93,10 +93,12 @@ export function registerOrders(r: OpenAPIRegistry, { secured, cronSecured, ok, e
     method: "get",
     path: "/api/delivery/orders",
     summary: "A courier's run: delivery users see only their courier's orders",
+    description:
+      "from and to apply to view=done: delivered orders by delivery day, returned orders by last update. A lone to covers the 7 days ending that day; a lone from runs to today.",
     tags: ["Delivery"],
     security: secured,
     request: { query: DeliveryOrdersQuery },
-    responses: { 200: ok("Orders with address, phone and cash to collect"), 401: errors[401], 403: errors[403] },
+    responses: { 200: ok("Orders with address, phone and cash to collect"), 400: errors[400], 401: errors[401], 403: errors[403] },
   });
   r.registerPath({
     method: "post",

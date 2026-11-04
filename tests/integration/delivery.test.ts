@@ -118,3 +118,81 @@ describe("delivery users", () => {
     expect((await call(deliveryList, "/api/delivery/orders", { cookie: outsider.cookie })).body).toEqual([]);
   });
 });
+
+describe("the delivered list's date range", () => {
+  async function setup() {
+    const owner = await signUpOwner();
+    const toters = await seedCourier(owner.shop.id, { name: "Toters" });
+    const sami = await seedCourier(owner.shop.id, { name: "Sami", type: "INDIVIDUAL" });
+    const driver = await addMember(owner.shop.id, "delivery", toters.id);
+    const { variant } = await seedVariant(owner.shop.id, { available: 20 });
+    const seed = (courierId: string, status: "DELIVERED" | "RETURNED" | "OUT_FOR_DELIVERY", deliveredAt?: string) =>
+      seedOrder(owner.shop.id, { variantId: variant.id, status, courierId, deliveredAt: deliveredAt ? new Date(deliveredAt) : undefined });
+    // All were just written, so updatedAt is today: only deliveredAt tells them apart.
+    const lateOnTheTenth = await seed(toters.id, "DELIVERED", "2025-01-10T23:30:00Z");
+    const onTheEleventh = await seed(toters.id, "DELIVERED", "2025-01-11T00:00:00Z");
+    const onTheTwentieth = await seed(toters.id, "DELIVERED", "2025-01-20T12:00:00Z");
+    const samiOnTheTenth = await seed(sami.id, "DELIVERED", "2025-01-10T12:00:00Z");
+    const returned = await seed(toters.id, "RETURNED");
+    await prisma.order.update({ where: { id: returned.id }, data: { updatedAt: new Date("2025-01-10T12:00:00Z") } });
+    const active = await seed(toters.id, "OUT_FOR_DELIVERY");
+    return { owner, toters, sami, driver, lateOnTheTenth, onTheEleventh, onTheTwentieth, samiOnTheTenth, returned, active };
+  }
+
+  const ids = async (cookie: string, query: string) => {
+    const res = await call(deliveryList, `/api/delivery/orders?${query}`, { cookie });
+    expect(res.status).toBe(200);
+    return res.body.map((o: { id: string }) => o.id).sort();
+  };
+  const sorted = (...orders: { id: string }[]) => orders.map((o) => o.id).sort();
+
+  it("filters delivered orders by deliveredAt with both days inclusive, and keeps returned orders by last update", async () => {
+    const { driver, lateOnTheTenth, onTheEleventh, returned } = await setup();
+    expect(await ids(driver.cookie, "view=done&from=2025-01-10&to=2025-01-10")).toEqual(sorted(lateOnTheTenth, returned));
+    expect(await ids(driver.cookie, "view=done&from=2025-01-10&to=2025-01-11")).toEqual(sorted(lateOnTheTenth, onTheEleventh, returned));
+    expect(await ids(driver.cookie, "view=done&from=2024-01-01&to=2024-01-31")).toEqual([]);
+  });
+
+  it("runs a lone from to today, and a lone to back over 7 days", async () => {
+    const { driver, onTheTwentieth, onTheEleventh } = await setup();
+    expect(await ids(driver.cookie, "view=done&from=2025-01-11")).toEqual(sorted(onTheEleventh, onTheTwentieth));
+    expect(await ids(driver.cookie, "view=done&to=2025-01-20")).toEqual(sorted(onTheTwentieth));
+    // 11 to 17 January is the 7 days ending on the 17th; the 10th is one day out.
+    expect(await ids(driver.cookie, "view=done&to=2025-01-17")).toEqual(sorted(onTheEleventh));
+  });
+
+  it("keeps the 7-day default on last update when no dates are given", async () => {
+    const { driver, lateOnTheTenth, onTheEleventh, onTheTwentieth } = await setup();
+    expect(await ids(driver.cookie, "view=done")).toEqual(sorted(lateOnTheTenth, onTheEleventh, onTheTwentieth));
+  });
+
+  it("leaves the to-deliver view alone", async () => {
+    const { driver, active } = await setup();
+    expect(await ids(driver.cookie, "view=active&from=2025-01-10&to=2025-01-10")).toEqual(sorted(active));
+  });
+
+  it("refuses from after to, and a lone from in the future", async () => {
+    const { driver } = await setup();
+    const backwards = await call(deliveryList, "/api/delivery/orders?view=done&from=2025-01-11&to=2025-01-10", { cookie: driver.cookie });
+    expect(backwards.status).toBe(400);
+    const future = await call(deliveryList, "/api/delivery/orders?view=done&from=2999-01-01", { cookie: driver.cookie });
+    expect(future.status).toBe(400);
+    const malformed = await call(deliveryList, "/api/delivery/orders?view=done&from=10-01-2025", { cookie: driver.cookie });
+    expect(malformed.status).toBe(400);
+  });
+
+  it("keeps delivery users on their own courier, while desk roles may pick one", async () => {
+    const { owner, driver, sami, lateOnTheTenth, samiOnTheTenth, returned } = await setup();
+    const range = "view=done&from=2025-01-10&to=2025-01-10";
+    expect(await ids(driver.cookie, `${range}&courierId=${sami.id}`)).toEqual(sorted(lateOnTheTenth, returned));
+    const staff = await addMember(owner.shop.id, "staff");
+    expect(await ids(staff.cookie, `${range}&courierId=${sami.id}`)).toEqual(sorted(samiOnTheTenth));
+    expect(await ids(staff.cookie, range)).toEqual(sorted(lateOnTheTenth, samiOnTheTenth, returned));
+  });
+
+  it("never reaches another shop's orders", async () => {
+    await setup();
+    const other = await signUpOwner();
+    expect(await ids(other.cookie, "view=done&from=2025-01-10&to=2025-01-20")).toEqual([]);
+  });
+});

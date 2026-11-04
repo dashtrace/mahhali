@@ -186,13 +186,20 @@ export const orderRepo = {
   },
 
   /** A courier's run: what the delivery screen lists. */
-  forCourier(shopId: string, f: { courierId?: string; statuses: OrderStatus[]; since?: Date }, client: Db = db) {
+  forCourier(
+    shopId: string,
+    f: { courierId?: string; statuses: OrderStatus[]; since?: Date; period?: { start: Date; end: Date } },
+    client: Db = db,
+  ) {
+    const within = f.period && { gte: f.period.start, lt: f.period.end };
     return client.order.findMany({
       where: {
         shopId,
         status: { in: f.statuses },
         ...(f.courierId ? { courierId: f.courierId } : {}),
         ...(f.since ? { updatedAt: { gte: f.since } } : {}),
+        // A returned order never reached the door, so it has no deliveredAt.
+        ...(within ? { OR: [{ status: "DELIVERED" as const, deliveredAt: within }, { status: "RETURNED" as const, updatedAt: within }] } : {}),
       },
       include: {
         items: { select: { nameSnapshot: true, qty: true, note: true } },

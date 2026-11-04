@@ -1,3 +1,4 @@
+import { periodOf } from "../domain/metrics";
 import { toMinor } from "../domain/money";
 import { firstName } from "../domain/names";
 import { itemLabel, orderTotals, parseOrderNumber } from "../domain/orders";
@@ -412,13 +413,16 @@ export const orderService = {
   },
 
   /** The delivery phone screen: a courier's run, with what to collect. */
-  async deliveryList(actor: Actor, q: { view: "active" | "done"; courierId?: string }) {
+  async deliveryList(actor: Actor, q: { view: "active" | "done"; courierId?: string; from?: string; to?: string }) {
     const scope = courierScope(actor);
     if (scope === null) return [];
+    const done = q.view === "done";
+    const period = done && (q.from || q.to) ? periodOf(q.from, q.to, new Date(), 7) : undefined;
     const orders = await orderRepo.forCourier(actor.shopId, {
       courierId: scope ?? q.courierId,
-      statuses: q.view === "active" ? ["PACKED", "OUT_FOR_DELIVERY"] : ["DELIVERED", "RETURNED"],
-      since: q.view === "done" ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) : undefined,
+      statuses: done ? ["DELIVERED", "RETURNED"] : ["PACKED", "OUT_FOR_DELIVERY"],
+      since: done && !period ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) : undefined,
+      period,
     });
     return orders.map((o) => ({
       id: o.id,

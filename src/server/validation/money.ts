@@ -31,11 +31,11 @@ export const CreateRemittanceBody = z
   })
   .openapi("CreateRemittanceBody");
 
-const range = { from: Day.optional(), to: Day.optional() };
+export const range = { from: Day.optional(), to: Day.optional() };
 // "to" defaults to today, so a lone "from" must not be in the future either.
-const fromNotAfterTo = (q: { from?: string; to?: string }) =>
+export const fromNotAfterTo = (q: { from?: string; to?: string }) =>
   !q.from || q.from <= (q.to ?? new Date().toISOString().slice(0, 10));
-const rangeMessage = { message: "from must not be after to", path: ["from"] };
+export const rangeMessage = { message: "from must not be after to", path: ["from"] };
 
 /** YYYY-MM-DD, inclusive, in UTC; the last 30 days by default. */
 export const PeriodQuery = z.object(range).refine(fromNotAfterTo, rangeMessage);
