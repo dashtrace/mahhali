@@ -9,6 +9,7 @@ import { themeTone, themeVars } from "../_server/theme";
 import { CartLink } from "./cart";
 import { dmSans, playfair } from "./fonts";
 import { OverlayHeader, ShopMenu, ShopTopNav, TrackPill, WhatsAppFab } from "./ShopNav";
+import { Toast } from "./Toast";
 import { WishLink } from "./wishlist";
 
 export { Stars } from "@/components/ui";
@@ -127,6 +128,7 @@ export function ShopFrame({
       </footer>
 
       {whatsapp && overlay && <WhatsAppFab href={whatsapp} locale={locale} />}
+      <Toast />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { addToCart, useCart } from "@/app/_storefront/cart";
+import { showToast } from "@/app/_storefront/Toast";
 import { Icon } from "@/components/Icon";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
@@ -22,7 +22,6 @@ export function quickAddVariant(product: Sellable) {
 export function QuickAdd({ slug, product, locale }: { slug: string; product: Sellable & { id: string; name: string }; locale: Locale }) {
   const m = storeMessages[locale];
   const { roomFor } = useCart(slug);
-  const [added, setAdded] = useState(false);
   const variant = quickAddVariant(product);
 
   if (!variant || roomFor(variant.id, variant.left) <= 0) {
@@ -33,22 +32,16 @@ export function QuickAdd({ slug, product, locale }: { slug: string; product: Sel
     );
   }
   return (
-    <>
-      <button
-        type="button"
-        aria-label={`${m.addToCart}: ${product.name}`}
-        className="sl-tile-add"
-        onClick={() => {
-          addToCart(slug, { variantId: variant.id, qty: 1 });
-          setAdded(true);
-          setTimeout(() => setAdded(false), 1500);
-        }}
-      >
-        <Icon name={added ? "check" : "plus"} className="size-[17px]" />
-      </button>
-      <span role="status" className="sr-only">
-        {added ? m.addedToCart : ""}
-      </span>
-    </>
+    <button
+      type="button"
+      aria-label={`${m.addToCart}: ${product.name}`}
+      className="sl-tile-add"
+      onClick={() => {
+        addToCart(slug, { variantId: variant.id, qty: 1 });
+        showToast(m.addedToCart);
+      }}
+    >
+      <Icon name="plus" className="size-[17px]" />
+    </button>
   );
 }
