@@ -5,11 +5,9 @@ import { plain } from "@/server/http/json";
 import { reviewService } from "@/server/services/reviewService";
 import { ShopFrame } from "../../../../_storefront/ShopFrame";
 import { loadStore } from "../../_components/load";
-import { ProductContent } from "./ProductContent";
+import { ProductContent, relatedTo } from "./ProductContent";
 
 type Params = { params: Promise<{ slug: string; id: string }> };
-
-const RELATED = 4;
 
 async function load(slug: string, id: string) {
   const data = await loadStore(slug);
@@ -30,16 +28,9 @@ export default async function ProductPage({ params }: Params) {
   const reviews = plain(await reviewService.forProduct(slug, id));
   const locale = shop.locale;
 
-  // Same category first, then the newest of the rest.
-  const others = products.filter((p) => p.id !== product.id);
-  const related = [...others.filter((p) => product.categoryId && p.categoryId === product.categoryId), ...others.filter((p) => !product.categoryId || p.categoryId !== product.categoryId)].slice(
-    0,
-    RELATED,
-  );
-
   return (
     <ShopFrame shop={shop} locale={locale} page wish={<WishButton slug={slug} productId={product.id} locale={locale} variant="icon" />}>
-      <ProductContent slug={slug} shop={shop} product={product} reviews={reviews} related={related} locale={locale} />
+      <ProductContent slug={slug} shop={shop} product={product} reviews={reviews} related={relatedTo(products, product)} locale={locale} />
     </ShopFrame>
   );
 }

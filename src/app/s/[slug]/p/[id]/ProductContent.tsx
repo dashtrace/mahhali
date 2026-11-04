@@ -10,7 +10,15 @@ import { Gallery, ProductActions, ProductOptions, ProductPrice, ProductProvider 
 
 type Review = { rating: number; comment?: string | null; authorName: string; createdAt: string };
 
-const firstSentence = (text: string) => text.split(/(?<=[.!?؟])\s|\n/)[0];
+const RELATED = 4;
+
+const firstSentence =(text: string) => text.split(/(?<=[.!?؟])\s|\n/)[0];
+
+/** "You may also like": same category first, then the newest of the rest. */
+export function relatedTo<P extends Pick<StoreProduct, "id" | "categoryId">>(products: P[], product: Pick<StoreProduct, "id" | "categoryId">) {
+  const others = products.filter((p) => p.id !== product.id);
+  return [...others.filter((p) => product.categoryId && p.categoryId === product.categoryId), ...others.filter((p) => !product.categoryId || p.categoryId !== product.categoryId)].slice(0, RELATED);
+}
 
 /** Filled and empty stars as in the approved design; the label is what a screen reader hears. */
 function StarRow({ rating, label }: { rating: number; label: string }) {
