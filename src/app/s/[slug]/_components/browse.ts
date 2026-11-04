@@ -32,3 +32,11 @@ export function shopHref(slug: string, params: Record<string, string | number | 
   const s = qs.toString();
   return `/s/${slug}/shop${s ? `?${s}` : ""}`;
 }
+
+/** The listing's filters as they travel in the URL. */
+export type BrowseFilters = { q?: string; cat?: string; sort?: string; min?: string; max?: string };
+
+/** A listing link with some filters changed and the rest kept. It never carries `page`, so any filter change starts at page 1. */
+export function filterHref(slug: string, filters: BrowseFilters, change: BrowseFilters = {}) {
+  return shopHref(slug, { ...filters, ...change });
+}
