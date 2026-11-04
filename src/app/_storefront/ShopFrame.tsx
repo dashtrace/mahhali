@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
-import { IconButtonLink, cx } from "@/components/ui";
+import { cx } from "@/components/ui";
 import { dirOf, fill, type Locale } from "@/i18n/locale";
 import { common, type CommonMessages } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
@@ -36,27 +36,24 @@ const INFO_LABEL = { about: "infoAbout", shipping: "infoShipping", contact: "inf
  * The shop's own look and language around every public shop page: header with
  * menu drawer, brand, wishlist / bag; a Track shortcut on phones and text links
  * on desktop; footer; WhatsApp button on the home page.
- * `bar` adds a sticky action bar at the bottom (product page: Add to cart / Buy
- * now). `back` swaps the menu button for a back link; `wish` swaps the header
- * wishlist link (product page: a WishButton variant="icon"). `overlay` (home page)
- * floats the header over a full-width hero: "photo" for a slide, "band" for the
- * themed hero of a shop without slides. Children then lay out their own width.
+ * `wish` swaps the header wishlist link (product page: a WishButton variant="icon").
+ * `overlay` (home page) floats the header over a full-width hero: "photo" for a
+ * slide, "band" for the themed hero of a shop without slides. Children then lay out
+ * their own width. `page` uses the approved design's inner-page shell.
  */
 export function ShopFrame({
   shop,
   locale,
-  bar,
-  back,
   wish,
   overlay,
+  page,
   children,
 }: {
   shop: FrameShop;
   locale: Locale;
-  bar?: ReactNode;
-  back?: { href: string; label: string };
   wish?: ReactNode;
   overlay?: "photo" | "band";
+  page?: boolean;
   children: ReactNode;
 }) {
   const t = common[locale];
@@ -74,13 +71,9 @@ export function ShopFrame({
     // The middle column takes what the sides leave, so a long name truncates instead of overlapping them.
     <div className="sl-nav">
       <div className="sl-nav-edge">
-        {back ? (
-          <IconButtonLink href={back.href} label={back.label} icon="back" className="sl-nav-btn" />
-        ) : (
-          <ShopMenu title={shop.name} locale={locale}>
-            <DrawerLinks shop={shop} t={t} />
-          </ShopMenu>
-        )}
+        <ShopMenu title={shop.name} locale={locale}>
+          <DrawerLinks shop={shop} t={t} />
+        </ShopMenu>
         <TrackPill slug={shop.slug} locale={locale} />
         <ShopTopNav slug={shop.slug} label={t.storeNav} links={startLinks} />
       </div>
@@ -100,12 +93,7 @@ export function ShopFrame({
       dir={dirOf(locale)}
       data-tone={themeTone(shop.theme)}
       style={{ ...themeVars(shop.theme), fontFamily: "var(--font-shop)" }}
-      className={cx(
-        playfair.variable,
-        dmSans.variable,
-        "sl-shop flex min-h-dvh flex-col bg-sl-bg text-sl-fg",
-        !!bar && "pb-[calc(76px+env(safe-area-inset-bottom))]",
-      )}
+      className={cx(playfair.variable, dmSans.variable, "sl-shop flex min-h-dvh flex-col bg-sl-bg text-sl-fg")}
     >
       {overlay ? (
         <OverlayHeader tone={overlay}>{headerRow}</OverlayHeader>
@@ -113,7 +101,7 @@ export function ShopFrame({
         <header className="sl-header sticky top-0 z-30">{headerRow}</header>
       )}
 
-      <main className={overlay ? "flex-1" : "mx-auto w-full max-w-6xl flex-1 px-4 py-4"}>{children}</main>
+      <main className={overlay ? "flex-1" : page ? "sl-page flex-1" : "mx-auto w-full max-w-6xl flex-1 px-4 py-4"}>{children}</main>
 
       <footer className="sl-footer sl-on-surface">
         <p className="sl-footer-name">{shop.name}</p>
@@ -137,12 +125,7 @@ export function ShopFrame({
         </div>
       </footer>
 
-      {bar && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-sl-border bg-sl-nav pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_#00000010]">
-          <div className="mx-auto flex max-w-6xl gap-2 px-3.5 py-2.5">{bar}</div>
-        </div>
-      )}
-      {!bar && whatsapp && <WhatsAppFab slug={shop.slug} href={whatsapp} locale={locale} />}
+      {whatsapp && <WhatsAppFab slug={shop.slug} href={whatsapp} locale={locale} />}
     </div>
   );
 }

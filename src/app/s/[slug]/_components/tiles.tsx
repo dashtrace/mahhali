@@ -1,7 +1,8 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { WishButton } from "@/app/_storefront/wishlist";
 import { Icon, type IconName } from "@/components/Icon";
-import { Badge, ProductCard, ProductPhoto, cx } from "@/components/ui";
+import { Badge, ProductPhoto, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
@@ -12,41 +13,71 @@ import { QuickAdd } from "./QuickAdd";
 // Shared by the home strips, the shop grid, the wishlist (a client page) and
 // "You may also like". No directive, so it renders on either side.
 
-type TileProduct = Pick<StoreProduct, "id" | "name" | "description" | "images" | "variants" | "rating">;
+export type TileProduct = Pick<StoreProduct, "id" | "name" | "description" | "images" | "variants" | "categoryName" | "customization">;
 
 /**
- * One product card. `priceMinor` overrides the shown price (the in-range price
- * under a price filter); otherwise the lowest price, "From …" when they differ.
+ * One product card: the photo and the name link to the product, with the heart
+ * and add button beside them, not inside a link. `priceMinor` overrides the shown
+ * price (the in-range price under a price filter); otherwise the lowest price,
+ * "From …" when they differ.
  */
-export function ProductTile({
-  slug,
-  product,
-  currency,
-  locale,
-  layout,
-  priceMinor,
-}: {
-  slug: string;
-  product: TileProduct;
-  currency: "USD" | "LBP";
-  locale: Locale;
-  layout?: "grid" | "strip";
-  priceMinor?: number | null;
-}) {
-  const m = storeMessages[locale];
+export function ProductTile({ slug, product, currency, locale, priceMinor }: { slug: string; product: TileProduct; currency: "USD" | "LBP"; locale: Locale; priceMinor?: number | null }) {
+  const href = `/s/${slug}/p/${product.id}`;
   return (
-    <ProductCard
-      href={`/s/${slug}/p/${product.id}`}
-      name={product.name}
-      image={product.images[0]?.url}
-      description={product.description}
-      rating={product.rating}
-      price={tilePrice(product, currency, locale, priceMinor)}
-      badge={product.variants.some((v) => v.inStock) ? undefined : <Badge tone="red">{m.soldOut}</Badge>}
-      wish={<WishButton slug={slug} productId={product.id} locale={locale} />}
-      locale={locale}
-      layout={layout}
-    />
+    <article className="sl-card">
+      <div className="sl-card-photo">
+        {/* The name below is the same link for keyboards and screen readers. */}
+        <Link href={href} tabIndex={-1} aria-hidden className="block size-full">
+          <ProductPhoto src={product.images[0]?.url} name={product.name} loading="lazy" />
+        </Link>
+        {!product.variants.some((v) => v.inStock) && (
+          <div className="absolute start-2 top-2">
+            <Badge tone="red">{storeMessages[locale].soldOut}</Badge>
+          </div>
+        )}
+        <div className="sl-card-heart">
+          <WishButton slug={slug} productId={product.id} locale={locale} />
+        </div>
+      </div>
+      <div className="sl-card-info">
+        {product.categoryName && <p className="sl-card-type">{product.categoryName}</p>}
+        <h3 className="sl-card-name">
+          <Link href={href}>{product.name}</Link>
+        </h3>
+        {product.description && <p className="sl-card-desc">{product.description}</p>}
+        <div className="sl-card-row">
+          <strong className="min-w-0">{tilePrice(product, currency, locale, priceMinor)}</strong>
+          <QuickAdd slug={slug} product={product} locale={locale} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/** The inner pages' opening: small kicker, big heading with an accent full stop, one line of lead. */
+export function PageHead({ eyebrow, title, lead }: { eyebrow: ReactNode; title: ReactNode; lead?: ReactNode }) {
+  return (
+    <>
+      <p className="sl-page-eyebrow">{eyebrow}</p>
+      <h1 className="sl-page-title">
+        {title}
+        <span aria-hidden className="sl-dot">
+          .
+        </span>
+      </h1>
+      {lead && <p className="sl-page-lead">{lead}</p>}
+    </>
+  );
+}
+
+/** An inner page with nothing to show (empty bag, no saved products, no matches). */
+export function PageEmpty({ title, body, action }: { title: ReactNode; body?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="sl-empty">
+      <h2>{title}</h2>
+      {body && <p>{body}</p>}
+      {action}
+    </div>
   );
 }
 
@@ -91,7 +122,7 @@ export function HomeTile({ slug, product, currency, locale }: { slug: string; pr
   );
 }
 
-/** The shop's shipping & returns terms (Shipping page, and the product page's sheet). */
+/** The shop's shipping & returns terms (Shipping page, and the product page's accordion). */
 export function ShippingPolicy({ shop, locale }: { shop: Pick<StoreShop, "name" | "shippingInfo" | "deliveryFeeMinor" | "currency">; locale: Locale }) {
   const m = storeMessages[locale];
   const fee = shop.deliveryFeeMinor;

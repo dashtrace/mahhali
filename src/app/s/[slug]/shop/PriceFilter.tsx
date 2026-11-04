@@ -7,7 +7,7 @@ import { Icon } from "@/components/Icon";
 import { Button, Field, Input, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
-import { parsePriceRange, shopHref } from "../_components/browse";
+import { filterHref, parsePriceRange, type BrowseFilters } from "../_components/browse";
 
 /**
  * The "Price: …" toggle and its inline min/max form. Applying keeps the search,
@@ -17,7 +17,7 @@ export function PriceFilter({
   slug,
   currency,
   locale,
-  keep,
+  filters,
   min,
   max,
   summary,
@@ -25,8 +25,8 @@ export function PriceFilter({
   slug: string;
   currency: "USD" | "LBP";
   locale: Locale;
-  /** The other filters to carry over (q, cat, sort). */
-  keep: Record<string, string | undefined>;
+  /** The filters in the URL; the price bounds are replaced, the rest carried over. */
+  filters: BrowseFilters;
   /** The current bounds as typed in the URL, "" when unset. */
   min: string;
   max: string;
@@ -54,36 +54,27 @@ export function PriceFilter({
     }
     setError(null);
     setOpen(false);
-    router.push(shopHref(slug, { ...keep, min: lo, max: hi }));
+    router.push(filterHref(slug, filters, { min: lo, max: hi }));
   }
 
   function reset() {
     setError(null);
     setOpen(false);
-    router.push(shopHref(slug, keep));
+    router.push(filterHref(slug, filters, { min: undefined, max: undefined }));
   }
 
   return (
-    <div className="mb-3">
+    <div className="sl-price">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen(!open)}
-          className={cx(
-            "inline-flex min-h-11 items-center gap-2 rounded-sl border bg-sl-panel px-3.5 text-[13px] font-bold text-sl-fg",
-            active ? "border-sl-accent shadow-[inset_0_0_0_1px_var(--sl-accent)]" : "border-sl-border",
-          )}
-        >
-          <Icon name="sliders" className="size-4" />
+        <button type="button" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(!open)} data-active={active || undefined} className="sl-price-trigger">
+          <Icon name="sliders" />
           <bdi>{fill(m.priceToggle, { summary })}</bdi>
-          <Icon name="chevron" className={cx("size-4 transition-transform", open && "rotate-180")} />
+          <Icon name="chevron" className={cx("transition-transform", open && "rotate-180")} />
         </button>
         {active && (
           <span className="inline-flex flex-wrap items-center gap-2 text-xs text-sl-muted">
             {m.priceActive}
-            <Link href={shopHref(slug, keep)} aria-label={m.clearPriceLabel} className="inline-flex min-h-11 items-center gap-1 px-1 text-[13px] font-bold text-sl-accent">
+            <Link href={filterHref(slug, filters, { min: undefined, max: undefined })} aria-label={m.clearPriceLabel} className="inline-flex min-h-11 items-center gap-1 px-1 text-[13px] font-bold text-sl-accent">
               {m.clearPrice}
               <Icon name="x" className="size-3.5" />
             </Link>
@@ -92,18 +83,10 @@ export function PriceFilter({
       </div>
 
       {open && (
-        <form
-          id={panelId}
-          onSubmit={apply}
-          noValidate
-          aria-labelledby={`${panelId}-title`}
-          className="mt-2 rounded-2xl border border-sl-border bg-sl-panel px-3.5 py-3.5 shadow-[0_10px_24px_#0000000d]"
-        >
-          <h2 id={`${panelId}-title`} className="mb-1 text-sm font-extrabold">
-            {m.priceTitle}
-          </h2>
-          <p className="mb-3 text-xs leading-normal text-sl-muted">{m.priceHelp}</p>
-          <div className="grid grid-cols-2 gap-2.5">
+        <form id={panelId} onSubmit={apply} noValidate aria-labelledby={`${panelId}-title`} className="sl-price-panel">
+          <h2 id={`${panelId}-title`}>{m.priceTitle}</h2>
+          <p>{m.priceHelp}</p>
+          <div className="sl-price-inputs">
             {(["min", "max"] as const).map((k) => (
               <Field key={k} label={fill(k === "min" ? m.priceMin : m.priceMax, { cur: symbol })}>
                 <Input
@@ -116,17 +99,16 @@ export function PriceFilter({
                   defaultValue={k === "min" ? min : max}
                   placeholder={k === "min" ? m.noMin : m.noMax}
                   aria-invalid={!!error}
-                  className="bg-sl-bg"
                 />
               </Field>
             ))}
           </div>
           {error && (
-            <p role="alert" className="mt-2 text-xs font-semibold text-sl-danger">
+            <p role="alert" className="sl-price-error">
               {error}
             </p>
           )}
-          <div className="mt-3 flex justify-end gap-2">
+          <div className="sl-price-actions">
             <Button tone="secondary" onClick={reset}>
               {m.priceReset}
             </Button>
