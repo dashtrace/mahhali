@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Icon } from "@/components/Icon";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
@@ -40,9 +41,9 @@ export function FeedbackForm({ slug, locale }: { slug: string; locale: Locale })
   if (sent) return <Alert tone="success">{m.feedbackSent}</Alert>;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <Field label={m.yourName} hint={m.yourNameHint}>
-        <Input name="authorName" required maxLength={60} autoComplete="name" />
+    <form onSubmit={submit} className="sl-form">
+      <Field label={m.yourName}>
+        <Input name="authorName" required maxLength={60} autoComplete="name" placeholder={m.yourNamePlaceholder} />
       </Field>
       <Field label={m.yourFeedback} hint={fill(m.feedbackCounter, { n: message.length, max: MAX })}>
         <Textarea
@@ -55,16 +56,16 @@ export function FeedbackForm({ slug, locale }: { slug: string; locale: Locale })
           onChange={(e) => setMessage(e.target.value)}
           placeholder={m.feedbackPlaceholder}
           aria-invalid={!!error && short}
-          className="bg-sl-bg"
         />
       </Field>
-      <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-normal">
-        <input type="checkbox" name="consent" required className="mt-0.5 size-5 shrink-0 accent-[var(--sl-accent)]" />
+      <label className="sl-consent">
+        <input type="checkbox" name="consent" required />
         <span>{m.consent}</span>
       </label>
       {error && <Alert tone="error">{error}</Alert>}
-      <Button type="submit" block disabled={busy} className="min-h-12">
+      <Button type="submit" disabled={busy} className="sl-submit">
         {busy ? m.sending : m.sendFeedback}
+        <Icon name="arrowOut" className="sl-arrow-out" />
       </Button>
     </form>
   );
