@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, type DragEvent, type ReactNode } from "react";
 import { Alert, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
@@ -43,6 +43,7 @@ type Props = {
   counts: Partial<Record<Status, number>>;
   selected: Status;
   q?: string;
+  courierId?: string;
   assign: AssignProps;
   locale: Locale;
   m: OrderMessages;
@@ -53,7 +54,7 @@ type Props = {
  * Phones: status tabs and one list at a time.
  * Wide screens: four columns with drag and drop, or the history table.
  */
-export function BoardClient({ view, pages, counts, selected, q, assign, locale, m, t }: Props) {
+export function BoardClient({ view, pages, counts, selected, q, courierId, assign, locale, m, t }: Props) {
   const router = useRouter();
   const statuses = view === "history" ? HISTORY : ACTIVE;
   const [tab, setTab] = useState<Status>(statuses.includes(selected) ? selected : statuses[0]);
@@ -110,6 +111,7 @@ export function BoardClient({ view, pages, counts, selected, q, assign, locale, 
           if (!cursor) return;
           const params = new URLSearchParams({ status: s, cursor, limit: String(PAGE_SIZE) });
           if (q) params.set("q", q);
+          if (courierId) params.set("courierId", courierId);
           const next = await api<Page>(`/api/orders?${params}`);
           const list = appendOrders(listOf(s), next.orders);
           setMore((prev) => ({ ...prev, [s]: { orders: list, cursor: next.nextCursor } }));
@@ -228,7 +230,7 @@ export function BoardClient({ view, pages, counts, selected, q, assign, locale, 
           {!list.length && (
             <div className="empty">
               <strong>{m.noOrders}</strong>
-              {tab === "NEW" && !q && m.noOrdersHint}
+              {tab === "NEW" && !q && !courierId && m.noOrdersHint}
             </div>
           )}
           {cursorOf(tab) && (
@@ -374,6 +376,33 @@ function OrderCard({
         <AssignCourierDialog order={{ ...order, courierId: order.courier?.id ?? null }} {...assign} onClose={() => setAssigning(false)} onDone={() => onAssigned(order)} m={m} t={t} />
       )}
     </article>
+  );
+}
+
+/** One courier's orders; keeps the other query params. */
+export function CourierFilter({ couriers, value, label, allLabel }: { couriers: { id: string; name: string }[]; value: string; label: string; allLabel: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  return (
+    <select
+      className="control"
+      aria-label={label}
+      value={value}
+      onChange={(e) => {
+        const next = new URLSearchParams(params.toString());
+        if (e.target.value) next.set("courierId", e.target.value);
+        else next.delete("courierId");
+        router.push(`${pathname}?${next}`);
+      }}
+    >
+      <option value="">{allLabel}</option>
+      {couriers.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.name}
+        </option>
+      ))}
+    </select>
   );
 }
 
