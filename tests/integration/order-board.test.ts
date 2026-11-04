@@ -179,6 +179,36 @@ describe("the board list", () => {
     expect(page2.body.nextCursor).toBeNull();
   });
 
+  it("searches item names, whatever the digits in the search", async () => {
+    const owner = await signUpOwner();
+    const { variant: oud } = await seedVariant(owner.shop.id, { name: "Oud 1920", available: 5 });
+    const { variant: rose } = await seedVariant(owner.shop.id, { name: "Rose water", available: 5 });
+    const { variant: shirt } = await seedVariant(owner.shop.id, { available: 5 });
+    await seedOrder(owner.shop.id, { variantId: oud.id, customerPhone: "+96171000001" }); // 1001
+    await seedOrder(owner.shop.id, { variantId: rose.id, customerPhone: "+96171000002", status: "CONFIRMED" }); // 1002
+    await seedOrder(owner.shop.id, { variantId: shirt.id, customerPhone: "+96171192055" }); // 1003: phone has 1920
+
+    const numbers = async (query: string) => {
+      const res = await call(listOrders, `/api/orders?${query}`, { cookie: owner.cookie });
+      expect(res.status).toBe(200);
+      return res.body.orders.map((o: { number: number }) => o.number);
+    };
+
+    expect(await numbers("q=ROSE")).toEqual([1002]);
+    expect(await numbers("q=rose&status=NEW")).toEqual([]);
+    // Digits alone reach items and phones; with letters they are words, so phones stay out.
+    expect(await numbers("q=1920")).toEqual([1003, 1001]);
+    expect(await numbers("q=oud%201920")).toEqual([1001]);
+    // Under 4 digits never reaches a phone, but does reach an item.
+    expect(await numbers("q=192")).toEqual([1001]);
+    // An order number still finds that order, and also an item with those digits.
+    expect(await numbers("q=%231002")).toEqual([1002]);
+    expect(await numbers("q=nothing-like-this")).toEqual([]);
+    // A customer name with digits is reached too, which a phone-only search would miss.
+    await seedOrder(owner.shop.id, { variantId: shirt.id, customerName: "Rami 2024", customerPhone: "+96171000003" }); // 1004
+    expect(await numbers("q=rami%202024")).toEqual([1004]);
+  });
+
   it("is closed to delivery users", async () => {
     const owner = await signUpOwner();
     const delivery = await addMember(owner.shop.id, "delivery");

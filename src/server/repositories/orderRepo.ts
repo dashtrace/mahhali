@@ -115,13 +115,14 @@ export const orderRepo = {
 
   async list(
     shopId: string,
-    f: { status?: OrderStatus; courierId?: string; number?: number; phoneDigits?: string; name?: string; cursor?: string; limit: number },
+    f: { status?: OrderStatus; courierId?: string; number?: number; phoneDigits?: string; name?: string; item?: string; cursor?: string; limit: number },
     client: Db = db,
   ) {
     const search: Prisma.OrderWhereInput[] = [];
     if (f.number !== undefined) search.push({ number: f.number });
     if (f.phoneDigits) search.push({ customerPhone: { contains: f.phoneDigits } });
     if (f.name) search.push({ customerName: { contains: f.name, mode: "insensitive" } });
+    if (f.item) search.push({ items: { some: { shopId, nameSnapshot: { contains: f.item, mode: "insensitive" } } } });
     const rows = await client.order.findMany({
       where: {
         shopId,

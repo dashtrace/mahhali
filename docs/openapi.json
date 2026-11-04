@@ -2687,7 +2687,7 @@
     },
     "/api/orders": {
       "get": {
-        "summary": "The order board: filter by status or courier, search by number, phone or name (owner, manager, staff)",
+        "summary": "The order board: filter by status or courier, search by number, phone, customer name or item name (owner, manager, staff)",
         "tags": [
           "Orders"
         ],

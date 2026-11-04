@@ -42,7 +42,7 @@ export function registerOrders(r: OpenAPIRegistry, { secured, cronSecured, ok, e
   r.registerPath({
     method: "get",
     path: "/api/orders",
-    summary: "The order board: filter by status or courier, search by number, phone or name (owner, manager, staff)",
+    summary: "The order board: filter by status or courier, search by number, phone, customer name or item name (owner, manager, staff)",
     tags: ["Orders"],
     security: secured,
     request: { query: ListOrdersQuery },

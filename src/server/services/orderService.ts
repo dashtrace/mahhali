@@ -301,6 +301,8 @@ export const orderService = {
     const search = q.q?.trim() ?? "";
     const number = search ? parseOrderNumber(search) : null;
     const digits = search.replace(/\D/g, "");
+    // Letters mean words: "Oud 1920" is not a phone number.
+    const isPhone = digits.length >= 4 && !/\p{L}/u.test(search);
     const filters = {
       status: q.status,
       courierId: q.courierId,
@@ -308,8 +310,10 @@ export const orderService = {
       limit: q.limit,
       ...(number !== null ? { number } : {}),
       // Local numbers ("03 123 456") are stored as +9613123456: match on the digits after the leading 0.
-      ...(digits.length >= 4 ? { phoneDigits: digits.replace(/^0/, "") } : {}),
-      ...(search && number === null && digits.length < 4 ? { name: search } : {}),
+      ...(isPhone ? { phoneDigits: digits.replace(/^0/, "") } : {}),
+      ...(search && number === null && !isPhone ? { name: search } : {}),
+      // Always, digits included: "1920" must still find "Oud 1920", next to any number or phone match.
+      ...(search ? { item: search } : {}),
     };
     const [page, counts] = await Promise.all([
       orderRepo.list(actor.shopId, filters),
