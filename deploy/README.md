@@ -41,7 +41,8 @@ In the GitHub repository settings:
 
 Every merge to `main` then runs the tests and deploys. The **Scheduled jobs** workflow calls
 `/api/cron/expire-reservations` and `/api/cron/review-emails` every 10 minutes; run it by hand from
-the Actions tab to test it.
+the Actions tab to test it. GitHub does not keep to that schedule (runs have been 4 to 8 hours apart),
+so these jobs can run late.
 
 ## Sandbox
 
@@ -61,6 +62,26 @@ production. To try a change: `git checkout sandbox`, `git merge <branch>`, `git 
 
 The **Scheduled jobs** workflow only calls production. Seed demo data here, never on production: its
 accounts share a password that is in this repo.
+
+## Platform admins
+
+A platform admin is a user whose `role` is `admin`. They open `/admin` to see all shops and their
+orders, suspend a shop, and read the audit log. No screen creates one and the admin plugin's HTTP
+endpoints are blocked (`src/server/auth/auth.ts`), so promote an account directly in that
+environment's database:
+
+1. Sign up at `/signup` on that environment. This also creates a shop for the account.
+2. Copy the public connection URL of that environment's Postgres (**Connect** tab) and run:
+
+   ```bash
+   psql "<public url>" -c "UPDATE \"user\" SET role = 'admin' WHERE email = 'you@example.com';"
+   ```
+
+   It should print `UPDATE 1`.
+3. Sign out and back in, then open `/admin`.
+
+To remove an admin, run the same command with `role = 'user'`. Each environment has its own users,
+so an admin on sandbox is not an admin on production.
 
 ## Email and billing
 
