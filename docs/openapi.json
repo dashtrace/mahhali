@@ -905,6 +905,30 @@
             "type": "string",
             "pattern": "^#[0-9a-fA-F]{6}$"
           },
+          "surface": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "muted": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "dark": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "darkText": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "border": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "buttonText": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
           "radius": {
             "type": "string",
             "enum": [

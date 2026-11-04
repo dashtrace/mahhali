@@ -10,16 +10,18 @@ const FONT: Record<Theme["font"], string> = {
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
+const OPTIONAL_COLORS = ["text", "surface", "muted", "dark", "darkText", "border", "buttonText"] as const;
 
 /** The stored theme JSON, falling back to the default for anything malformed. */
 export function readTheme(value: unknown): Theme {
   const t = (value ?? {}) as Partial<Record<keyof Theme, unknown>>;
   const color = (v: unknown, d: string) => (typeof v === "string" && HEX.test(v) ? v : d);
+  const optional = OPTIONAL_COLORS.filter((k) => color(t[k], "")).map((k) => [k, t[k]] as const);
   return {
     primary: color(t.primary, DEFAULT_THEME.primary),
     accent: color(t.accent, DEFAULT_THEME.accent),
     background: color(t.background, DEFAULT_THEME.background),
-    ...(typeof t.text === "string" && HEX.test(t.text) ? { text: t.text } : {}),
+    ...(Object.fromEntries(optional) as Pick<Theme, (typeof OPTIONAL_COLORS)[number]>),
     radius: (RADII as readonly unknown[]).includes(t.radius) ? (t.radius as Theme["radius"]) : DEFAULT_THEME.radius,
     font: (FONTS as readonly unknown[]).includes(t.font) ? (t.font as Theme["font"]) : DEFAULT_THEME.font,
   };
