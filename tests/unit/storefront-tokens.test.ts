@@ -56,6 +56,16 @@ describe("storefrontTokens", () => {
     expect(contrastRatio(tokens["--sl-band-ink"], tokens["--sl-band"])).toBeGreaterThanOrEqual(4.5);
   });
 
+  it("ignores a saved darkText that fails on the derived band", () => {
+    const tokens = storefrontTokens(readTheme({ ...PALETTES.classic, darkText: "#000000" }));
+    expect(tokens["--sl-band-ink"]).toBe("#ffffff");
+  });
+
+  it("skips the surface tint when a saved text colour would fail on it", () => {
+    const tokens = storefrontTokens(readTheme({ ...PALETTES.classic, text: "#767676" }));
+    expect(tokens["--sl-surface"]).toBe("#ffffff");
+  });
+
   it("returns every saved role exactly, and the saved theme passes validateTheme", () => {
     expect(validateTheme(ROSEWOOD)).toEqual([]);
     expect(storefrontTokens(readTheme(ROSEWOOD))).toEqual({

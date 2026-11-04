@@ -52,18 +52,21 @@ function derivedMuted(ink: string, background: string): string {
  * The storefront colour roles: the saved value when set, otherwise derived, so
  * shops saved before the roles existed keep working. --sl-ornament is decoration,
  * never text. Muted text is only guaranteed on the page; use --sl-fg on --sl-surface.
+ * Derived colours can pair with a saved one validateTheme never saw, so they check themselves.
  */
 export function storefrontTokens(t: Theme) {
   const ink = t.text ?? inkFor(t.background);
   const band = t.dark ?? mix(t.primary, ink, 80);
+  const reads = (fg: string, bg: string) => contrastRatio(fg, bg) >= MIN_CONTRAST;
+  const tint = mix(t.primary, t.background, 8);
   return {
     "--sl-accent": t.primary,
     "--sl-accent-ink": t.buttonText ?? t.background,
     "--sl-ornament": t.accent,
-    "--sl-surface": t.surface ?? mix(t.primary, t.background, 8),
+    "--sl-surface": t.surface ?? (reads(ink, tint) ? tint : t.background),
     "--sl-muted": t.muted ?? derivedMuted(ink, t.background),
     "--sl-band": band,
-    "--sl-band-ink": t.darkText ?? (contrastRatio(t.background, band) >= MIN_CONTRAST ? t.background : inkFor(band)),
+    "--sl-band-ink": [t.darkText, t.background].find((c) => c && reads(c, band)) ?? inkFor(band),
     "--sl-line": t.border ?? mix(ink, t.background, 11),
   };
 }
