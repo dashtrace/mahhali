@@ -185,8 +185,10 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     key={o.courierId ?? ""}
                     orderId={o.id}
                     courierId={o.courierId}
-                    couriers={couriers.map((c) => ({ id: c.id, name: c.name }))}
+                    // A deactivated current courier still shows, so the select never names someone else.
+                    couriers={[...couriers.map((c) => ({ id: c.id, name: c.name })), ...(o.courier && !couriers.some((c) => c.id === o.courier?.id) ? [{ id: o.courier.id, name: o.courier.name }] : [])]}
                     canAddCourier={can(actor.role, "courier.write")}
+                    keepCourier={o.status === "OUT_FOR_DELIVERY"}
                     m={m}
                     t={t}
                   />

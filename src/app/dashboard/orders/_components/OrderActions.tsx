@@ -190,6 +190,7 @@ export function CourierForm({
   courierId,
   couriers,
   canAddCourier,
+  keepCourier,
   m,
   t,
 }: {
@@ -197,6 +198,8 @@ export function CourierForm({
   courierId: string | null;
   couriers: { id: string; name: string }[];
   canAddCourier: boolean;
+  /** The order is out with this courier: it can move to another one, but not to nobody. */
+  keepCourier: boolean;
   m: OrderMessages;
   t: CommonMessages;
 }) {
@@ -226,7 +229,7 @@ export function CourierForm({
       {save.error && <Alert tone="error" className="mb-3">{save.error}</Alert>}
       <Field label={m.courierTitle}>
         <select value={value} onChange={(e) => setValue(e.target.value)} className="control">
-          <option value="">{m.unassigned}</option>
+          {!(keepCourier && courierId) && <option value="">{m.unassigned}</option>}
           {couriers.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
