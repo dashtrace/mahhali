@@ -112,9 +112,9 @@
   inset-inline: 0;
   top: 0;
   z-index: -1;
-  height: 120px;
+  height: 160px;
   pointer-events: none;
-  background: linear-gradient(#000000b3, #0000);
+  background: linear-gradient(#000000bf, #0000);
 }
 
 @theme inline {

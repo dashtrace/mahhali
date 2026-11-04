@@ -98,7 +98,8 @@ export function HeroCarousel({
           className="sl-fade pointer-events-none absolute inset-0 size-full object-cover"
         />
       ))}
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(#0003,#0000_20%,#0000008c_50%,#000000d1)]" />
+      {/* In px from the bottom, like the text: the block reaches about 370px at most, on any hero height. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,#000000d1,#0000008c_400px,#0000_640px)]" />
       <div className="relative mx-auto w-full max-w-6xl px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:px-4">
         {/* Stacked in one grid cell: the tallest slide sets the height, so nothing jumps as they fade. */}
         <div className="grid">
