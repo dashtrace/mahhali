@@ -9,10 +9,12 @@ import { getLocale } from "@/i18n/server";
 import { ORDER_STATUSES, type OrderStatus } from "@/server/domain/orderStatus";
 import { can } from "@/server/domain/policy";
 import { plain } from "@/server/http/json";
+import { accountService } from "@/server/services/accountService";
 import { courierService } from "@/server/services/courierService";
+import { appUrl } from "@/server/mail/mailer";
 import { orderService } from "@/server/services/orderService";
 import { pageActor } from "../_server/session";
-import { BoardClient, CourierFilter } from "./_components/Board";
+import { BoardClient, CopyLink, CourierFilter } from "./_components/Board";
 import { DashIcon } from "./_components/DashIcon";
 import { PAGE_SIZE } from "./orders/_components/boardPages";
 
@@ -39,7 +41,8 @@ export default async function OrdersBoardPage({
   const courierId = sp.courierId || undefined;
 
   const statuses = view === "history" ? HISTORY : ACTIVE;
-  const [lists, allCouriers, found] = await Promise.all([
+  const [me, lists, allCouriers, found] = await Promise.all([
+    accountService.me(actor),
     Promise.all(statuses.map((status) => orderService.list(actor, { status, courierId, q, limit: PAGE_SIZE }))),
     courierService.list(actor, {}),
     // Search covers every status, as each view lists only some. shortcut: the newest 50 matches only, add paging if searches often pass that.
@@ -118,6 +121,12 @@ export default async function OrdersBoardPage({
       <div className="info-inline mt-4">
         <DashIcon name="info" size="sm" /> {m.boardNote}
       </div>
+      {/* The owner has this in Settings; managers and staff have no other place to copy it. */}
+      {!can(actor.role, "shop.settings") && (
+        <div className="mt-4">
+          <CopyLink url={appUrl(`/s/${me.shop.slug}`)} label={m.catalogueLink} copy={m.copyLink} copied={m.copied} />
+        </div>
+      )}
     </>
   );
 }
