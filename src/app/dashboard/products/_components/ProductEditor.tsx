@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Alert, Badge, Button, Card, Field, IconButton, Input, SaveButton, Select, Textarea, cx } from "@/components/ui";
-import { Icon } from "@/components/Icon";
+import { useRef, useState } from "react";
+import { Alert, PageHeader } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import type { CommonMessages } from "@/i18n/messages/common";
 import { api } from "@/lib/api";
 import { formatDateTime, toAmountText } from "@/lib/format";
-import { OptionsFields, VariantFields, blankVariant, variantBody, type VariantDraft } from "./CreateProductForm";
-import { FilePicker } from "./FilePicker";
-import { CardHead, ExtrasFields, extrasBody, extrasOf, type Category, type Extras } from "./ProductExtras";
+import { DashIcon } from "../../_components/DashIcon";
+import { OptionsFields, OptionsIntro, SkuField, VariantFields, blankVariant, variantBody, type VariantDraft } from "./CreateProductForm";
+import { BackLink, Check, Dialog, Field, Steps } from "./kit";
+import { ExtrasFields, extrasBody, extrasOf, type Category, type Extras } from "./ProductExtras";
 import { submitWith, useAction, useSave } from "./useAction";
 
 type Currency = "USD" | "LBP";
@@ -26,80 +26,182 @@ type Product = {
 } & Parameters<typeof extrasOf>[0];
 type Movement = { id: string; delta: number; reason: "RESERVE" | "RELEASE" | "SHIP" | "RESTOCK" | "ADJUST"; note: string | null; at: string };
 type Common = { currency: Currency; locale: Locale; m: CatalogueMessages; t: CommonMessages };
+type Step = "basics" | "options" | "photos" | "display" | "inventory";
 
-export function ProductEditor({ product, categories, ...c }: { product: Product; categories: Category[] } & Common) {
-  const { m, t } = c;
-  const details = useSave(t.error);
-  const archive = useAction(t.error);
+const variantLabel = (v: Variant, m: CatalogueMessages) => v.optionValues.filter(Boolean).join(" / ") || m.noOptions;
+
+export function ProductEditor({
+  product,
+  categories,
+  canAdjust,
+  initialStep,
+  created,
+  ...c
+}: { product: Product; categories: Category[]; canAdjust: boolean; initialStep?: string; created: boolean } & Common) {
+  const { m } = c;
+  const items: [Step, string][] = [
+    ["basics", m.stepBasics],
+    ["options", m.stepOptions],
+    ["photos", m.stepPhotos],
+    ["display", m.stepDisplay],
+    ...(canAdjust ? ([["inventory", m.stepInventory]] as [Step, string][]) : []),
+  ];
+  const [step, setStep] = useState<Step>(items.find(([k]) => k === initialStep)?.[0] ?? "basics");
+  const [notice, setNotice] = useState<string | null>(null);
+  const go = (next: Step, message: string | null = null) => {
+    setStep(next);
+    setNotice(message);
+  };
   const archived = product.status === "ARCHIVED";
-  const values = [...new Set(product.variants.flatMap((v) => v.optionValues).filter(Boolean))];
+  const live = product.variants.filter((v) => !v.archived);
+  const available = live.reduce((n, v) => n + v.available, 0);
+  const reserved = live.reduce((n, v) => n + v.reserved, 0);
+  const categoryName = categories.find((x) => x.id === product.categoryId)?.name;
 
   return (
-    <div className="flex max-w-3xl flex-col gap-4">
-      {archived && <Alert tone="warning">{m.archivedNotice}</Alert>}
+    <>
+      <BackLink href="/dashboard/products">{m.backToProducts}</BackLink>
+      <PageHeader
+        title={product.name}
+        subtitle={[fill(m.available, { n: available }), fill(m.reserved, { n: reserved }), categoryName].filter(Boolean).join(" · ")}
+        actions={
+          canAdjust && (
+            <button type="button" className="btn primary" onClick={() => go("inventory")}>
+              <DashIcon name="box" size="sm" />
+              {m.adjustStock}
+            </button>
+          )
+        }
+      />
+      {archived && <Alert tone="warning" className="mb-4">{m.archivedNotice}</Alert>}
+      {created && <Alert tone="success" className="mb-4">{m.createdNotice}</Alert>}
 
-      <Card>
-        <form
-          key={`${product.name}|${product.description}`}
-          {...details.form}
-          onSubmit={submitWith((f) =>
-            details.save(() =>
-              api(`/api/products/${product.id}`, { method: "PATCH", body: { name: f.get("name"), description: String(f.get("description") ?? "") || null } }),
-            ),
+      <div className="stock-action between">
+        <div className="min-w-0">
+          <h2>{m.glanceTitle}</h2>
+          <div className="number">{fill(m.available, { n: available })}</div>
+          <p className={`hint ${live.length > 1 ? "mb-0" : ""}`}>{fill(m.glanceSub, { reserved, total: available + reserved })}</p>
+          {live.length > 1 && (
+            <ul className="hint mt-2">
+              {live.map((v) => (
+                <li key={v.id}>
+                  <bdi>{variantLabel(v, m)}</bdi>: {fill(m.available, { n: v.available })} · {fill(m.reserved, { n: v.reserved })}
+                </li>
+              ))}
+            </ul>
           )}
-          className="flex flex-col gap-4"
-        >
-          <CardHead title={m.details} />
-          {details.error && <Alert tone="error">{details.error}</Alert>}
-          <Field label={m.name}>
-            <Input name="name" defaultValue={product.name} required maxLength={120} dir="auto" />
-          </Field>
-          <Field label={m.description} hint={t.optional}>
-            <Textarea name="description" defaultValue={product.description ?? ""} maxLength={2000} dir="auto" />
-          </Field>
-          <SaveButton state={details} labels={t} className="self-start" />
-        </form>
-      </Card>
-
-      <Photos productId={product.id} images={product.images} values={values} {...c} />
-
-      <Options product={product} {...c} />
-
-      <Card className="flex flex-col gap-3">
-        <CardHead title={m.variants} hint={product.options.length ? m.variantsHint : m.variantsHintNone} />
-        {product.variants.map((v) => (
-          <VariantCard key={v.id} variant={v} options={product.options} {...c} />
-        ))}
-        {product.options.length > 0 && <AddVariant key={product.options.join("|")} productId={product.id} options={product.options} {...c} />}
-      </Card>
-
-      <StorefrontExtras product={product} categories={categories} {...c} />
-
-      <div className="flex flex-col gap-2 border-t border-sl-border pt-4">
-        {archive.error && <Alert tone="error">{archive.error}</Alert>}
-        {archived ? (
-          <Button tone="secondary" disabled={archive.busy} onClick={() => archive.run(() => api(`/api/products/${product.id}`, { method: "PATCH", body: { status: "ACTIVE" } }))}>
-            {m.restoreProduct}
-          </Button>
-        ) : (
-          <Button
-            tone="danger"
-            disabled={archive.busy}
-            onClick={() => confirm(m.archiveConfirm) && archive.run(() => api(`/api/products/${product.id}`, { method: "DELETE" }))}
-          >
-            {m.archiveProduct}
-          </Button>
+        </div>
+        {canAdjust && (
+          <button type="button" className="btn shrink-0" onClick={() => go("inventory")}>
+            {m.updateStock}
+            <DashIcon name="arrow" size="sm" />
+          </button>
         )}
       </div>
-    </div>
+
+      <Steps items={items} current={step} onPick={(k) => go(k)} />
+
+      <div className="card max-w-[860px]">
+        {notice && (
+          <p role="status" className="info-inline mb-[15px]">
+            <DashIcon name="check" size="sm" /> {notice}
+          </p>
+        )}
+        {/* Steps stay mounted, so an unsaved edit survives moving between them. */}
+        <div hidden={step !== "basics"}>
+          <Basics product={product} onDone={(saved) => go("options", saved ? m.basicsSaved : null)} {...c} />
+        </div>
+        <div hidden={step !== "options"}>
+          <OptionsStep product={product} onDone={() => go("photos")} {...c} />
+        </div>
+        <div hidden={step !== "photos"}>
+          <Photos product={product} onDone={() => go("display")} {...c} />
+        </div>
+        <div hidden={step !== "display"}>
+          <Display product={product} categories={categories} onSaved={() => setNotice(m.appearanceSaved)} {...c} />
+        </div>
+        {canAdjust && (
+          <div hidden={step !== "inventory"}>
+            <Inventory product={product} available={available} reserved={reserved} {...c} />
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function Basics({ product, onDone, m, t }: { product: Product; onDone: (saved: boolean) => void } & Common) {
+  const details = useSave(t.error);
+  return (
+    <form
+      key={`${product.name}|${product.description}`}
+      {...details.form}
+      onSubmit={submitWith(async (f) => {
+        if (!details.dirty) return onDone(false);
+        const ok = await details.save(() => api(`/api/products/${product.id}`, { method: "PATCH", body: { name: f.get("name"), description: String(f.get("description") ?? "") || null } }));
+        if (ok) onDone(true);
+      })}
+    >
+      <h2>{m.basicsTitle}</h2>
+      <p className="hint">{m.basicsHint}</p>
+      {details.error && <Alert tone="error" className="mb-4">{details.error}</Alert>}
+      <Field label={m.nameRequired}>
+        <input className="control" name="name" defaultValue={product.name} required maxLength={120} placeholder={m.namePlaceholder} dir="auto" />
+      </Field>
+      <Field label={m.descriptionOptional}>
+        <textarea className="control area" name="description" defaultValue={product.description ?? ""} maxLength={2000} placeholder={m.descriptionPlaceholder} dir="auto" />
+      </Field>
+      <button type="submit" className="btn primary" disabled={details.busy}>
+        {details.busy ? t.saving : m.saveBasics}
+        <DashIcon name="arrow" size="sm" />
+      </button>
+    </form>
   );
 }
 
 type OptionRow = { name: string; from: string | null };
 const rowsOf = (options: string[]): OptionRow[] => options.map((name) => ({ name, from: name }));
 
+function OptionsStep({ product, onDone, ...c }: { product: Product; onDone: () => void } & Common) {
+  const { m } = c;
+  const panel = useRef<HTMLDivElement>(null);
+  const [unsaved, setUnsaved] = useState(false);
+  return (
+    <div ref={panel}>
+      <OptionNames product={product} {...c} />
+      <hr className="separator" />
+      <h3>{m.variants}</h3>
+      <p className="hint">{product.options.length ? m.variantsHint : m.variantsHintNone}</p>
+      {product.variants.map((v) => (
+        <VariantRow key={v.id} variant={v} options={product.options} {...c} />
+      ))}
+      {product.options.length > 0 && <AddVariant key={product.options.join("|")} productId={product.id} options={product.options} {...c} />}
+      {unsaved && (
+        <p role="status" className="callout">
+          {m.unsavedChanges}
+        </p>
+      )}
+      <div className="mt-4">
+        <button
+          type="button"
+          className="btn primary"
+          onClick={() => {
+            // Options and variants each save on their own; don't let an edit look saved by moving on.
+            const dirty = !!panel.current?.querySelector('form[data-dirty="true"]');
+            setUnsaved(dirty);
+            if (!dirty) onDone();
+          }}
+        >
+          {m.continue}
+          <DashIcon name="arrow" size="sm" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Option names. Each row remembers which current option it was, so a rename keeps every value. */
-function Options({ product, m, t }: { product: Product } & Common) {
+function OptionNames({ product, m, t }: { product: Product } & Common) {
   const [rows, setRows] = useState(() => rowsOf(product.options));
   // After a save (or a change in another tab) the rows start again from the saved names.
   const [saved, setSaved] = useState(JSON.stringify(product.options));
@@ -108,67 +210,49 @@ function Options({ product, m, t }: { product: Product } & Common) {
     setRows(rowsOf(product.options));
   }
   const save = useSave(t.error, rows.map((r) => r.name.trim()));
-  return (
-    <Card>
-      <form
-        {...save.form}
-        onSubmit={submitWith(() =>
-          save.save(() => api(`/api/products/${product.id}/options`, { method: "PUT", body: { options: rows.map((r) => ({ ...r, name: r.name.trim() })) } })),
-        )}
-        className="flex flex-col gap-4"
-      >
-        <CardHead title={m.options} hint={`${m.optionsHint} ${m.optionsRemoveHint}`} />
-        {save.error && <Alert tone="error">{save.error}</Alert>}
-        <OptionsFields
-          names={rows.map((r) => r.name)}
-          onRename={(i, name) => setRows(rows.map((r, j) => (j === i ? { ...r, name } : r)))}
-          onAdd={() => setRows([...rows, { name: "", from: null }])}
-          onRemove={(i) => setRows(rows.filter((_, j) => j !== i))}
-          m={m}
-        />
-        <SaveButton state={save} labels={t} className="self-start" />
-      </form>
-    </Card>
-  );
-}
-
-/** Category, featured, specs and customization, saved together. */
-function StorefrontExtras({ product, categories, m, t }: { product: Product; categories: Category[] } & Common) {
-  const [extras, setExtras] = useState<Extras>(() => extrasOf(product));
-  const save = useSave(t.error, extras);
+  const inUse = (from: string | null) => {
+    const i = from === null ? -1 : product.options.indexOf(from);
+    return i < 0 ? [] : [...new Set(product.variants.map((v) => v.optionValues[i]).filter(Boolean))];
+  };
   return (
     <form
       {...save.form}
-      onSubmit={submitWith(() => save.save(() => api(`/api/products/${product.id}`, { method: "PATCH", body: extrasBody(extras) })))}
-      className="flex flex-col gap-4"
+      data-dirty={save.dirty}
+      onSubmit={submitWith(() => save.save(() => api(`/api/products/${product.id}/options`, { method: "PUT", body: { options: rows.map((r) => ({ ...r, name: r.name.trim() })) } })))}
     >
-      <ExtrasFields value={extras} onChange={setExtras} categories={categories} m={m} />
-      {save.error && <Alert tone="error">{save.error}</Alert>}
-      <SaveButton state={save} labels={t} className="self-start" />
+      <OptionsIntro extra={m.optionsRemoveHint} m={m} />
+      {save.error && <Alert tone="error" className="mb-4">{save.error}</Alert>}
+      <OptionsFields
+        names={rows.map((r) => r.name)}
+        values={rows.map((r) => inUse(r.from))}
+        onRename={(i, name) => setRows(rows.map((r, j) => (j === i ? { ...r, name } : r)))}
+        onAdd={() => setRows([...rows, { name: "", from: null }])}
+        onRemove={(i) => setRows(rows.filter((_, j) => j !== i))}
+        m={m}
+      />
+      {(save.dirty || save.busy || save.saved) && (
+        <button type="submit" className="btn primary ms-2 mt-2" disabled={save.busy || !save.dirty}>
+          {save.busy ? t.saving : save.saved ? t.saved : m.saveOptions}
+        </button>
+      )}
     </form>
   );
 }
 
-function VariantCard({ variant: v, options, currency, locale, m, t }: { variant: Variant; options: string[] } & Common) {
+function VariantRow({ variant: v, options, currency, m, t }: { variant: Variant; options: string[] } & Common) {
   const edit = useSave(t.error);
-  const stock = useAction(t.error);
-  const [history, setHistory] = useState<Movement[] | null>(null);
-  const [stockDone, setStockDone] = useState(false);
-  const label = v.optionValues.filter(Boolean).join(" / ") || m.noOptions;
-  const loadHistory = async () => setHistory(await api<Movement[]>(`/api/variants/${v.id}/movements`));
-
   return (
-    <section aria-label={label} className={cx("flex flex-col gap-3 rounded-sl border p-3", v.archived ? "border-dashed border-sl-control bg-sl-panel" : "border-sl-border bg-sl-bg")}>
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-bold">{label}</h3>
-        <Badge tone={v.available > 0 ? "green" : "red"}>{fill(m.available, { n: v.available })}</Badge>
-        {v.reserved > 0 && <Badge tone="amber">{fill(m.reserved, { n: v.reserved })}</Badge>}
-        {v.archived && <Badge>{m.hidden}</Badge>}
+    <section aria-label={variantLabel(v, m)} className={`inner-card mb-3 ${v.archived ? "border-dashed" : ""}`}>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <h3 className="m-0">{variantLabel(v, m)}</h3>
+        <span className={`mini-badge ${v.available > 0 ? "green" : "red"}`}>{fill(m.available, { n: v.available })}</span>
+        {v.reserved > 0 && <span className="mini-badge amber">{fill(m.reserved, { n: v.reserved })}</span>}
+        {v.archived && <span className="mini-badge gray">{m.hidden}</span>}
       </div>
-
       <form
         key={JSON.stringify([options, v.optionValues, v.sku, v.priceMinor])}
         {...edit.form}
+        data-dirty={edit.dirty}
         onSubmit={submitWith((f) =>
           edit.save(() =>
             api(`/api/variants/${v.id}`, {
@@ -177,84 +261,28 @@ function VariantCard({ variant: v, options, currency, locale, m, t }: { variant:
             }),
           ),
         )}
-        className="flex flex-col gap-3"
       >
-        {edit.error && <Alert tone="error">{edit.error}</Alert>}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {edit.error && <Alert tone="error" className="mb-3">{edit.error}</Alert>}
+        <div className="split3">
           {options.map((name, i) => (
             <Field key={i} label={name}>
-              <Input name="value" defaultValue={v.optionValues[i] ?? ""} maxLength={40} dir="auto" />
+              <input className="control" name="value" defaultValue={v.optionValues[i] ?? ""} maxLength={40} dir="auto" />
             </Field>
           ))}
-          <Field label={fill(m.price, { currency })}>
-            <Input name="price" defaultValue={toAmountText(v.priceMinor, currency)} required dir="ltr" inputMode="decimal" />
+          <Field label={fill(m.priceRequired, { currency })}>
+            <input className="control" name="price" defaultValue={toAmountText(v.priceMinor, currency)} required dir="ltr" inputMode="decimal" />
           </Field>
-          <Field label={m.sku}>
-            <Input name="sku" defaultValue={v.sku ?? ""} maxLength={40} />
-          </Field>
+          <SkuField name="sku" defaultValue={v.sku ?? ""} m={m} />
         </div>
-        <div className="flex flex-wrap gap-2">
-          <SaveButton state={edit} labels={t} tone="secondary">
-            {m.saveVariant}
-          </SaveButton>
-          <Button tone="ghost" disabled={edit.busy} onClick={() => edit.run(() => api(`/api/variants/${v.id}`, { method: "PATCH", body: { archived: !v.archived } }))}>
+        <div className="actions">
+          <button type="submit" className="btn" disabled={edit.busy || !edit.dirty}>
+            {edit.busy ? t.saving : edit.saved ? t.saved : m.saveVariant}
+          </button>
+          <button type="button" className="btn tiny" disabled={edit.busy} onClick={() => edit.run(() => api(`/api/variants/${v.id}`, { method: "PATCH", body: { archived: !v.archived } }))}>
             {v.archived ? m.showVariant : m.hideVariant}
-          </Button>
+          </button>
         </div>
       </form>
-
-      <form
-        onSubmit={submitWith(async (f, form) => {
-          setStockDone(false);
-          const ok = await stock.run(() =>
-            api(`/api/variants/${v.id}/stock-adjustments`, { body: { delta: Number(f.get("delta")), note: String(f.get("note") ?? "") || null } }),
-          );
-          setStockDone(ok);
-          if (!ok) return;
-          form.reset();
-          if (history) await loadHistory().catch(() => {});
-        })}
-        className="flex flex-col gap-3 border-t border-sl-border pt-3"
-      >
-        <h4 className="text-sm font-bold">{m.adjustStock}</h4>
-        {stock.error && <Alert tone="error">{stock.error}</Alert>}
-        {stockDone && <Alert tone="success">{m.stockUpdated}</Alert>}
-        <div className="grid grid-cols-[7rem_1fr] gap-3">
-          <Field label={m.delta}>
-            <Input name="delta" type="number" dir="ltr" required min={-100000} max={100000} step={1} inputMode="numeric" />
-          </Field>
-          <Field label={m.note} hint={t.optional}>
-            <Input name="note" maxLength={200} placeholder={m.notePlaceholder} />
-          </Field>
-        </div>
-        <p className="-mt-1 text-xs text-sl-muted">{m.deltaHint}</p>
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" tone="secondary" disabled={stock.busy}>
-            {m.apply}
-          </Button>
-          <Button tone="ghost" aria-expanded={!!history} onClick={() => (history ? setHistory(null) : loadHistory().catch(() => setHistory([])))}>
-            {history ? m.hideHistory : m.history}
-          </Button>
-        </div>
-      </form>
-
-      {history && (
-        <ul className="divide-y divide-sl-border text-sm">
-          {history.length === 0 && <li className="py-2 text-sl-muted">{m.noMovements}</li>}
-          {history.map((h) => (
-            <li key={h.id} className="flex items-start justify-between gap-3 py-2">
-              <div className="min-w-0">
-                <p>{m[`reason${h.reason}`]}</p>
-                {h.note && <p className="break-words text-sl-muted">{h.note}</p>}
-                <p className="text-xs text-sl-muted">{formatDateTime(h.at, locale)}</p>
-              </div>
-              <span dir="ltr" className={cx("font-bold tabular-nums", h.delta > 0 ? "text-sl-ok" : "text-sl-danger")}>
-                {h.delta > 0 ? `+${h.delta}` : h.delta}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   );
 }
@@ -265,86 +293,283 @@ function AddVariant({ productId, options, currency, m, t }: { productId: string;
 
   if (!draft) {
     return (
-      <Button tone="secondary" className="self-start" onClick={() => setDraft(blankVariant(options))}>
-        <Icon name="plus" />
+      <button type="button" className="btn soft" onClick={() => setDraft(blankVariant(options))}>
+        <DashIcon name="plus" size="sm" />
         {m.addVariant}
-      </Button>
+      </button>
     );
   }
   return (
     <form
+      data-dirty="true"
       onSubmit={submitWith(async () => {
         if (await add.run(() => api(`/api/products/${productId}/variants`, { body: variantBody(draft) }))) setDraft(null);
       })}
-      className="flex flex-col gap-3 rounded-sl border border-dashed border-sl-control p-3"
+      className="inner-card border-dashed"
     >
-      <h3 className="font-bold">{m.addVariant}</h3>
-      {add.error && <Alert tone="error">{add.error}</Alert>}
+      <h3>{m.addVariant}</h3>
+      {add.error && <Alert tone="error" className="mb-3">{add.error}</Alert>}
       <VariantFields value={draft} onChange={setDraft} options={options} currency={currency} m={m} />
-      <div className="flex gap-2">
-        <Button type="submit" disabled={add.busy}>
+      <div className="actions">
+        <button type="submit" className="btn primary" disabled={add.busy}>
           {add.busy ? t.saving : t.add}
-        </Button>
-        <Button tone="ghost" onClick={() => setDraft(null)}>
+        </button>
+        <button type="button" className="btn" onClick={() => setDraft(null)}>
           {t.cancel}
-        </Button>
+        </button>
       </div>
     </form>
   );
 }
 
-function Photos({ productId, images, values, m, t }: { productId: string; images: Product["images"]; values: string[] } & Common) {
+function Photos({ product, onDone, m, t }: { product: Product; onDone: () => void } & Common) {
   const action = useAction(t.error);
   const [value, setValue] = useState("");
+  const values = [...new Set(product.variants.flatMap((v) => v.optionValues).filter(Boolean))];
+  const images = product.images;
 
   async function upload(file: File) {
     const form = new FormData();
     form.set("file", file);
     if (value) form.set("optionValue", value);
-    await action.run(() => api(`/api/products/${productId}/images`, { body: form }));
+    await action.run(() => api(`/api/products/${product.id}/images`, { body: form }));
   }
 
   return (
-    <Card className="flex flex-col gap-3">
-      <CardHead title={m.photos} hint={m.photosHint} />
-      {action.error && <Alert tone="error">{action.error}</Alert>}
+    <>
+      <h2>{m.photosTitle}</h2>
+      <p className="hint">{m.photosIntro}</p>
+      {action.error && <Alert tone="error" className="mb-4">{action.error}</Alert>}
       {images.length === 0 ? (
-        <p className="text-sm text-sl-muted">{m.noPhotos}</p>
+        <p className="empty mb-5">{m.noPhotos}</p>
       ) : (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        <div className="mb-5 flex flex-wrap items-center gap-[9px]">
           {images.map((img) => (
-            <li key={img.id} className="relative overflow-hidden rounded-sl-sm border border-sl-border bg-sl-cat">
+            <div key={img.id} className="thumb">
               {/* eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is */}
-              <img src={img.url} alt="" className="aspect-square w-full object-cover" />
-              {img.optionValue && <Badge className="absolute bottom-1 start-1">{img.optionValue}</Badge>}
-              <IconButton
-                label={m.deletePhoto}
-                icon={<Icon name="x" className="size-4" />}
+              <img src={img.url} alt="" />
+              {img.optionValue && <span className="mini-badge absolute start-1 bottom-1">{img.optionValue}</span>}
+              <button
+                type="button"
+                className="btn tiny absolute end-1 top-1 px-2"
+                aria-label={m.deletePhoto}
                 disabled={action.busy}
-                onClick={() => confirm(m.deletePhotoConfirm) && action.run(() => api(`/api/products/${productId}/images/${img.id}`, { method: "DELETE" }))}
-                className="absolute end-1 top-1 rounded-full bg-sl-panel/90"
-              />
-            </li>
+                onClick={() => confirm(m.deletePhotoConfirm) && action.run(() => api(`/api/products/${product.id}/images/${img.id}`, { method: "DELETE" }))}
+              >
+                <DashIcon name="x" size="tiny" />
+              </button>
+            </div>
           ))}
-        </ul>
+          <div className="min-w-40 flex-1">
+            <b>{m.currentPhotos}</b>
+            <p className="hint mb-0">{fill(m.currentPhotosN, { n: images.length })}</p>
+          </div>
+        </div>
       )}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        {values.length > 0 && (
-          <Field label={m.photoOption} className="sm:w-56">
-            <Select value={value} onChange={(e) => setValue(e.target.value)}>
-              <option value="">{m.anyOption}</option>
-              {values.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
-        <FilePicker busy={action.busy} onFile={upload}>
-          {action.busy ? m.uploading : m.addPhoto}
-        </FilePicker>
+      {values.length > 0 && (
+        <Field label={m.photoOption}>
+          <select className="control" value={value} onChange={(e) => setValue(e.target.value)}>
+            <option value="">{m.anyOption}</option>
+            {values.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+      <Field label={action.busy ? m.uploading : m.uploadPhoto} hint={m.photosHint}>
+        <input
+          className="control"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          disabled={action.busy}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) upload(file);
+          }}
+        />
+      </Field>
+      <button type="button" className="btn primary" onClick={onDone}>
+        {m.continue}
+        <DashIcon name="arrow" size="sm" />
+      </button>
+    </>
+  );
+}
+
+/** Category, featured, specs and customization saved together; archive and restore underneath. */
+function Display({ product, categories, onSaved, m, t }: { product: Product; categories: Category[]; onSaved: () => void } & Common) {
+  const [extras, setExtras] = useState<Extras>(() => extrasOf(product));
+  const save = useSave(t.error, extras);
+  const archive = useAction(t.error);
+  const [confirming, setConfirming] = useState(false);
+  const archived = product.status === "ARCHIVED";
+  const toggle = async () => {
+    const ok = await archive.run(() => (archived ? api(`/api/products/${product.id}`, { method: "PATCH", body: { status: "ACTIVE" } }) : api(`/api/products/${product.id}`, { method: "DELETE" })));
+    if (ok) setConfirming(false);
+  };
+
+  return (
+    <>
+      <form
+        {...save.form}
+        onSubmit={submitWith(async () => {
+          if (!save.dirty || (await save.save(() => api(`/api/products/${product.id}`, { method: "PATCH", body: extrasBody(extras) })))) onSaved();
+        })}
+      >
+        <ExtrasFields
+          value={extras}
+          onChange={setExtras}
+          categories={categories}
+          visibility={<Check label={m.showInShop} hint={m.showInShopHint} checked={!archived} onChange={() => setConfirming(true)} />}
+          m={m}
+        />
+        {save.error && <Alert tone="error" className="mb-4">{save.error}</Alert>}
+        <button type="submit" className="btn primary" disabled={save.busy}>
+          {save.busy ? t.saving : m.saveAppearance}
+        </button>
+      </form>
+
+      <div className="callout">
+        <b>{m.archiveProduct}</b>
+        <br />
+        {m.archiveCopy}
       </div>
-    </Card>
+      {archive.error && <Alert tone="error" className="mb-3">{archive.error}</Alert>}
+      <button type="button" className="btn warn" disabled={archive.busy} onClick={() => setConfirming(true)}>
+        <DashIcon name="archive" size="sm" />
+        {archived ? m.restoreProduct : m.archiveHide}
+      </button>
+      {confirming && (
+        <Dialog title={fill(archived ? m.restoreTitle : m.archiveTitle, { name: product.name })} closeLabel={t.close} onClose={() => setConfirming(false)}>
+          <p className="hint">{archived ? m.restoreConfirm : m.archiveConfirm}</p>
+          {archive.error && <Alert tone="error" className="mb-3">{archive.error}</Alert>}
+          <div className="actions">
+            <button type="button" className={`btn ${archived ? "primary" : "warn"}`} disabled={archive.busy} onClick={toggle}>
+              {archived ? m.restoreProduct : m.archiveYes}
+            </button>
+            <button type="button" className="btn" onClick={() => setConfirming(false)}>
+              {t.cancel}
+            </button>
+          </div>
+        </Dialog>
+      )}
+    </>
+  );
+}
+
+function Inventory({ product, available, reserved, ...c }: { product: Product; available: number; reserved: number } & Common) {
+  const { m } = c;
+  return (
+    <>
+      <h2 className="flex items-center gap-2">
+        <DashIcon name="box" />
+        {m.stockTitle}
+      </h2>
+      <p className="hint">{m.stockIntro}</p>
+      <div className="split3">
+        <div className="stat">
+          <div className="eyebrow">{m.statAvailable}</div>
+          <div className="number green">{available}</div>
+        </div>
+        <div className="stat">
+          <div className="eyebrow">{m.statReserved}</div>
+          <div className="number">{reserved}</div>
+        </div>
+        <div className="stat">
+          <div className="eyebrow">{m.statTotal}</div>
+          <div className="number">{available + reserved}</div>
+        </div>
+      </div>
+      {product.variants.map((v) => (
+        <StockCard key={v.id} variant={v} single={product.variants.length === 1} {...c} />
+      ))}
+    </>
+  );
+}
+
+function StockCard({ variant: v, single, locale, m, t }: { variant: Variant; single: boolean } & Common) {
+  const stock = useAction(t.error);
+  const [history, setHistory] = useState<Movement[] | null>(null);
+  const [done, setDone] = useState(false);
+  const label = variantLabel(v, m);
+  const loadHistory = async () => setHistory(await api<Movement[]>(`/api/variants/${v.id}/movements`));
+  const details = useRef<HTMLDetailsElement>(null);
+
+  return (
+    <section aria-label={label} className="mt-4">
+      <form
+        className="inner-card"
+        onSubmit={submitWith(async (f, form) => {
+          setDone(false);
+          // The API stores one free-text note, so the chosen reason leads it.
+          const note = [String(f.get("reason") ?? ""), String(f.get("note") ?? "").trim()].filter(Boolean).join(": ");
+          const ok = await stock.run(() => api(`/api/variants/${v.id}/stock-adjustments`, { body: { delta: Number(f.get("delta")), note: note || null } }));
+          setDone(ok);
+          if (!ok) return;
+          form.reset();
+          if (history) await loadHistory().catch(() => {});
+        })}
+      >
+        <h3>{single ? m.adjustStock : `${m.adjustStock} · ${label}`}</h3>
+        {!single && (
+          <p className="hint">
+            {fill(m.available, { n: v.available })} · {fill(m.reserved, { n: v.reserved })}
+            {v.archived && ` · ${m.hidden}`}
+          </p>
+        )}
+        {stock.error && <Alert tone="error" className="mb-3">{stock.error}</Alert>}
+        {done && <Alert tone="success" className="mb-3">{m.stockUpdated}</Alert>}
+        <div className="split">
+          <Field label={m.delta} hint={m.deltaHint}>
+            <input className="control" name="delta" type="number" dir="ltr" required min={-100000} max={100000} step={1} inputMode="numeric" placeholder="+10 / -3" />
+          </Field>
+          <Field label={m.reason}>
+            <select className="control" name="reason" defaultValue="">
+              <option value={m.reasonShipment}>{m.reasonShipment}</option>
+              <option value={m.reasonRecount}>{m.reasonRecount}</option>
+              <option value={m.reasonDamaged}>{m.reasonDamaged}</option>
+              <option value="">{m.reasonOther}</option>
+            </select>
+          </Field>
+        </div>
+        <Field label={m.noteOptional}>
+          {/* The API's limit is 200, and the longest reason plus its separator takes the rest. */}
+          <input className="control" name="note" maxLength={175} placeholder={m.notePlaceholder} dir="auto" />
+        </Field>
+        <button type="submit" className="btn primary" disabled={stock.busy}>
+          {m.apply}
+        </button>
+      </form>
+
+      <details
+        ref={details}
+        className="mt-5"
+        onToggle={() => {
+          if (details.current?.open && !history) loadHistory().catch(() => setHistory([]));
+        }}
+      >
+        <summary className="bold cursor-pointer">{m.history}</summary>
+        {history && (
+          <div className="line-list mt-2">
+            {history.length === 0 && <div className="line-item hint">{m.noMovements}</div>}
+            {history.map((h) => (
+              <div key={h.id} className="line-item">
+                <div className="min-w-0">
+                  <div>{m[`reason${h.reason}`]}</div>
+                  {h.note && <div className="hint break-words">{h.note}</div>}
+                  <div className="hint">{formatDateTime(h.at, locale)}</div>
+                </div>
+                <span dir="ltr" className={`bold tabular-nums ${h.delta > 0 ? "text-sl-ok" : "text-sl-danger"}`}>
+                  {h.delta > 0 ? `+${h.delta}` : h.delta}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </details>
+    </section>
   );
 }
