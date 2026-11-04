@@ -7,7 +7,7 @@ import { fill } from "@/i18n/locale";
 import type { CheckoutMessages } from "@/i18n/messages/checkout";
 import { ApiError, api, errorMessage } from "@/lib/api";
 
-type Item = { orderItemId: string; name: string; qty: number };
+type Item = { orderItemId: string; name: string; qty: number; imageUrl?: string };
 const WORDS = ["rate1", "rate2", "rate3", "rate4", "rate5"] as const;
 
 export function ReviewForm({ token, slug, items, expires, m }: { token: string; slug: string; items: Item[]; expires: string; m: CheckoutMessages }) {
@@ -71,10 +71,14 @@ export function ReviewForm({ token, slug, items, expires, m }: { token: string; 
         return (
           <div key={item.orderItemId} className="sl-review-panel">
             <div className="sl-review-product">
-              <strong>
-                <bdi>{item.name}</bdi>
-              </strong>
-              <small>{fill(m.purchasedQty, { n: item.qty })}</small>
+              {/* eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is */}
+              {item.imageUrl && <img src={item.imageUrl} alt="" />}
+              <div className="min-w-0">
+                <strong>
+                  <bdi>{item.name}</bdi>
+                </strong>
+                <small>{fill(m.purchasedQty, { n: item.qty })}</small>
+              </div>
             </div>
             <fieldset>
               <legend className="sl-review-label">
