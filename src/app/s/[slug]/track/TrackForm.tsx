@@ -8,7 +8,7 @@ import type { CheckoutMessages } from "@/i18n/messages/checkout";
 import { ApiError, api, errorMessage } from "@/lib/api";
 
 // Number plus phone, never the number alone: order numbers are sequential and easy to guess.
-export function TrackForm({ slug, m }: { slug: string; m: CheckoutMessages }) {
+export function TrackForm({ slug, number, m }: { slug: string; number?: number; m: CheckoutMessages }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +47,7 @@ export function TrackForm({ slug, m }: { slug: string; m: CheckoutMessages }) {
         <input
           id="track-number"
           name="number"
+          defaultValue={number}
           required
           inputMode="numeric"
           pattern="#?\s*\d{1,10}"

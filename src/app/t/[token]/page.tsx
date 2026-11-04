@@ -13,9 +13,12 @@ import { appUrl } from "@/server/mail/mailer";
 import { plain } from "@/server/http/json";
 import { trackingService } from "@/server/services/trackingService";
 import { requestIp } from "../../_server/session";
-import { attempt, shopLocale } from "../../_storefront/data";
+import { attempt, shopLocale, withCatalogue } from "../../_storefront/data";
+import { productForItem } from "../../_storefront/orderItems";
 import { ShopFrame } from "../../_storefront/ShopFrame";
+import { TrackTop } from "../../s/[slug]/track/TrackTop";
 import { LinkNotice } from "../_components/LinkNotice";
+import { ScrollIntoView } from "../_components/ScrollIntoView";
 import { CopyLink, CopyNumber } from "./CopyLink";
 
 type Props = { params: Promise<{ token: string }>; searchParams: Promise<{ placed?: string }> };
@@ -65,6 +68,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
     return <LinkNotice locale={locale} title={res.error.status === 429 ? m.rateLimited : m.error} />;
   }
   const { shop, order, review } = plain(res.data);
+  const { shop: frame, products } = await withCatalogue(shop);
   const locale = shopLocale(shop.language);
   const m = checkoutMessages[locale];
   const status = order.status;
@@ -131,7 +135,9 @@ export default async function TrackingPage({ params, searchParams }: Props) {
 
   const items = (
     <div className="sl-order-items">
-      {order.items.map((item, i) => (
+      {order.items.map((item, i) => {
+        const category = productForItem(products, item.name)?.categoryName;
+        return (
         <div key={i} className="sl-order-item">
           <span className="sl-order-thumb">
             <ProductPhoto src={item.imageUrl} name={item.name} />
@@ -140,12 +146,16 @@ export default async function TrackingPage({ params, searchParams }: Props) {
             <h3>
               <bdi>{item.name}</bdi>
             </h3>
-            <small>{fill(m.qty, { n: item.qty })}</small>
+            <small>
+              {category && <bdi>{category} · </bdi>}
+              {fill(m.qty, { n: item.qty })}
+            </small>
             {item.note && <p className="sl-order-item-note">{item.note}</p>}
           </div>
           <b>{money(item.unitPriceMinor * item.qty)}</b>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 
@@ -189,7 +199,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
 
   if (placed && !bad) {
     return (
-      <ShopFrame shop={shop} locale={locale} page="sl-order-page">
+      <ShopFrame shop={frame} locale={locale} page="sl-order-page">
         {refresh}
         <section className="sl-order-success sl-on-surface">
           <div className="sl-order-check" aria-hidden>
@@ -249,17 +259,19 @@ export default async function TrackingPage({ params, searchParams }: Props) {
   }
 
   return (
-    <ShopFrame shop={shop} locale={locale} page="sl-track-page">
+    <ShopFrame shop={frame} locale={locale} page="sl-track-page">
       {refresh}
-      <section className="sl-result">
+      <TrackTop slug={shop.slug} shopName={shop.name} number={order.number} m={m} />
+      <ScrollIntoView id="order-result" />
+      <section id="order-result" className="sl-result">
         <div className="sl-result-head">
           <div>
             <p className="sl-page-eyebrow">{fill(m.orderEyebrow, { n: order.number })}</p>
             {status === "CANCELLED" || status === "RETURNED" ? (
-              <h1>{status === "CANCELLED" ? m.cancelledTitle : m.returnedTitle}</h1>
+              <h2>{status === "CANCELLED" ? m.cancelledTitle : m.returnedTitle}</h2>
             ) : (
               <>
-                <h1>{m[`result${status}`]}</h1>
+                <h2>{m[`result${status}`]}</h2>
                 <p>{delivered ? fill(m.resultLeadDelivered, { shop: shop.name }) : status === "NEW" ? m.resultLeadNew : m.resultLead}</p>
               </>
             )}
