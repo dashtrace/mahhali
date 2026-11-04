@@ -89,6 +89,12 @@ export const remittanceService = {
     return { from: period.from, to: period.to, remittances };
   },
 
+  async get(actor: Actor, id: string) {
+    const remittance = await remittanceRepo.find(actor.shopId, id);
+    if (!remittance) throw notFound("Remittance");
+    return remittance;
+  },
+
   /** What the owner ticks off while the courier is handing over cash. */
   async unsettled(actor: Actor, courierId: string) {
     await this.requireCourier(actor, courierId);

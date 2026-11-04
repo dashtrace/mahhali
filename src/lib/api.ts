@@ -38,11 +38,13 @@ function safeJson(text: string): unknown {
   }
 }
 
-/** A readable message for a failed call, including the first field error. */
+/** A readable message for a failed call: the first field error when a schema wrote one for people. */
 export function errorMessage(error: unknown, fallback = "Something went wrong. Please try again."): string {
   if (error instanceof ApiError) {
-    const first = Array.isArray(error.details) ? (error.details[0] as { path?: string; message?: string }) : null;
-    return first?.message ? `${error.message} ${first.path ? `(${first.path}) ` : ""}${first.message}` : error.message;
+    const first = Array.isArray(error.details) ? (error.details[0] as { message?: string }) : null;
+    if (!first?.message) return error.message;
+    // Zod's built-in wording ("Too small: expected string...") is for developers.
+    return /^(Too (small|big)|Invalid)\b/.test(first.message) ? fallback : first.message;
   }
   return fallback;
 }

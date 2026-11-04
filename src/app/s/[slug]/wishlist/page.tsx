@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { storeMessages } from "@/i18n/messages/store";
 import { ShopFrame } from "../../../_storefront/ShopFrame";
 import { loadStore } from "../_components/load";
+import { PageHead } from "../_components/tiles";
 import { WishlistGrid } from "./WishlistGrid";
 
 type Params = { params: Promise<{ slug: string }> };
@@ -17,12 +18,11 @@ export default async function WishlistPage({ params }: Params) {
   const locale = shop.locale;
   const m = storeMessages[locale];
   // Only what a card needs crosses to the browser.
-  const tiles = products.map(({ id, name, description, images, variants, rating }) => ({ id, name, description, images, variants, rating }));
+  const tiles = products.map(({ id, name, description, images, variants, categoryName, customization }) => ({ id, name, description, images, variants, categoryName, customization }));
 
   return (
-    <ShopFrame shop={shop} locale={locale}>
-      <h1 className="sl-heading mt-1 text-[22px] leading-tight sm:text-[26px]">{m.wishTitle}</h1>
-      <p className="mb-4 mt-1 text-[13px] text-sl-muted">{m.wishNote}</p>
+    <ShopFrame shop={shop} locale={locale} page>
+      <PageHead eyebrow={m.wishEyebrow} title={m.wishTitle} lead={m.wishLead} />
       <WishlistGrid slug={slug} products={tiles} currency={shop.currency} locale={locale} />
     </ShopFrame>
   );

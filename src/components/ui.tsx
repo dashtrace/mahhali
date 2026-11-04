@@ -280,18 +280,19 @@ export function Segmented({ label, items, className }: { label: string; items: S
 
 export function PageHeader({ title, subtitle, back, actions }: { title: ReactNode; subtitle?: ReactNode; back?: { href: string; label: string }; actions?: ReactNode }) {
   return (
-    <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    // page-head, back, hint, actions: the dashboard's restyling hooks (dashboard/dashboard.css); no CSS elsewhere.
+    <header className="page-head mb-4 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         {back && (
-          <Link href={back.href} className="mb-1 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-sl-accent hover:underline">
+          <Link href={back.href} className="back mb-1 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-sl-accent hover:underline">
             <Icon name="back" className="size-4" />
             {back.label}
           </Link>
         )}
         <h1 className="sl-heading truncate text-2xl">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-sl-muted">{subtitle}</p>}
+        {subtitle && <p className="hint mt-0.5 text-sm text-sl-muted">{subtitle}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="actions flex flex-wrap gap-2">{actions}</div>}
     </header>
   );
 }

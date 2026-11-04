@@ -1,266 +1,223 @@
 "use client";
 
-import { useState } from "react";
-import { Alert, Button, Card, Field, SaveButton, Select, cx } from "@/components/ui";
-import { Icon, type IconName } from "@/components/Icon";
-import { fill, type Locale } from "@/i18n/locale";
+import { useEffect, useState } from "react";
+import { Alert } from "@/components/ui";
+import { Icon } from "@/components/Icon";
+import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
-import { formatMoney } from "@/lib/format";
-import { FONTS, PALETTES, RADII, inkFor, validateTheme, type PaletteName, type Theme } from "@/server/domain/theme";
-import { themeTone, themeVars } from "../../../_server/theme";
+import { FONTS, PALETTES, RADII, contrastRatio, inkFor, validateTheme, type PaletteName, type Theme } from "@/server/domain/theme";
+import { storefrontTokens } from "../../../_server/theme";
+import { DashIcon } from "../../_components/DashIcon";
 import { FilePicker } from "../../products/_components/FilePicker";
-import { CardHead } from "../../products/_components/ProductExtras";
 import { useAction } from "../../products/_components/useAction";
+import { SaveBtn, SettingField } from "./fields";
+import { useLivePreview, useUnsaved } from "./LivePreview";
+import { COLOUR_ROLES, PAIR_MESSAGES, REQUIRED_ROLES, STORE_LOOK, STORE_PALETTES, type StorePaletteName } from "./palettes";
 
-type PreviewShop = { name: string; currency: "USD" | "LBP"; logoMode: string; tagline: string | null };
-type Props = { theme: Theme; logo: string | null; shop: PreviewShop; locale: Locale; m: ShopMessages; t: CommonMessages };
+type Props = { theme: Theme; logo: string | null; m: ShopMessages; t: CommonMessages };
+type Role = (typeof COLOUR_ROLES)[number];
 
-const PAIR_KEYS = { "text on primary": "pairPrimary", "text on accent": "pairAccent", "body text on background": "pairBackground" } as const;
-// A fixed key list: `text` is optional, so clearing it must still count as a change.
-const KEYS = ["primary", "accent", "background", "text", "radius", "font"] as const;
+// A fixed key list: optional colours can be cleared, and that must still count as a change.
+const KEYS = [...COLOUR_ROLES, "radius", "font"] as const;
 const same = (a: Theme, b: Theme) => KEYS.every((k) => a[k] === b[k]);
 
-export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: Props) {
+/** What the storefront draws for each role right now, so an Automatic swatch shows its real colour. */
+function drawnColours(theme: Theme): Record<Role, string> {
+  const tokens = storefrontTokens(theme);
+  return {
+    primary: theme.primary,
+    accent: theme.accent,
+    background: theme.background,
+    surface: tokens["--sl-surface"],
+    text: theme.text ?? inkFor(theme.background),
+    muted: tokens["--sl-muted"],
+    dark: tokens["--sl-band"],
+    darkText: tokens["--sl-band-ink"],
+    border: tokens["--sl-line"],
+    buttonText: tokens["--sl-accent-ink"],
+  };
+}
+
+export function Branding({ theme: saved, logo: savedLogo, m, t }: Props) {
   const [theme, setTheme] = useState<Theme>(saved);
   // Set from the upload's response, so the new logo shows before the page refresh lands.
   const [logo, setLogo] = useState(savedLogo);
   const [done, setDone] = useState(false);
   const save = useAction(t.error);
+  const preview = useLivePreview();
   const failures = validateTheme(theme);
-  const set = <K extends keyof Theme>(k: K, v: Theme[K]) => {
+  const dirty = !same(theme, saved);
+  useUnsaved(dirty);
+  const drawn = drawnColours(theme);
+  const change = (next: Theme) => {
     setDone(false);
-    setTheme({ ...theme, [k]: v });
+    setTheme(next);
   };
+  const set = <K extends keyof Theme>(k: K, v: Theme[K]) => change({ ...theme, [k]: v });
+  /** Leaves the key out of the save, so the storefront derives this colour. */
+  const setAutomatic = (k: Role) => {
+    const next = { ...theme };
+    delete next[k];
+    change(next);
+  };
+  useEffect(() => preview.draft({ theme }), [preview, theme]);
+  const palettes: { name: StorePaletteName | PaletteName; value: Theme }[] = [
+    ...(Object.keys(STORE_PALETTES) as StorePaletteName[]).map((name) => ({ name, value: { ...STORE_PALETTES[name], ...STORE_LOOK } })),
+    ...(Object.keys(PALETTES) as PaletteName[]).map((name) => ({ name, value: { ...PALETTES[name] } })),
+  ];
+  // By colours only: choosing another font afterwards doesn't make it a different palette.
+  const selected = palettes.find((p) => COLOUR_ROLES.every((k) => theme[k] === (p.value as Theme)[k]));
+  const [contrastStart, contrastMiddle, contrastEnd] = m.contrastOk.split(/\{\w+\}/);
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-w-0 flex-col gap-4">
-        <Card className="flex flex-col gap-4">
-          <CardHead title={m.brandingTitle} />
+    <>
+      <div className="card">
+        <h2>{m.brandingTitle}</h2>
+        <p className="hint">{m.brandingHint}</p>
 
-          <fieldset>
-            <legend className="mb-2 text-[13px] font-bold">{m.palettes}</legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {(Object.keys(PALETTES) as PaletteName[]).map((name) => {
-                const p = PALETTES[name];
-                const active = same(theme, p);
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => {
-                      setDone(false);
-                      setTheme({ ...p });
-                    }}
-                    className={cx(
-                      "flex min-h-11 items-center gap-2 rounded-sl-sm border bg-sl-panel px-3 py-2 text-sm font-bold",
-                      active ? "border-sl-accent bg-sl-soft text-sl-soft-ink" : "border-sl-border hover:border-sl-accent",
-                    )}
-                  >
-                    <span className="flex shrink-0 overflow-hidden rounded-full border border-sl-border" aria-hidden>
-                      {[p.primary, p.accent, p.background].map((c) => (
-                        <span key={c} className="size-4" style={{ background: c }} />
-                      ))}
-                    </span>
-                    {m[`palette${name}`]}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-
-          <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <legend className="mb-2 text-[13px] font-bold">{m.custom}</legend>
-            {(["primary", "accent", "background", "text"] as const).map((k) => (
-              <Field key={k} label={m[k]}>
-                <span className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    // An unset text colour shows the automatic one (black or white for the background).
-                    value={theme[k] ?? inkFor(theme.background)}
-                    onChange={(e) => set(k, e.target.value.toLowerCase())}
-                    className="h-11 w-14 shrink-0 cursor-pointer rounded-sl-sm border border-sl-control bg-sl-panel p-1"
-                  />
-                  <span dir="ltr" className="hidden font-mono text-xs text-sl-muted sm:inline">
-                    {theme[k] ?? m.textAuto}
-                  </span>
-                </span>
-              </Field>
-            ))}
-            {theme.text && (
-              <Button
-                tone="ghost"
-                className="col-span-2 justify-self-start sm:col-span-4"
-                onClick={() => {
-                  setDone(false);
-                  setTheme((current) => {
-                    const next = { ...current };
-                    delete next.text;
-                    return next;
-                  });
-                }}
-              >
-                {m.useAutoText}
-              </Button>
-            )}
-          </fieldset>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={m.radius}>
-              <Select value={theme.radius} onChange={(e) => set("radius", e.target.value as Theme["radius"])}>
-                {RADII.map((r) => (
-                  <option key={r} value={r}>
-                    {m[`radius${r}`]}
-                  </option>
+        <div className="between my-[14px] flex-wrap">
+          <b>{m.palettes}</b>
+          <span className="hint">{m.palettesHint}</span>
+        </div>
+        <div className="mb-[19px] flex flex-wrap items-center gap-[9px]">
+          {palettes.map(({ name, value }) => (
+            <button key={name} type="button" aria-pressed={selected?.name === name} onClick={() => change(value)} className={`palette-card${selected?.name === name ? " selected" : ""}`}>
+              <span className="palette-swatches" aria-hidden>
+                {[value.primary, value.accent, value.background, drawnColours(value).surface, drawnColours(value).dark].map((c, i) => (
+                  <i key={i} style={{ background: c }} />
                 ))}
-              </Select>
-            </Field>
-            <Field label={m.font}>
-              <Select value={theme.font} onChange={(e) => set("font", e.target.value as Theme["font"])}>
-                {FONTS.map((f) => (
-                  <option key={f} value={f}>
-                    {m[`font${f}`]}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-
-          {failures.length === 0 ? (
-            <Alert tone="success">{m.contrastOk}</Alert>
+              </span>
+              <span>{m[`palette${name}`]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="info-inline mb-[15px]">
+          {selected ? (
+            <>
+              <b>{m.paletteSelected}</b> {m[`palette${selected.name}`]}.
+            </>
           ) : (
-            <Alert tone="warning">
-              <p>{m.contrastFail}</p>
-              <ul className="mt-1 list-disc ps-5">
-                {failures.map((f) => (
-                  <li key={f.pair}>{fill(m.contrastRow, { pair: m[PAIR_KEYS[f.pair as keyof typeof PAIR_KEYS]] ?? f.pair, ratio: f.ratio })}</li>
-                ))}
-              </ul>
-            </Alert>
-          )}
-          {save.error && <Alert tone="error">{save.error}</Alert>}
-          <SaveButton
+            <b>{m.paletteCustom}.</b>
+          )}{" "}
+          {m.paletteNote}
+        </div>
+
+        <h3 className="mb-[14px]">{m.colourRoles}</h3>
+        <div className="colorgrid">
+          {COLOUR_ROLES.map((k) => (
+            <div key={k} className="colorfield">
+              <input
+                id={`color-${k}`}
+                type="color"
+                value={drawn[k]}
+                onChange={(e) => set(k, e.target.value.toLowerCase())}
+              />
+              <span>
+                <label htmlFor={`color-${k}`}>
+                  <strong>{m[`role${k}`]}</strong>
+                </label>
+                <span className="colorfield-value">
+                  <code dir="ltr">{theme[k] ?? m.textAuto}</code>
+                  {theme[k] && !REQUIRED_ROLES.includes(k) && (
+                    <button type="button" aria-label={fill(m.setAutomatic, { role: m[`role${k}`] })} onClick={() => setAutomatic(k)}>
+                      {m.textAuto}
+                    </button>
+                  )}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4">{save.error && <Alert tone="error" className="mb-3">{save.error}</Alert>}</div>
+        <div className="actions">
+          <SaveBtn
             type="button"
-            className="self-start"
-            state={{ busy: save.busy, dirty: !same(theme, saved), saved: done }}
+            state={{ busy: save.busy, dirty, saved: done }}
             labels={t}
             disabled={failures.length > 0}
-            onClick={async () => setDone(await save.run(() => api("/api/shop/branding", { method: "PATCH", body: theme })))}
+            onClick={async () => {
+              const ok = await save.run(() => api("/api/shop/branding", { method: "PATCH", body: theme }));
+              setDone(ok);
+              if (ok) preview.reload();
+            }}
           >
             {m.saveBranding}
-          </SaveButton>
-        </Card>
-
-        <Logo logo={logo} onChange={setLogo} m={m} t={t} />
-      </div>
-
-      <section aria-labelledby="branding-preview" className="flex flex-col gap-2 lg:sticky lg:top-[76px]">
-        <h2 id="branding-preview" className="text-[13px] font-bold">
-          {m.preview}
-        </h2>
-        <p className="text-xs text-sl-muted">{m.previewHint}</p>
-        <MiniShop theme={theme} logo={logo} shop={shop} locale={locale} m={m} />
-      </section>
-    </div>
-  );
-}
-
-/** A phone-sized storefront drawn with the sl-* tokens of the theme being edited. Decorative. */
-function MiniShop({ theme, logo, shop, locale, m }: { theme: Theme; logo: string | null; shop: PreviewShop; locale: Locale; m: ShopMessages }) {
-  const showImage = logo && shop.logoMode !== "name-only";
-  const showName = !showImage || shop.logoMode === "image-and-name";
-  const tiles: [string, string, number][] = [
-    [m.previewProduct, m.previewDescription, shop.currency === "USD" ? 2400 : 2_150_000],
-    [m.previewProduct2, m.previewDescription, shop.currency === "USD" ? 1850 : 1_650_000],
-  ];
-  const tabs: IconName[] = ["home", "grid", "truck", "cart"];
-
-  return (
-    <div
-      aria-hidden
-      lang={locale}
-      data-tone={themeTone(theme)}
-      style={{ ...themeVars(theme), fontFamily: "var(--font-shop)" }}
-      className="sl-shop mx-auto w-full max-w-[320px] overflow-hidden rounded-[26px] border border-sl-border bg-sl-bg text-sl-fg shadow-[0_10px_24px_#0000000d]"
-    >
-      <div className="flex h-12 items-center gap-2 border-b border-sl-border bg-sl-panel px-3">
-        <span className="grid size-8 place-items-center rounded-sl border border-sl-border">
-          <Icon name="menu" className="size-4" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col items-center leading-tight">
-          <span className="flex max-w-full items-center gap-1.5">
-            {showImage && (
-              // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
-              <img src={logo} alt="" className="h-7 max-w-24 object-contain" />
-            )}
-            {showName && <span className="sl-heading truncate text-[15px]">{shop.name}</span>}
-          </span>
-          {shop.tagline && <span className="max-w-full truncate text-[10px] text-sl-muted">{shop.tagline}</span>}
-        </span>
-        <span className="grid size-8 place-items-center rounded-sl border border-sl-border">
-          <Icon name="bag" className="size-4" />
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-3 p-3">
-        <div className="flex h-[112px] flex-col justify-center gap-1 rounded-[16px] bg-sl-hero px-4 text-sl-hero-ink">
-          <span className="text-[9px] font-extrabold uppercase tracking-[0.15em] text-sl-accent rtl:tracking-normal">{m.previewHeroKicker}</span>
-          <span className="sl-heading text-lg leading-tight">{m.previewHeroTitle}</span>
-          <span className="mt-1 self-start rounded-full bg-sl-accent px-3 py-1 text-[11px] font-bold text-sl-accent-ink">{m.previewButton}</span>
+          </SaveBtn>
+          <button type="button" className="btn" disabled={!dirty || save.busy} onClick={() => change(saved)}>
+            {m.restoreColours}
+          </button>
         </div>
-
-        <div>
-          <p className="sl-heading mb-1.5 text-sm">{m.previewCategories}</p>
-          <div className="flex gap-3">
-            {(["heart", "star", "box", "grid"] as const).map((icon) => (
-              <span key={icon} className="grid size-10 place-items-center rounded-full border border-sl-border bg-sl-cat text-sl-accent">
-                <Icon name={icon} className="size-4" />
-              </span>
-            ))}
+        {failures.length === 0 ? (
+          <div role="status" className="info-inline mt-[15px]">
+            <DashIcon name="info" size="sm" /> {contrastStart}
+            <b dir="ltr">{contrastRatio(drawn.buttonText, theme.primary).toFixed(1)}:1</b>
+            {contrastMiddle}
+            <b dir="ltr">{contrastRatio(drawn.text, theme.background).toFixed(1)}:1</b>
+            {contrastEnd}
           </div>
-        </div>
-
-        <div>
-          <p className="sl-heading mb-1.5 text-sm">{m.previewBestSellers}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {tiles.map(([name, desc, minor], i) => (
-              <div key={name} className="relative overflow-hidden rounded-sl border border-sl-border bg-sl-panel">
-                <div className="aspect-[4/3] bg-sl-cat" />
-                {i === 0 && (
-                  <span className="absolute start-1.5 top-1.5 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-ink)]">{m.previewBadge}</span>
-                )}
-                <div className="flex flex-col gap-0.5 p-2">
-                  <span className="truncate text-[11px] font-bold">{name}</span>
-                  <span className="truncate text-[10px] text-sl-muted">{desc}</span>
-                  <span className="flex items-center justify-between">
-                    <bdi className="text-xs font-extrabold tabular-nums">{formatMoney(minor, shop.currency, locale)}</bdi>
-                    <span className="grid size-5 place-items-center rounded-full bg-sl-accent text-sl-accent-ink">
-                      <Icon name="plus" className="size-3" />
-                    </span>
-                  </span>
-                </div>
-              </div>
-            ))}
+        ) : (
+          <div role="status" className="callout mb-0">
+            <p>{m.contrastFail}</p>
+            <ul className="mt-1 list-disc ps-5">
+              {failures.map((f) => (
+                <li key={f.pair}>{fill(m.contrastRow, { pair: m[PAIR_MESSAGES[f.pair as keyof typeof PAIR_MESSAGES]] ?? f.pair, ratio: f.ratio })}</li>
+              ))}
+            </ul>
           </div>
-        </div>
+        )}
+      </div>
 
-        <div className="flex gap-2">
-          <span className="flex h-9 flex-1 items-center justify-center rounded-sl border border-sl-accent text-[11px] font-bold text-sl-accent">{m.previewAddToCart}</span>
-          <span className="flex h-9 flex-1 items-center justify-center rounded-sl bg-sl-accent text-[11px] font-bold text-sl-accent-ink">{m.previewButton}</span>
+      <div className="card">
+        <h2>{m.typographyTitle}</h2>
+        <p className="hint">{m.typographyHint}</p>
+        <div className="split">
+          <SettingField label={m.font}>
+            <select className="control" value={theme.font} onChange={(e) => set("font", e.target.value as Theme["font"])}>
+              {FONTS.map((f) => (
+                <option key={f} value={f}>
+                  {m[`font${f}`]}
+                </option>
+              ))}
+            </select>
+          </SettingField>
+          <SettingField label={m.radius}>
+            <select className="control" value={theme.radius} onChange={(e) => set("radius", e.target.value as Theme["radius"])}>
+              {RADII.map((r) => (
+                <option key={r} value={r}>
+                  {m[`radius${r}`]}
+                </option>
+              ))}
+            </select>
+          </SettingField>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 border-t border-sl-border bg-sl-nav py-2">
-        {tabs.map((icon, i) => (
-          <span key={icon} className={cx("grid place-items-center", i === 0 ? "text-sl-accent" : "text-sl-muted")}>
-            <Icon name={icon} solid={i === 0} className="size-5" />
-          </span>
-        ))}
+      <Logo
+        logo={logo}
+        onChange={(next) => {
+          setLogo(next);
+          preview.reload();
+        }}
+        m={m}
+        t={t}
+      />
+
+      <div className="card">
+        <h2>{m.whereTitle}</h2>
+        <p className="hint">{m.whereHint}</p>
+        <div className="settings-mapping">
+          {(["Hero", "Products", "Story", "Reviews", "Contact"] as const).map((k) => (
+            <div key={k}>
+              <b>{m[`where${k}`]}</b>
+              <small>{m[`where${k}Body`]}</small>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -269,9 +226,10 @@ function Logo({ logo, onChange, m, t }: { logo: string | null; onChange: (logo: 
   const [uploaded, setUploaded] = useState(false);
   const [uploading, setUploading] = useState(false);
   return (
-    <Card className="flex flex-col gap-3">
-      <CardHead title={m.logo} hint={m.logoHint} />
-      {action.error && <Alert tone="error">{action.error}</Alert>}
+    <div className="card">
+      <h2>{m.logo}</h2>
+      <p className="hint">{m.logoHint}</p>
+      {action.error && <Alert tone="error" className="mb-3">{action.error}</Alert>}
       <div className="flex flex-wrap items-center gap-3">
         {logo && (
           // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
@@ -293,8 +251,9 @@ function Logo({ logo, onChange, m, t }: { logo: string | null; onChange: (logo: 
           {uploading ? m.uploading : logo ? m.replaceLogo : m.uploadLogo}
         </FilePicker>
         {logo && (
-          <Button
-            tone="ghost"
+          <button
+            type="button"
+            className="btn"
             disabled={action.busy}
             onClick={() =>
               confirm(m.removeLogoConfirm) &&
@@ -306,7 +265,7 @@ function Logo({ logo, onChange, m, t }: { logo: string | null; onChange: (logo: 
             }
           >
             {m.removeLogo}
-          </Button>
+          </button>
         )}
         <span role="status" className="inline-flex items-center gap-1 text-sm font-bold text-sl-ok">
           {uploaded && (
@@ -317,6 +276,6 @@ function Logo({ logo, onChange, m, t }: { logo: string | null; onChange: (logo: 
           )}
         </span>
       </div>
-    </Card>
+    </div>
   );
 }

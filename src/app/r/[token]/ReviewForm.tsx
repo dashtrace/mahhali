@@ -1,13 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { Icon, type IconName } from "@/components/Icon";
-import { Alert, Button, ButtonLink, Card, Field, Textarea, cx } from "@/components/ui";
+import { ArrowOut, Icon, type IconName } from "@/components/Icon";
 import { fill } from "@/i18n/locale";
 import type { CheckoutMessages } from "@/i18n/messages/checkout";
 import { ApiError, api, errorMessage } from "@/lib/api";
 
-type Item = { orderItemId: string; name: string; qty: number };
+type Item = { orderItemId: string; name: string; qty: number; imageUrl?: string };
 const WORDS = ["rate1", "rate2", "rate3", "rate4", "rate5"] as const;
 
 export function ReviewForm({ token, slug, items, expires, m }: { token: string; slug: string; items: Item[]; expires: string; m: CheckoutMessages }) {
@@ -48,35 +48,48 @@ export function ReviewForm({ token, slug, items, expires, m }: { token: string; 
 
   if (done) {
     return (
-      <Card role="status" className="flex flex-col items-center gap-2 rounded-[17px] px-5 py-10 text-center">
-        <span aria-hidden className="mb-2 grid size-14 place-items-center rounded-full bg-sl-accent text-sl-accent-ink">
+      <section role="status" className="sl-review-success sl-on-surface">
+        <span aria-hidden className="sl-review-done-icon">
           <Icon name={done.icon} className="size-7" />
         </span>
-        <p className="sl-heading text-2xl leading-tight">{done.title}</p>
-        <p className="text-sm leading-normal text-sl-muted">{done.body}</p>
-        <ButtonLink href={`/s/${slug}`} tone="secondary" className="mt-4">
+        <h2>{done.title}</h2>
+        <p>{done.body}</p>
+        <Link href={`/s/${slug}`} className="sl-text-cta">
           {m.backToShop}
-        </ButtonLink>
-      </Card>
+          <ArrowOut />
+        </Link>
+      </section>
     );
   }
 
+  const someUnrated = items.some((i) => ratings[i.orderItemId]) && items.some((i) => !ratings[i.orderItemId]);
+
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form onSubmit={submit}>
       {items.map((item) => {
         const value = ratings[item.orderItemId] ?? 0;
         return (
-          <Card key={item.orderItemId} className="flex flex-col gap-3 rounded-[17px] p-4 sm:p-5">
+          <div key={item.orderItemId} className="sl-review-panel">
+            <div className="sl-review-product">
+              {/* eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is */}
+              {item.imageUrl && <img src={item.imageUrl} alt="" />}
+              <div className="min-w-0">
+                <strong>
+                  <bdi>{item.name}</bdi>
+                </strong>
+                <small>{fill(m.purchasedQty, { n: item.qty })}</small>
+              </div>
+            </div>
             <fieldset>
-              <legend className="font-bold leading-snug">
-                <bdi>{item.name}</bdi> <span className="text-sm font-normal text-sl-muted">× {item.qty}</span>
+              <legend className="sl-review-label">
+                <span className="sr-only">
+                  <bdi>{item.name}</bdi>:{" "}
+                </span>
+                {m.yourRating}
               </legend>
-              <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-2">
+              <div className="sl-rating">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <label
-                    key={n}
-                    className="grid size-11 cursor-pointer place-items-center rounded-sl has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-sl-accent"
-                  >
+                  <label key={n} data-on={n <= value || undefined}>
                     <input
                       type="radio"
                       name={`rating-${item.orderItemId}`}
@@ -85,29 +98,36 @@ export function ReviewForm({ token, slug, items, expires, m }: { token: string; 
                       onChange={() => setRatings((r) => ({ ...r, [item.orderItemId]: n }))}
                       className="sr-only"
                     />
-                    <Icon name="star" solid className={cx("size-8 transition", n <= value ? "text-sl-star" : "text-sl-control")} />
+                    <span aria-hidden>★</span>
                     <span className="sr-only">{fill(m.starsLabel, { n })}</span>
                   </label>
                 ))}
-                <span aria-hidden className="ms-2 text-sm font-bold text-sl-muted">
+                <span aria-hidden className="sl-rating-word">
                   {value ? m[WORDS[value - 1]] : null}
                 </span>
               </div>
             </fieldset>
-            <Field label={`${m.comment} (${m.optional})`}>
-              <Textarea name={`comment-${item.orderItemId}`} maxLength={1000} placeholder={m.commentPlaceholder} />
-            </Field>
-          </Card>
+            <label className="sl-review-label" htmlFor={`comment-${item.orderItemId}`}>
+              {m.comment} ({m.optional})
+            </label>
+            <textarea id={`comment-${item.orderItemId}`} name={`comment-${item.orderItemId}`} maxLength={1000} placeholder={m.commentPlaceholder} className="sl-review-textarea" />
+          </div>
         );
       })}
-      <Alert tone="note">
+      <div className="sl-review-note sl-on-surface">
+        <strong>{m.verifiedNote}</strong>
         <p>{m.shownAs}</p>
-        <p className="mt-1 text-sl-muted">{fill(m.expiresOn, { date: expires })}</p>
-      </Alert>
-      {error && <Alert tone="error">{error}</Alert>}
-      <Button type="submit" block className="min-h-12 text-[15px]" disabled={busy}>
+        <small>{fill(m.expiresOn, { date: expires })}</small>
+      </div>
+      {/* The first submit uses up the link, so say so while unrated items can still be rated. */}
+      <div aria-live="polite">{someUnrated && <p className="sl-order-alert sl-review-warning">{m.unratedWarning}</p>}</div>
+      <p role="alert" className="sl-review-error">
+        {error}
+      </p>
+      <button type="submit" className="sl-review-submit" disabled={busy}>
         {busy ? m.sending : m.sendReviews}
-      </Button>
+        {!busy && <ArrowOut />}
+      </button>
     </form>
   );
 }

@@ -135,6 +135,32 @@ describe("tenant isolation: orders, couriers and cash", () => {
     unassignedA = (await seedOrder(shopA.shop.id, { variantId: vA.id, status: "OUT_FOR_DELIVERY" })).id;
   });
 
+  it("searching orders by item, name, phone or number never returns shop B's", async () => {
+    // Own shops: the list test below expects shop A's orders exactly.
+    const a = await signUpOwner();
+    const b = await signUpOwner();
+    const { variant: secret } = await seedVariant(b.shop.id, { name: "B's secret perfume" });
+    const { variant: shared } = await seedVariant(b.shop.id, { name: "Shared name 7734" });
+    const { variant: mine } = await seedVariant(a.shop.id, { name: "Shared name 7734" });
+    await seedOrder(b.shop.id, { variantId: secret.id, customerPhone: "+96176770001" });
+    const theirs = await seedOrder(b.shop.id, { variantId: shared.id, customerName: "Shared Customer", customerPhone: "+96176770002" });
+    const ours = await seedOrder(a.shop.id, { variantId: mine.id, customerName: "Shared Customer", customerPhone: "+96176770002" });
+
+    const search = async (q: string) => {
+      const res = await call(listOrders, `/api/orders?q=${encodeURIComponent(q)}`, { cookie: a.cookie });
+      expect(res.status).toBe(200);
+      expect(JSON.stringify(res.body)).not.toContain("secret");
+      return res.body.orders.map((o: { id: string }) => o.id);
+    };
+
+    expect(await search("secret perfume")).toEqual([]);
+    for (const q of ["Shared name", "7734", "Shared Customer", "76770002", `#${ours.number}`]) {
+      const found = await search(q);
+      expect(found).toContain(ours.id);
+      expect(found).not.toContain(theirs.id);
+    }
+  });
+
   for (const role of ["owner", "manager", "staff", "delivery"]) {
     it(`${role} of shop A cannot read, edit or move shop B's order`, async () => {
       const cookie = actorsA[role];

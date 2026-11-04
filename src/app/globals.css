@@ -14,9 +14,10 @@
 /*
  * Design tokens (see spec-foundation.md). The platform (dashboard, admin, auth,
  * marketing) uses the slate/blue owner-panel palette below. A storefront sets
- * --sl-bg, --sl-fg, --sl-accent, --sl-accent-ink and --sl-r inline from the
- * shop's validated theme (themeVars) and gets the rest derived in .sl-shop, so
- * any palette, including the dark "night" preset, keeps its contrast.
+ * --sl-bg, --sl-fg, --sl-r and the colour roles (storefrontTokens: accent, ornament,
+ * surface, muted, band, line) inline from the shop's validated theme (themeVars)
+ * and gets the rest derived in .sl-shop, so any palette, including the dark "night"
+ * preset, keeps its contrast. The roles new to the storefront exist only inside .sl-shop.
  */
 :root {
   --sl-bg: #eef0f1;
@@ -52,7 +53,6 @@
 /* Light shops: warm panels, serif display headings. */
 .sl-shop {
   --sl-panel: color-mix(in srgb, #ffffff 55%, var(--sl-bg));
-  --sl-muted: color-mix(in srgb, var(--sl-fg) 62%, var(--sl-bg));
   --sl-cat: color-mix(in srgb, var(--sl-accent) 10%, var(--sl-bg));
   --sl-border: color-mix(in srgb, var(--sl-fg) 11%, var(--sl-bg));
   --sl-control: color-mix(in srgb, var(--sl-fg) 30%, var(--sl-bg));
@@ -61,7 +61,8 @@
   --sl-hero-ink: var(--sl-fg);
   --sl-soft: color-mix(in srgb, var(--sl-accent) 13%, var(--sl-panel));
   --sl-soft-ink: color-mix(in srgb, var(--sl-accent) 65%, var(--sl-fg));
-  --sl-heading-font: Georgia, "Times New Roman", var(--font-cairo), serif;
+  /* The fallback inside var(): dashboard previews are .sl-shop without the font, and an undefined var() would void the whole list. */
+  --sl-heading-font: var(--font-playfair, Georgia), Georgia, "Times New Roman", var(--font-cairo), serif;
   --sl-heading-weight: 600;
   --sl-heading-tracking: -0.025em;
 }
@@ -81,6 +82,3397 @@
   --sl-heading-tracking: 0;
 }
 
+/*
+ * The home header at the top of the hero: one ink, on the hero's own scrim, which
+ * darkens the top of any photo. The drawer, a dialog inside the header, keeps the
+ * shop's colours.
+ */
+.sl-shop header[data-over="photo"] {
+  --sl-over-ink: #ffffff;
+}
+.sl-shop header[data-over="band"] {
+  --sl-over-ink: var(--sl-band-ink);
+}
+.sl-shop header[data-top="true"] {
+  color: var(--sl-over-ink);
+}
+.sl-shop header[data-top="true"] :is(a, button):not(dialog *) {
+  --sl-fg: var(--sl-over-ink);
+  --sl-panel: color-mix(in srgb, var(--sl-over-ink) 13%, transparent);
+  --sl-line: color-mix(in srgb, var(--sl-over-ink) 50%, transparent);
+  outline-color: var(--sl-over-ink);
+}
+
+/* Reveal.tsx sets the attribute, so content stays visible without it. */
+.sl-shop [data-reveal="hidden"] {
+  opacity: 0;
+  transform: translateY(28px);
+}
+.sl-shop [data-reveal="shown"] {
+  transition:
+    opacity 0.7s var(--sl-ease),
+    transform 0.7s var(--sl-ease);
+}
+
+/*
+ * The storefront home and frame, ported from customer-storefront-approved-v8 with
+ * its sizes and its 700px and 1100px breakpoints. Colours are the shop's tokens.
+ * Letter-spacing goes through --sl-track, because it breaks Arabic joining.
+ */
+.sl-shop {
+  --sl-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sl-track: 1;
+  --sl-caption-boost: 0px;
+  --sl-display-weight: 500;
+  --sl-display-tracking: -0.045em;
+}
+.sl-shop[data-tone="dark"] {
+  --sl-display-weight: var(--sl-heading-weight);
+  --sl-display-tracking: var(--sl-heading-tracking);
+}
+/* Arabic script is unreadable at the tiny Latin caption sizes. */
+.sl-shop:lang(ar) {
+  --sl-track: 0;
+  --sl-display-tracking: 0;
+  --sl-caption-boost: 3px;
+}
+/* Accent and muted are only guaranteed on the page; these are checked against the surface. */
+.sl-shop .sl-on-surface {
+  --sl-accent: var(--sl-surface-accent);
+  --sl-accent-ink: var(--sl-surface-accent-ink);
+  --sl-muted: var(--sl-surface-muted);
+}
+.sl-shop [id^="home-"] {
+  scroll-margin-top: 85px;
+}
+/* The approved design leaves line-height to the font unless it sets one. */
+.sl-shop :is(.sl-nav, .sl-hero, .sl-categories, .sl-section, .sl-story, .sl-band, .sl-footer, .sl-page) {
+  line-height: normal;
+}
+.sl-shop .sl-arrow-out {
+  display: inline-block;
+  flex: none;
+}
+.sl-shop .sl-arrow-out:dir(rtl) {
+  transform: scaleX(-1);
+}
+/* A few design tints the tokens have no role for, derived so they follow any palette. */
+.sl-shop {
+  --sl-surface-deep: color-mix(in srgb, var(--sl-surface) 92%, var(--sl-ornament));
+  --sl-line-warm: color-mix(in srgb, var(--sl-line) 85%, var(--sl-ornament));
+  --sl-line-deep: color-mix(in srgb, var(--sl-line) 40%, var(--sl-ornament));
+  --sl-line-rose: color-mix(in srgb, var(--sl-accent) 14%, var(--sl-bg));
+}
+.sl-shop :is(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--sl-fg) 65%, var(--sl-bg));
+  opacity: 1;
+}
+
+/* Header */
+.sl-shop .sl-header {
+  background: color-mix(in srgb, var(--sl-bg) 94%, transparent);
+  /* The design's faint cast of the accent; dark shops keep the plain page colour. */
+  background: color-mix(in srgb, oklch(from var(--sl-accent) 0.961 0.012 h) 94%, transparent);
+  backdrop-filter: blur(18px);
+  border-block-end: 1px solid var(--sl-line-rose);
+  box-shadow: 0 8px 30px #370f1c0f;
+  transition:
+    background 0.4s,
+    border-color 0.4s,
+    color 0.3s,
+    box-shadow 0.4s;
+}
+.sl-shop[data-tone="dark"] .sl-header {
+  background: color-mix(in srgb, var(--sl-bg) 94%, transparent);
+}
+.sl-shop .sl-header[data-top="true"] {
+  background: transparent;
+  backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+.sl-shop .sl-nav {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
+  align-items: center;
+  height: 67px;
+  max-width: 1360px;
+  margin-inline: auto;
+  padding-inline: clamp(18px, 4vw, 64px);
+  transition: height 0.3s;
+}
+.sl-shop .sl-header[data-top="true"] .sl-nav {
+  height: 88px;
+}
+.sl-shop .sl-nav-edge {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.sl-shop .sl-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: calc(0.04em * var(--sl-track));
+  white-space: nowrap;
+}
+.sl-shop .sl-nav-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  opacity: 0.9;
+}
+.sl-shop .sl-nav-links a:hover {
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.sl-shop .sl-nav-btn,
+.sl-shop .sl-round {
+  border-radius: 50%;
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+.sl-shop .sl-nav-btn {
+  width: 43px;
+  height: 43px;
+  border-color: var(--sl-line);
+}
+.sl-shop header[data-top="true"] .sl-nav-btn {
+  backdrop-filter: blur(5px);
+}
+.sl-shop .sl-header:not([data-top="true"]) .sl-nav-btn {
+  border-color: var(--sl-line-rose);
+}
+.sl-shop .sl-nav-btn:hover,
+.sl-shop .sl-round:hover {
+  transform: translateY(-2px);
+}
+.sl-shop .sl-nav-btn svg {
+  width: 21px;
+  height: 21px;
+}
+/* The round buttons look smaller than a comfortable touch target; this is the target. */
+.sl-shop .sl-nav-btn::after,
+.sl-shop .sl-round::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+}
+.sl-shop .sl-nav-btn > span {
+  inset-inline-end: -5px;
+  top: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding-inline: 3px;
+  font-size: 10px;
+}
+.sl-shop .sl-track {
+  display: none;
+}
+.sl-shop .sl-brand {
+  display: block;
+  min-width: 0;
+  text-align: center;
+  line-height: 1;
+}
+.sl-shop .sl-brand-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sl-heading-font);
+  font-size: 27px;
+  font-weight: 700;
+  /* Room for the descenders the overflow would clip. */
+  line-height: 1.2;
+  letter-spacing: calc(0.075em * var(--sl-track));
+  transition: font-size 0.3s;
+}
+.sl-shop .sl-header[data-top="true"] .sl-brand-name {
+  font-size: 33px;
+}
+.sl-shop .sl-brand-tag {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-block-start: 3px;
+  font-size: calc(8px + var(--sl-caption-boost));
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: calc(0.26em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-header[data-top="true"] .sl-brand-tag {
+  font-size: calc(9px + var(--sl-caption-boost));
+}
+
+/* Menu drawer */
+.sl-shop .sl-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline: 0 auto;
+  width: min(86vw, 390px);
+  max-width: 390px;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  overflow-y: auto;
+  background: var(--sl-bg);
+  color: var(--sl-fg);
+  transition: transform 0.36s var(--sl-ease);
+}
+@starting-style {
+  .sl-shop .sl-drawer[open] {
+    transform: translateX(-100%);
+  }
+  .sl-shop[dir="rtl"] .sl-drawer[open] {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sl-shop .sl-drawer {
+    transition: none;
+  }
+}
+.sl-shop .sl-drawer::backdrop {
+  background: #1b10229c;
+}
+/* The padding sits in here so a tap on it isn't taken for a tap on the backdrop. */
+.sl-shop .sl-drawer-body {
+  padding: 31px 26px calc(31px + env(safe-area-inset-bottom));
+}
+.sl-shop .sl-drawer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block-end: 34px;
+}
+.sl-shop .sl-drawer-top h2 {
+  min-width: 0;
+  font-family: var(--sl-heading-font);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: calc(-0.035em * var(--sl-track));
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-drawer-top button {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--sl-line);
+  border-radius: 50%;
+  background: var(--sl-panel);
+}
+.sl-shop .sl-drawer-top button svg {
+  width: 24.5px;
+  height: 24.5px;
+}
+.sl-shop .sl-drawer-top button::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+}
+.sl-shop .sl-drawer-kicker {
+  margin-block-start: 32px;
+  color: var(--sl-accent);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 800;
+  letter-spacing: calc(0.16em * var(--sl-track));
+}
+.sl-shop .sl-drawer a {
+  display: block;
+  padding-block: 18px;
+  border-block-end: 1px solid var(--sl-line);
+  font-size: 17px;
+  font-weight: 600;
+}
+.sl-shop .sl-drawer a:hover {
+  color: var(--sl-accent);
+}
+
+/* Hero */
+/* Physical sides: logical ones would turn with its vertical writing mode. */
+.sl-shop .sl-scroll-note {
+  position: absolute;
+  right: clamp(22px, 5vw, 85px);
+  bottom: 108px;
+  z-index: 3;
+  color: #fff;
+  font-size: calc(10px + var(--sl-caption-boost));
+  letter-spacing: calc(0.18em * var(--sl-track));
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  opacity: 0.8;
+}
+.sl-shop[dir="rtl"] .sl-scroll-note {
+  right: auto;
+  left: clamp(22px, 5vw, 85px);
+}
+@media (max-width: 700px) {
+  .sl-shop .sl-scroll-note {
+    display: none;
+  }
+}
+.sl-shop .sl-hero {
+  position: relative;
+  height: min(960px, 100svh);
+  min-height: 630px;
+  overflow: hidden;
+  touch-action: pan-y;
+  background: var(--sl-band);
+  color: #ffffff;
+}
+.sl-shop .sl-hero-band {
+  color: var(--sl-band-ink);
+}
+.sl-shop .sl-hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  filter: brightness(0.8) saturate(0.88);
+  transition-duration: 1.1s;
+}
+.sl-shop .sl-hero-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(25 10 26 / 0.53), rgb(29 16 30 / 0.07) 27%, rgb(26 11 28 / 0.1) 43%, rgb(27 9 22 / 0.69) 100%);
+}
+.sl-shop .sl-hero-copy {
+  position: absolute;
+  bottom: clamp(80px, 14vh, 162px);
+  inset-inline: clamp(24px, 8.3vw, 120px) 24px;
+  max-width: 650px;
+}
+/* Unseen on a dark photo like the approved one; it keeps the small text readable on a pale one. */
+.sl-shop .sl-hero:not(.sl-hero-band) .sl-hero-copy {
+  text-shadow: 0 1px 14px #00000059;
+}
+.sl-shop .sl-hero-slide {
+  grid-area: 1 / 1;
+  align-self: end;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.75s ease,
+    transform 0.75s var(--sl-ease);
+}
+.sl-shop .sl-hero-slide[data-active="true"] {
+  opacity: 1;
+  transform: none;
+}
+.sl-shop .sl-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: calc(0.22em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-hero-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin-block: 15px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(43px, 6.3vw, 88px);
+  font-weight: var(--sl-display-weight);
+  line-height: 1.13;
+  letter-spacing: calc(-0.043em * var(--sl-track));
+  text-wrap: balance;
+}
+.sl-shop .sl-hero-body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  max-width: 370px;
+  margin-block-end: 24px;
+  font-size: clamp(14px, 1.6vw, 18px);
+  line-height: 1.65;
+}
+.sl-shop .sl-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3.5px;
+  padding: 15px 20px;
+  border: 1px solid color-mix(in srgb, currentColor 90%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+  backdrop-filter: blur(6px);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: calc(0.04em * var(--sl-track));
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+.sl-shop .sl-hero-cta:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, currentColor 26%, transparent);
+}
+.sl-shop .sl-hero-controls {
+  position: absolute;
+  bottom: 35px;
+  inset-inline-start: clamp(24px, 8.3vw, 120px);
+  /* At least 76px: the WhatsApp button sits in the corner. */
+  inset-inline-end: max(76px, clamp(24px, 8.3vw, 120px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sl-shop .sl-hero-bars {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.sl-shop .sl-hero-bars button {
+  display: grid;
+  align-items: center;
+  flex-shrink: 1;
+  width: clamp(45px, 6vw, 90px);
+  height: 28px;
+}
+.sl-shop .sl-hero-bars span {
+  display: block;
+  height: 3px;
+  background: linear-gradient(#fff, #fff) no-repeat 0 / 0 100%, #ffffff61;
+}
+.sl-shop[dir="rtl"] .sl-hero-bars span {
+  background-position: 100%;
+}
+.sl-shop .sl-hero-bars [aria-current="true"] span {
+  background-size: 100% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sl-shop .sl-hero-bars [aria-current="true"][data-running="true"] span {
+    animation: sl-hero-fill 5s linear forwards;
+  }
+}
+@keyframes sl-hero-fill {
+  from {
+    background-size: 0 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+.sl-shop .sl-hero-arrows {
+  display: flex;
+  flex: none;
+  gap: 10px;
+}
+.sl-shop .sl-round {
+  width: 39px;
+  height: 39px;
+  border-color: #ffffffaa;
+  background: #ffffff1b;
+  color: #ffffff;
+  backdrop-filter: blur(6px);
+}
+.sl-shop .sl-round svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* Section shells and headings */
+.sl-shop .sl-shell {
+  max-width: 1260px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 5vw, 72px);
+}
+.sl-shop .sl-section {
+  padding-block: clamp(76px, 10vw, 126px);
+}
+.sl-shop .sl-kicker {
+  color: var(--sl-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: calc(0.19em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-display {
+  margin-block-start: 9px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(34px, 4.2vw, 60px);
+  font-weight: var(--sl-display-weight);
+  line-height: 1.12;
+  letter-spacing: var(--sl-display-tracking);
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-muted {
+  color: var(--sl-muted);
+  line-height: 1.65;
+}
+.sl-shop .sl-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-block-end: 30px;
+}
+.sl-shop .sl-head-center {
+  margin-block-end: 30px;
+  text-align: center;
+}
+.sl-shop .sl-text-link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  color: var(--sl-accent);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Categories */
+.sl-shop .sl-categories {
+  padding-block: 82px 20px;
+}
+.sl-shop .sl-category-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  max-width: 780px;
+  margin-inline: auto;
+}
+.sl-shop .sl-category-row > li {
+  flex: 0 1 calc((100% - 24px) / 3);
+  min-width: 0;
+}
+.sl-shop .sl-category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 4px;
+}
+.sl-shop .sl-orb {
+  display: grid;
+  place-items: center;
+  width: clamp(86px, 17vw, 158px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--sl-line);
+  border-radius: 50%;
+  background: var(--sl-surface);
+  color: var(--sl-surface-accent);
+  font-family: var(--sl-heading-font);
+  font-size: 45px;
+  transition:
+    transform 0.45s var(--sl-ease),
+    box-shadow 0.45s;
+}
+.sl-shop .sl-category:hover .sl-orb {
+  transform: translateY(-6px);
+  box-shadow: 0 15px 30px #8d35511c;
+}
+.sl-shop .sl-category-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Products */
+.sl-shop .sl-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 690px;
+  margin-inline: auto;
+}
+.sl-shop .sl-tile-grid > li {
+  min-width: 0;
+}
+@media (max-width: 1099px) {
+  .sl-shop .sl-tile-grid > li:nth-child(n + 3) {
+    display: none;
+  }
+}
+@media (min-width: 1100px) {
+  .sl-shop .sl-tile-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.sl-shop .sl-tile {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.sl-shop .sl-tile-photo {
+  position: relative;
+  aspect-ratio: 4 / 4.65;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(140deg, var(--sl-surface), var(--sl-line));
+}
+.sl-shop .sl-tile-photo img {
+  transition: transform 0.8s var(--sl-ease);
+}
+.sl-shop .sl-tile:hover .sl-tile-photo img {
+  transform: scale(1.035);
+}
+.sl-shop .sl-tile-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 12px 1px 6px;
+}
+.sl-shop .sl-tile-type {
+  margin-block-end: 7px;
+  color: var(--sl-muted);
+  font-size: calc(10px + var(--sl-caption-boost));
+  letter-spacing: calc(0.08em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-tile-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-block-end: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.sl-shop .sl-tile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-block-start: auto;
+}
+.sl-shop .sl-tile-price {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+.sl-shop .sl-tile-add {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+}
+/* The approved design's plus is a bold glyph. */
+.sl-shop .sl-tile-add svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.4;
+}
+/* On home its svg has no viewBox: a thin plus, full size, clipped by a 17px box, so it sits low. */
+.sl-shop .sl-tile .sl-tile-add svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.75;
+  transform: translate(3.5px, 3.5px);
+  clip-path: inset(0 7px 7px 0);
+}
+.sl-shop .sl-tile-add::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+.sl-shop .sl-catalog-link {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  margin: 22px auto 0;
+  padding-block-end: 8px;
+  border-block-end: 1px solid currentColor;
+  color: var(--sl-accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: calc(0.02em * var(--sl-track));
+}
+
+/* Story */
+.sl-shop .sl-story {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 520px;
+  padding: 85px 8vw 76px;
+  background: var(--sl-surface);
+  text-align: center;
+}
+/* Narrower than the text below and not centred over it, as in the approved design. */
+.sl-shop .sl-story-title {
+  max-width: 510px;
+  font-size: clamp(38px, 6.8vw, 76px);
+  line-height: 1.09;
+}
+.sl-shop .sl-story-text {
+  max-width: 620px;
+  margin: 25px auto 13px;
+  color: var(--sl-muted);
+  font-size: 15px;
+  line-height: 1.9;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-outline-link .sl-arrow-out {
+  line-height: 1;
+}
+.sl-shop .sl-outline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 21px;
+  border: 1px solid var(--sl-accent);
+  border-radius: 2px;
+  color: var(--sl-accent);
+  font-size: 13px;
+  font-weight: 800;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+.sl-shop .sl-outline-link:hover {
+  transform: translateY(-2px);
+}
+
+/* Shipping */
+.sl-shop .sl-policy {
+  border-block: 1px solid var(--sl-line);
+  background: color-mix(in srgb, var(--sl-bg) 80%, var(--sl-surface));
+}
+.sl-shop .sl-policy-intro {
+  max-width: 570px;
+  margin-block-start: 15px;
+  color: var(--sl-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.sl-shop .sl-policy-message {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(18px, 3vw, 38px);
+  max-width: 1000px;
+  margin-block-start: clamp(33px, 5vw, 62px);
+  padding-block: 4px 7px;
+}
+.sl-shop .sl-policy-rule {
+  flex: none;
+  width: 3px;
+  min-height: 94px;
+  border-radius: 5px;
+  background: var(--sl-accent);
+  opacity: 0.82;
+}
+.sl-shop .sl-policy-overline {
+  margin-block-end: 16px;
+  color: var(--sl-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: calc(0.18em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-policy-text {
+  max-width: 780px;
+  font-size: clamp(18px, 2.1vw, 25px);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-policy-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 21px;
+  margin-block-start: clamp(35px, 5vw, 61px);
+  padding-block-start: 23px;
+  border-block-start: 1px solid var(--sl-line);
+  color: var(--sl-muted);
+  font-size: 13px;
+}
+
+/* Testimonials */
+.sl-shop .sl-testimonials {
+  overflow: hidden;
+  background: var(--sl-panel);
+}
+.sl-shop .sl-testimonials-intro {
+  max-width: 650px;
+  margin-block-end: 42px;
+  text-align: center;
+}
+.sl-shop .sl-testimonials-intro .sl-muted {
+  margin-block-start: 16px;
+}
+.sl-shop .sl-quote-row {
+  justify-content: safe center;
+  gap: 18px;
+  scroll-padding-inline: 20px;
+  padding-inline: 20px;
+}
+.sl-shop .sl-testimonials-note {
+  margin-block-start: 18px;
+  padding-inline: 20px;
+  color: var(--sl-muted);
+  font-size: calc(10px + var(--sl-caption-boost));
+  text-align: center;
+}
+.sl-shop .sl-quote {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 27px;
+  border: 1px solid var(--sl-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--sl-surface) 60%, var(--sl-bg));
+}
+/* A touch darker than the surface its muted colour was checked against, so the small date takes the full ink. */
+.sl-shop li:nth-child(even) > .sl-quote {
+  --sl-muted: var(--sl-fg);
+  background: color-mix(in srgb, var(--sl-surface) 96%, var(--sl-accent));
+}
+.sl-shop .sl-quote-mark {
+  color: var(--sl-accent);
+  font-family: Georgia, serif;
+  font-size: 48px;
+  line-height: 0.7;
+}
+.sl-shop .sl-quote blockquote {
+  margin-block: 12px auto;
+  font-family: var(--sl-heading-font);
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.36;
+  letter-spacing: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-quote figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block-start: 16px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.sl-shop .sl-quote time {
+  flex: none;
+  color: var(--sl-muted);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 500;
+}
+/* On the home strip every card is the same size; a long message is clipped, and the About page shows it in full. */
+.sl-shop .sl-quote-row .sl-quote {
+  width: clamp(252px, 28vw, 365px);
+  height: 253px;
+}
+.sl-shop .sl-quote-row blockquote {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* Feedback */
+.sl-shop .sl-feedback {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  align-items: start;
+  gap: clamp(30px, 6vw, 90px);
+}
+.sl-shop .sl-feedback .sl-display {
+  max-width: 490px;
+  text-wrap: balance;
+}
+.sl-shop .sl-feedback-text {
+  max-width: 380px;
+  margin-block: 16px;
+}
+.sl-shop .sl-form-card {
+  padding: clamp(24px, 3vw, 42px);
+  border: 1px solid var(--sl-line);
+  border-radius: 17px;
+  background: var(--sl-panel);
+  box-shadow: 0 15px 50px #6b25460a;
+}
+.sl-shop .sl-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 19px;
+}
+.sl-shop .sl-form > label {
+  gap: 8px;
+  width: 100%;
+}
+.sl-shop .sl-form > label > span:first-child {
+  font-size: 12px;
+  font-weight: 800;
+}
+.sl-shop .sl-form :is(input:not([type="checkbox"]), textarea) {
+  padding: 15px 16px;
+  border-color: var(--sl-line);
+  border-radius: 8px;
+  background: var(--sl-panel);
+  font-size: 14px;
+  line-height: normal;
+}
+.sl-shop .sl-form textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+.sl-shop .sl-form .sl-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.sl-shop .sl-consent input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin-block-start: 2px;
+  accent-color: var(--sl-accent);
+}
+.sl-shop .sl-form .sl-consent > span:first-child {
+  font-weight: inherit;
+}
+.sl-shop .sl-submit {
+  min-height: 0;
+  gap: 2px;
+  padding: 15px 24px;
+  border: 1px solid var(--sl-accent);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 18px;
+}
+
+/* The band, in the approved design's newsletter position */
+.sl-shop .sl-band {
+  position: relative;
+  overflow: hidden;
+  padding: 90px 20px 92px;
+  background: var(--sl-band);
+  color: var(--sl-band-ink);
+  text-align: center;
+}
+.sl-shop .sl-band::before {
+  content: "";
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  width: 500px;
+  height: 500px;
+  border: 1px solid color-mix(in srgb, var(--sl-band-ink) 7%, transparent);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.sl-shop .sl-band-inner {
+  position: relative;
+  max-width: 650px;
+  margin-inline: auto;
+}
+.sl-shop .sl-band-title {
+  font-size: clamp(36px, 5vw, 66px);
+}
+.sl-shop .sl-band-text {
+  max-width: 460px;
+  margin: 18px auto 27px;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+.sl-shop .sl-band-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 485px;
+  margin-inline: auto;
+}
+.sl-shop .sl-band-link {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 10px 22px;
+  border: 1px solid var(--sl-band-ink);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  transition: transform 0.2s;
+}
+.sl-shop .sl-band-link:hover {
+  transform: translateY(-2px);
+}
+.sl-shop .sl-band-link[data-solid="true"] {
+  background: var(--sl-band-ink);
+  color: var(--sl-band);
+}
+
+/* Contact */
+.sl-shop .sl-contact {
+  background: var(--sl-panel);
+}
+.sl-shop .sl-contact-head {
+  max-width: 500px;
+  margin-inline: auto;
+  text-align: center;
+}
+.sl-shop .sl-contact-head .sl-muted {
+  margin-block: 16px 0;
+}
+.sl-shop .sl-contact-grid {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 14px;
+  margin-block-start: 38px;
+}
+.sl-shop .sl-contact-grid > li {
+  display: flex;
+}
+.sl-shop .sl-contact-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 160px;
+  padding: 31px 18px;
+  border: 1px solid var(--sl-line);
+  border-radius: 14px;
+  background: var(--sl-bg);
+  text-align: center;
+}
+.sl-shop a.sl-contact-card:hover {
+  box-shadow: 0 12px 30px #5524390d;
+}
+.sl-shop .sl-contact-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 47px;
+  height: 47px;
+  border-radius: 50%;
+  background: var(--sl-line);
+  color: var(--sl-accent);
+}
+.sl-shop .sl-contact-card b {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+/* One row above 700px as in the design, with a gap so the two words don't run together. */
+.sl-shop .sl-contact-card small {
+  margin-inline-start: 6px;
+  color: var(--sl-muted);
+  font-size: 11px;
+}
+
+/* Footer */
+.sl-shop .sl-footer {
+  padding: 65px clamp(20px, 5vw, 72px) 26px;
+  background: var(--sl-surface);
+  text-align: center;
+}
+.sl-shop .sl-footer-name {
+  font-family: var(--sl-heading-font);
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: calc(0.05em * var(--sl-track));
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-footer-tag {
+  margin-block-start: 6px;
+  color: var(--sl-muted);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 800;
+  letter-spacing: calc(0.2em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 25px;
+  margin-block: 26px 43px;
+  font-size: 13px;
+}
+/* The rows are 17px of text 14px apart; this makes each link a 24px target without moving them. */
+.sl-shop .sl-footer-links a {
+  position: relative;
+}
+.sl-shop .sl-footer-links a::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
+}
+.sl-shop .sl-footer-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sl-shop .sl-legal {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-block-start: 19px;
+  border-block-start: 1px solid var(--sl-line);
+  color: var(--sl-muted);
+  font-size: 11px;
+}
+.sl-shop .sl-legal a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Below this the text links would push a shop's real name into a tablet's truncation; the drawer holds them. */
+@media (max-width: 899px) {
+  .sl-shop .sl-nav-links {
+    display: none;
+  }
+  .sl-shop .sl-track {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    min-height: 38px;
+    padding-inline: 8px;
+    border: 1px solid var(--sl-line);
+    border-radius: 28px;
+    background: var(--sl-panel);
+    color: var(--sl-fg);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: calc(0.005em * var(--sl-track));
+  }
+  .sl-shop header[data-top="true"] .sl-track {
+    backdrop-filter: blur(5px);
+  }
+  .sl-shop .sl-track[aria-current="page"] {
+    border-color: var(--sl-accent);
+    background: var(--sl-accent);
+    color: var(--sl-accent-ink);
+  }
+}
+
+@media (max-width: 700px) {
+  .sl-shop .sl-nav {
+    height: 63px;
+    padding-inline: 12px;
+  }
+  .sl-shop .sl-header[data-top="true"] .sl-nav {
+    height: 75px;
+  }
+  .sl-shop .sl-nav-edge {
+    gap: 5px;
+  }
+  .sl-shop .sl-nav-btn {
+    width: 39px;
+    height: 39px;
+  }
+  .sl-shop .sl-nav-btn::after {
+    inset: -2.5px;
+  }
+  /* 208px: the two sides of the header. The name shrinks only as far as its length needs. */
+  .sl-shop .sl-brand-name {
+    font-size: max(13px, min(23px, calc((100vw - 208px) / var(--sl-brand-chars) / 0.58)));
+    letter-spacing: calc(0.048em * var(--sl-track));
+  }
+  .sl-shop .sl-header[data-top="true"] .sl-brand-name {
+    font-size: max(13px, min(25px, calc((100vw - 208px) / var(--sl-brand-chars) / 0.58)));
+  }
+  .sl-shop .sl-brand-tag {
+    margin-block-start: 3px;
+    letter-spacing: calc(0.15em * var(--sl-track));
+  }
+  .sl-shop .sl-header[data-top="true"] .sl-brand-tag {
+    font-size: calc(7px + var(--sl-caption-boost));
+  }
+
+  .sl-shop .sl-hero {
+    height: 92svh;
+    min-height: 620px;
+  }
+  .sl-shop .sl-hero-scrim {
+    background: linear-gradient(180deg, rgb(29 11 27 / 0.62), transparent 26%, rgb(26 12 30 / 0.15) 41%, rgb(35 9 26 / 0.78) 100%);
+  }
+  .sl-shop .sl-hero-copy {
+    bottom: 113px;
+    inset-inline: 25px 26px;
+  }
+  .sl-shop .sl-hero-title {
+    max-width: 425px;
+    font-size: clamp(41px, 10vw, 62px);
+  }
+  .sl-shop .sl-hero-body {
+    font-size: 14px;
+  }
+  .sl-shop .sl-hero-controls {
+    inset-inline: 25px;
+    bottom: 31px;
+  }
+
+  .sl-shop .sl-section {
+    padding-block: 72px;
+  }
+  .sl-shop .sl-display {
+    font-size: 36px;
+  }
+  .sl-shop .sl-categories {
+    padding-block-start: 62px;
+  }
+  .sl-shop .sl-category-row {
+    gap: 6px;
+  }
+  .sl-shop .sl-category-row > li {
+    flex-basis: calc((100% - 12px) / 3);
+  }
+  .sl-shop .sl-category {
+    gap: 12px;
+  }
+  .sl-shop .sl-orb {
+    width: clamp(80px, 23vw, 123px);
+  }
+  .sl-shop .sl-category-name {
+    font-size: 12px;
+  }
+  .sl-shop .sl-tile-grid {
+    gap: 12px;
+  }
+  .sl-shop .sl-tile-info {
+    padding-block-start: 9px;
+  }
+  .sl-shop .sl-story {
+    padding: 74px 24px 80px;
+  }
+  .sl-shop .sl-story-title {
+    font-size: 40px;
+  }
+  .sl-shop .sl-policy {
+    padding-block: 76px;
+  }
+  .sl-shop .sl-policy-intro {
+    font-size: 14px;
+  }
+  .sl-shop .sl-policy-message {
+    gap: 17px;
+    margin-block-start: 29px;
+  }
+  .sl-shop .sl-policy-text {
+    font-size: 18px;
+    line-height: 1.75;
+  }
+  .sl-shop .sl-policy-contact {
+    margin-block-start: 34px;
+  }
+  .sl-shop .sl-quote {
+    padding: 22px;
+  }
+  .sl-shop .sl-quote blockquote {
+    font-size: 21px;
+  }
+  .sl-shop .sl-quote-row .sl-quote {
+    width: 260px;
+    height: 235px;
+  }
+  .sl-shop .sl-quote-row blockquote {
+    -webkit-line-clamp: 4;
+  }
+  .sl-shop .sl-feedback {
+    display: block;
+  }
+  .sl-shop .sl-feedback > div:first-child {
+    margin-block-end: 27px;
+  }
+  .sl-shop .sl-band {
+    padding: 78px 22px;
+  }
+  .sl-shop .sl-contact-grid {
+    grid-auto-flow: row;
+    gap: 11px;
+    margin-block-start: 25px;
+  }
+  .sl-shop .sl-contact-card {
+    flex-direction: row;
+    min-height: 83px;
+    padding: 15px 18px;
+    text-align: start;
+  }
+  .sl-shop .sl-contact-card small {
+    display: block;
+    margin-block-start: 4px;
+    margin-inline-start: 0;
+  }
+  .sl-shop .sl-contact-icon {
+    width: 43px;
+    height: 43px;
+  }
+  .sl-shop .sl-footer {
+    padding-block-start: 55px;
+  }
+  .sl-shop .sl-legal {
+    display: block;
+    line-height: 2;
+  }
+  .sl-shop .sl-legal > * {
+    display: block;
+  }
+}
+/* A phone too short for the 620px hero: its end clears the WhatsApp button instead of running under it. */
+@media (max-width: 700px) and (max-height: 660px) {
+  .sl-shop .sl-hero {
+    height: calc(100svh - 47px);
+    min-height: 520px;
+  }
+}
+
+/*
+ * The testimonial marquee: two identical lists side by side, moved by one list's
+ * width. Each list ends in its own gap, so the seam matches. Under reduced motion
+ * the first list stays a plain sl-scroll-row and the copy is gone.
+ */
+@keyframes sl-marquee {
+  to {
+    transform: translateX(var(--sl-marquee-to));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sl-shop .sl-marquee-track > [aria-hidden] {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sl-shop .sl-marquee {
+    overflow: hidden;
+    mask-image: linear-gradient(to right, #0000, #000 5%, #000 95%, #0000);
+    max-width: 1900px;
+    margin-inline: auto;
+  }
+  .sl-shop .sl-marquee-track {
+    --sl-marquee-to: -50%;
+    display: flex;
+    width: max-content;
+    animation: sl-marquee calc(var(--sl-marquee-cards) * 7.75s) linear infinite;
+  }
+  .sl-shop[dir="rtl"] .sl-marquee-track {
+    --sl-marquee-to: 50%;
+  }
+  .sl-shop .sl-marquee-track > ul {
+    overflow: visible;
+    padding-inline: 0 18px;
+  }
+  .sl-shop .sl-marquee:hover .sl-marquee-track,
+  .sl-shop .sl-marquee:focus-within .sl-marquee-track {
+    animation-play-state: paused;
+  }
+}
+
+/*
+ * The inner pages (catalogue, product, wishlist, bag, checkout), ported from the
+ * same design with its 750px and 700px breakpoints. Its header is fixed and its
+ * top padding includes it; ours is sticky, so the 68px comes off.
+ */
+.sl-shop:has(> .sl-page) .sl-header {
+  box-shadow: none;
+}
+.sl-shop .sl-page {
+  width: 100%;
+  max-width: 1210px;
+  min-height: 66vh;
+  margin-inline: auto;
+  padding: calc(clamp(102px, 11vw, 135px) - 68px) clamp(17px, 5vw, 60px) 90px;
+}
+.sl-shop .sl-page-eyebrow {
+  margin-block-end: 16px;
+  color: var(--sl-accent);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 800;
+  letter-spacing: calc(0.2em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-page-title {
+  margin-block-end: 13px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(33px, 5vw, 56px);
+  font-weight: var(--sl-heading-weight);
+  line-height: 1.1;
+  letter-spacing: calc(-0.04em * var(--sl-track));
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-dot {
+  color: var(--sl-accent);
+}
+.sl-shop .sl-page-lead {
+  margin-block-end: 28px;
+  color: var(--sl-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.sl-shop .sl-section-title {
+  margin-block-end: 13px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(25px, 3.4vw, 37px);
+  font-weight: var(--sl-heading-weight);
+  line-height: 1.25;
+  letter-spacing: calc(-0.03em * var(--sl-track));
+}
+.sl-shop .sl-empty {
+  padding: 50px 4px;
+  border-block-start: 1px solid var(--sl-line);
+}
+.sl-shop .sl-empty h2 {
+  margin-block-end: 13px;
+  font-family: var(--sl-heading-font);
+  font-size: 25px;
+  font-weight: var(--sl-heading-weight);
+}
+.sl-shop .sl-empty p {
+  max-width: 420px;
+  margin-block-end: 13px;
+  color: var(--sl-muted);
+  font-size: 13px;
+}
+.sl-shop .sl-text-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-block-start: 10px;
+  padding-block-end: 5px;
+  border-block-end: 1px solid var(--sl-accent);
+  color: var(--sl-accent);
+  font-size: 13px;
+  font-weight: 800;
+}
+.sl-shop .sl-reset-filters {
+  display: inline-block;
+  margin-block-start: 15px;
+  padding: 10px 17px;
+  border-radius: 20px;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+}
+
+/* Catalogue tools */
+.sl-shop .sl-shop-tools {
+  max-width: 690px;
+  margin: 30px auto 20px;
+}
+.sl-shop .sl-search {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: 580px;
+  margin-block-end: 8px;
+  padding: 5px 0 12px;
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-search:focus-within {
+  border-color: var(--sl-accent);
+}
+.sl-shop .sl-search svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--sl-muted);
+}
+.sl-shop .sl-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 15px 16px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 800;
+  outline: 0;
+}
+.sl-shop .sl-search input::placeholder {
+  color: var(--sl-muted);
+}
+.sl-shop .sl-filter-row {
+  display: flex;
+  gap: 8px;
+  padding: 20px 0 15px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sl-shop .sl-filter-row::-webkit-scrollbar {
+  display: none;
+}
+.sl-shop .sl-filter-row > li {
+  flex: none;
+}
+.sl-shop .sl-pill {
+  position: relative;
+  display: block;
+  padding: 10px 16px;
+  border: 1px solid var(--sl-line);
+  border-radius: 100px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.sl-shop .sl-pill::after {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+.sl-shop .sl-pill[aria-current] {
+  border-color: var(--sl-accent);
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+}
+.sl-shop .sl-price {
+  margin: 15px 0 17px;
+}
+.sl-shop .sl-price-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 50px;
+  padding: 12px 18px;
+  border: 1px solid var(--sl-line);
+  border-radius: 24px;
+  background: var(--sl-panel);
+  color: var(--sl-fg);
+  font-size: 13px;
+  font-weight: 750;
+}
+.sl-shop .sl-price-trigger[data-active] {
+  border-color: var(--sl-accent);
+  color: var(--sl-accent);
+}
+.sl-shop .sl-price-chevron {
+  margin-inline-start: 5px;
+  font-size: 20px;
+  line-height: 1;
+}
+.sl-shop .sl-price-panel {
+  margin-block-start: 10px;
+  padding: 23px;
+  border: 1px solid var(--sl-line);
+  border-radius: 18px;
+  background: var(--sl-panel);
+  box-shadow: 0 8px 28px #4a20350c;
+}
+.sl-shop .sl-price-panel h2 {
+  margin-block-start: 1px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.sl-shop .sl-price-panel > p:not([role]) {
+  margin: 6px 0 16px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.sl-shop .sl-price-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+}
+.sl-shop .sl-price-inputs label {
+  gap: 8px;
+  margin-block-end: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: normal;
+}
+.sl-shop .sl-price-inputs label > span {
+  font-size: 12px;
+  line-height: normal;
+}
+.sl-shop .sl-price-inputs input {
+  min-width: 0;
+  min-height: 0;
+  line-height: normal;
+  padding: 12px 14px;
+  border: 1px solid var(--sl-line);
+  border-radius: 12px;
+  background: var(--sl-panel);
+  font-size: 14px;
+  font-weight: 700;
+}
+.sl-shop .sl-price-error {
+  margin-block-start: 10px;
+  color: var(--sl-danger);
+  font-size: 12px;
+}
+.sl-shop .sl-price-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-block-start: 15px;
+}
+.sl-shop .sl-price-actions button {
+  position: relative;
+  min-height: 0;
+  padding: 11px 19px;
+  border: 1px solid var(--sl-accent);
+  border-radius: 26px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: normal;
+}
+/* The design's buttons are 39px on phones; this keeps the 44px target. */
+.sl-shop .sl-price-actions button::after {
+  content: "";
+  position: absolute;
+  inset: -3px 0;
+}
+.sl-shop .sl-price-actions button:first-child {
+  border: 1px solid var(--sl-line);
+  background: var(--sl-panel);
+}
+.sl-shop .sl-result-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block: 4px 15px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-result-label a {
+  position: relative;
+  flex: none;
+  color: var(--sl-accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sl-shop .sl-result-label a::after {
+  content: "";
+  position: absolute;
+  inset: -14px -8px;
+}
+
+/* Product cards */
+.sl-shop .sl-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(13px, 2.4vw, 23px);
+  max-width: 690px;
+  margin-inline: auto;
+}
+.sl-shop .sl-card-grid > li {
+  min-width: 0;
+}
+.sl-shop .sl-card-grid-saved {
+  max-width: 800px;
+  margin-inline: 0;
+}
+.sl-shop .sl-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.sl-shop .sl-card-photo {
+  position: relative;
+  aspect-ratio: 1 / 1.04;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(140deg, var(--sl-surface), var(--sl-line));
+}
+.sl-shop .sl-card-grid-tall .sl-card-photo {
+  aspect-ratio: 4 / 5;
+  min-height: 160px;
+}
+.sl-shop .sl-card-photo img {
+  transition: transform 0.5s;
+}
+.sl-shop .sl-card-photo:hover img {
+  transform: scale(1.025);
+}
+/* The button is 44px for touch around a 34px circle, so the circle lands 9px from the corner. */
+.sl-shop .sl-card-heart {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+}
+.sl-shop .sl-card-heart button > span {
+  width: 34px;
+  height: 34px;
+}
+.sl-shop .sl-card-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 12px 2px 8px;
+}
+.sl-shop .sl-card-type {
+  color: var(--sl-accent);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 700;
+  letter-spacing: calc(0.08em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-card-name {
+  margin-block: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.sl-shop .sl-card-name a:hover {
+  text-decoration: underline;
+}
+.sl-shop .sl-card-desc {
+  overflow: hidden;
+  color: var(--sl-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sl-shop .sl-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-block-start: auto;
+  padding-block-start: 8px;
+  font-size: 15px;
+}
+
+/* Product page */
+.sl-shop .sl-crumbs {
+  margin: -18px 0 22px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-crumbs a {
+  display: inline-block;
+  margin-block: -14px;
+  padding-block: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.sl-shop .sl-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.88fr);
+  gap: clamp(30px, 5vw, 85px);
+  max-width: 1130px;
+  margin-inline: auto;
+}
+/* A grid, as in the design: a portrait photo takes the full width and its foot is cropped by the frame. */
+.sl-shop .sl-detail-photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: min(600px, 55vw);
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--sl-surface);
+  touch-action: pan-y;
+}
+.sl-shop .sl-gallery-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block-start: 11px;
+  color: var(--sl-muted);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 700;
+  letter-spacing: calc(0.1em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-detail-title {
+  margin-block-end: 12px;
+  font-size: clamp(34px, 3.8vw, 51px);
+}
+.sl-shop .sl-detail-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-detail-rating a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sl-shop .sl-stars {
+  color: #d48c3e;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.sl-shop .sl-detail-price {
+  margin: 20px 0 12px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.sl-shop .sl-detail-short {
+  margin-block-end: 22px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sl-shop .sl-option-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block-start: 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.sl-shop .sl-option-line small {
+  color: var(--sl-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.sl-shop .sl-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 25px;
+}
+.sl-shop .sl-variant {
+  min-width: 125px;
+  padding: 9px 15px;
+  border: 1px solid var(--sl-line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: start;
+}
+.sl-shop .sl-variant[aria-pressed="true"] {
+  border-color: var(--sl-accent);
+  background: var(--sl-surface);
+}
+.sl-shop .sl-variant:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.sl-shop .sl-variant small {
+  display: block;
+  padding-block-start: 3px;
+  color: var(--sl-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.sl-shop .sl-qty {
+  gap: 20px;
+  padding: 4px;
+  border-color: var(--sl-line);
+  border-radius: 30px;
+  background: transparent;
+}
+.sl-shop .sl-qty button {
+  width: 30px;
+  height: 30px;
+  background: var(--sl-surface-deep);
+}
+.sl-shop .sl-qty button::after {
+  inset: -7px;
+}
+.sl-shop .sl-qty svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 3.4;
+}
+.sl-shop .sl-qty > span {
+  min-width: 15px;
+  font-size: 13px;
+  font-weight: 700;
+}
+/* The minus resting at 1 is the normal state, not a warning; running out of room is. */
+.sl-shop :is(.sl-qty, .sl-cart-qty) button:first-child:disabled {
+  opacity: 1;
+}
+.sl-shop .sl-in-bag {
+  margin-block-start: 10px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-custom-note {
+  margin-block-start: 22px;
+}
+.sl-shop .sl-custom-note h2,
+.sl-shop .sl-custom-note label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.sl-shop .sl-custom-note > p {
+  margin: 7px 0 10px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.sl-shop .sl-optional {
+  color: var(--sl-muted);
+  font-weight: 400;
+}
+.sl-shop .sl-custom-note textarea {
+  display: block;
+  min-height: 42px;
+  padding: 10px 2px;
+  border-width: 0 0 1px;
+  border-color: var(--sl-line);
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+}
+.sl-shop .sl-detail-actions {
+  display: flex;
+  gap: 9px;
+  margin: 25px 0 29px;
+}
+.sl-shop .sl-action {
+  flex: 1;
+  gap: 15px;
+  min-width: 0;
+  min-height: 49px;
+  padding: 12px 17px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.sl-shop .sl-action-text {
+  gap: 2px;
+}
+.sl-shop .sl-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline-start: 20px;
+  border-radius: 13px;
+  background: var(--sl-fg);
+  box-shadow: 0 14px 50px #22131c33;
+  color: var(--sl-bg);
+  font-size: 13px;
+  pointer-events: auto;
+}
+.sl-shop .sl-flash {
+  position: fixed;
+  z-index: 40;
+  bottom: calc(25px + env(safe-area-inset-bottom));
+  left: 50%;
+  min-width: 200px;
+  max-width: calc(100vw - 28px);
+  padding: 13px 20px;
+  border-radius: 13px;
+  background: var(--sl-fg);
+  box-shadow: 0 14px 50px #22131c33;
+  color: var(--sl-bg);
+  font-size: 13px;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 20px);
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
+  pointer-events: none;
+}
+.sl-shop .sl-flash[data-shown="true"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.sl-shop .sl-accordions {
+  border-block-start: 1px solid var(--sl-line);
+}
+.sl-shop .sl-accordions details {
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-accordions summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-block: 21px;
+  font-size: 15px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.sl-shop .sl-accordions summary::-webkit-details-marker {
+  display: none;
+}
+.sl-shop .sl-plus {
+  position: relative;
+  flex: none;
+  width: 17px;
+  height: 17px;
+}
+.sl-shop .sl-plus::before,
+.sl-shop .sl-plus::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-start: 1px;
+  width: 15px;
+  height: 1px;
+  background: var(--sl-fg);
+  transition: transform 0.2s;
+}
+.sl-shop .sl-plus::after {
+  transform: rotate(90deg);
+}
+.sl-shop details[open] .sl-plus::after {
+  transform: rotate(0);
+}
+.sl-shop .sl-accordion-body {
+  max-width: 530px;
+  padding-block-end: 19px;
+  padding-inline-end: 23px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.sl-shop .sl-accordion-body p {
+  font-size: 13px;
+}
+.sl-shop .sl-accordion-body dt {
+  display: inline;
+  color: var(--sl-fg);
+  font-weight: 600;
+}
+.sl-shop .sl-accordion-body dt::after {
+  content: ": ";
+}
+.sl-shop .sl-accordion-body dd {
+  display: inline;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-below-detail {
+  max-width: 1130px;
+  margin: 70px auto 0;
+  padding-block-start: 32px;
+  border-block-start: 1px solid var(--sl-line);
+  scroll-margin-block-start: 85px;
+}
+.sl-shop .sl-below-note {
+  margin-block-end: 13px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.sl-shop .sl-review-lines {
+  max-width: 800px;
+}
+.sl-shop .sl-review-lines > li {
+  padding-block: 19px;
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-review-lines .sl-stars {
+  display: block;
+  margin-block-end: 10px;
+}
+.sl-shop .sl-review-lines p {
+  margin-block-end: 8px;
+  font-size: 13px;
+  font-style: italic;
+}
+.sl-shop:lang(ar) .sl-review-lines p {
+  font-style: normal;
+}
+.sl-shop .sl-review-lines small {
+  color: var(--sl-muted);
+  font-size: 11px;
+}
+.sl-shop .sl-related .sl-card-grid {
+  max-width: 430px;
+  margin: 20px 0;
+}
+
+/* Bag and checkout */
+.sl-shop .sl-cart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
+  gap: 45px;
+  align-items: start;
+}
+.sl-shop .sl-cart-line {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+  padding-block: 20px;
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-cart-thumb {
+  display: block;
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--sl-surface);
+}
+.sl-shop .sl-cart-line h3 {
+  margin-block: 4px 6px;
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-cart-meta {
+  margin-block: 4px 10px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-cart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.sl-shop .sl-cart-qty {
+  gap: 14px;
+}
+.sl-shop .sl-cart-qty button {
+  width: 18px;
+  height: 26px;
+  border: 0;
+  background: none;
+}
+.sl-shop .sl-cart-qty button::after {
+  inset: -9px -7px;
+}
+.sl-shop .sl-cart-qty svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+}
+.sl-shop .sl-cart-qty > span {
+  min-width: 10px;
+  font-size: 16px;
+}
+.sl-shop .sl-cart-remove {
+  position: relative;
+  padding: 4px;
+  font-size: 18px;
+  text-decoration: underline;
+}
+.sl-shop .sl-cart-remove::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
+}
+.sl-shop .sl-cart-cost {
+  font-size: 14px;
+  font-weight: 700;
+}
+.sl-shop .sl-cart-summary {
+  padding: 26px;
+  border-radius: 7px;
+  background: var(--sl-surface);
+}
+@media (min-width: 751px) {
+  .sl-shop .sl-cart-summary {
+    position: sticky;
+    inset-block-start: 88px;
+  }
+}
+.sl-shop .sl-cart-summary h2 {
+  margin-block-end: 22px;
+  font-family: var(--sl-heading-font);
+  font-size: 25px;
+  font-weight: var(--sl-heading-weight);
+}
+.sl-shop .sl-totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block: 9px;
+  font-size: 13px;
+}
+.sl-shop .sl-totals-final {
+  margin-block-start: 9px;
+  padding-block-start: 20px;
+  border-block-start: 1px solid color-mix(in srgb, var(--sl-line) 85%, var(--sl-accent));
+  font-size: 17px;
+  font-weight: 800;
+}
+.sl-shop .sl-cart-summary .sl-action {
+  margin-block-start: 26px;
+}
+.sl-shop .sl-summary-note {
+  margin-block: 14px 11px;
+  color: var(--sl-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.sl-shop .sl-subback {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: max-content;
+  margin-block: -30px 38px;
+  color: var(--sl-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.sl-shop .sl-subback::after {
+  content: "";
+  position: absolute;
+  inset: -14px 0;
+}
+.sl-shop .sl-checkout-form .sl-section-title {
+  margin-block-start: 28px;
+}
+.sl-shop .sl-checkout-form .sl-section-title:first-child {
+  margin-block-start: 3px;
+}
+.sl-shop .sl-checkout-form label {
+  gap: 5px;
+  margin-block: 18px;
+  font-size: 12px;
+  font-weight: 700;
+}
+/* Margins don't collapse inside a grid, so the side-by-side fields keep the same rhythm this way. */
+.sl-shop .sl-checkout-form > .grid {
+  row-gap: 18px;
+  margin-block: 18px;
+}
+.sl-shop .sl-checkout-form > .grid > label {
+  margin-block: 0;
+}
+.sl-shop .sl-checkout-form label > span {
+  font-size: 12px;
+}
+.sl-shop .sl-checkout-form label > span:not(:first-child) {
+  font-weight: 400;
+}
+.sl-shop .sl-checkout-form :is(input, select, textarea) {
+  min-height: 48px;
+  padding: 13px 14px;
+  border: 1px solid var(--sl-line-warm);
+  border-radius: 8px;
+  background: var(--sl-panel);
+  font-size: 14px;
+  font-weight: 700;
+}
+/* Drawn from the text colour, so the arrow follows the shop's theme and the page's side. */
+.sl-shop .sl-checkout-form select {
+  appearance: none;
+  padding-inline-end: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-repeat: no-repeat;
+  background-size: 5px 5px;
+  background-position:
+    right 19px center,
+    right 14px center;
+  font-weight: 400;
+}
+.sl-shop[dir="rtl"] .sl-checkout-form select {
+  background-position:
+    left 14px center,
+    left 19px center;
+}
+/* These fields set their own border, so the states the shared control gives have to be restated. */
+.sl-shop :is(.sl-checkout-form, .sl-price-inputs, .sl-custom-note) :is(input, select, textarea):focus-visible {
+  border-color: var(--sl-accent);
+}
+.sl-shop :is(.sl-checkout-form, .sl-price-inputs, .sl-custom-note) :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--sl-danger);
+}
+.sl-shop .sl-checkout-form :is(input, select) {
+  height: 48px;
+}
+.sl-shop .sl-checkout-form textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+.sl-shop .sl-checkout-help {
+  margin-block-end: 14px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 750px) {
+  .sl-shop .sl-page {
+    padding: 31px 17px 64px;
+  }
+  .sl-shop .sl-page-title {
+    font-size: 36px;
+  }
+  .sl-shop .sl-page-eyebrow {
+    font-size: calc(9px + var(--sl-caption-boost));
+  }
+  .sl-shop .sl-card-grid {
+    gap: 13px;
+  }
+  .sl-shop .sl-detail {
+    display: block;
+  }
+  .sl-shop .sl-detail-photo {
+    height: auto;
+    aspect-ratio: 1 / 0.91;
+    border-radius: 4px;
+  }
+  .sl-shop .sl-detail-content {
+    padding-block-start: 29px;
+  }
+  .sl-shop .sl-detail-title {
+    font-size: 35px;
+  }
+  .sl-shop .sl-detail-price {
+    font-size: 25px;
+  }
+  .sl-shop .sl-detail-actions {
+    margin-block-start: 21px;
+  }
+  .sl-shop .sl-below-detail {
+    margin-block-start: 47px;
+  }
+  .sl-shop .sl-accordions {
+    margin-block-start: 10px;
+  }
+  .sl-shop .sl-accordions summary {
+    font-size: 14px;
+  }
+  .sl-shop .sl-cart-layout {
+    display: block;
+  }
+  .sl-shop .sl-cart-summary {
+    margin-block-start: 26px;
+  }
+  .sl-shop .sl-cart-line {
+    grid-template-columns: 76px minmax(0, 1fr) auto;
+    gap: 11px;
+    padding-block: 16px;
+  }
+  .sl-shop .sl-cart-thumb {
+    width: 76px;
+    height: 76px;
+  }
+  .sl-shop .sl-cart-cost {
+    font-size: 12px;
+  }
+}
+@media (max-width: 700px) {
+  .sl-shop .sl-price-inputs {
+    gap: 10px;
+  }
+  .sl-shop .sl-price-panel {
+    padding: 18px;
+  }
+  .sl-shop .sl-price-actions button {
+    padding: 11px 16px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 355px) {
+  .sl-shop .sl-page {
+    padding-inline: 12px;
+  }
+  .sl-shop .sl-card-grid {
+    gap: 9px;
+  }
+  .sl-shop .sl-card-row {
+    font-size: 13px;
+  }
+  .sl-shop .sl-detail-actions {
+    gap: 6px;
+  }
+  .sl-shop .sl-action {
+    padding: 10px;
+  }
+}
+/*
+ * Order placed, tracking and rate order, ported from the same design with its 750, 650, 600
+ * and 550px breakpoints. The header is sticky here, so its height comes off the top padding.
+ */
+.sl-shop .sl-order-page {
+  max-width: 1120px;
+  padding-block-start: calc(clamp(105px, 13vw, 164px) - 68px);
+}
+/* This view shares the tracking page's URL, but it isn't the Track tab. */
+.sl-shop:has(> .sl-order-page) .sl-track[aria-current="page"] {
+  border-color: var(--sl-line);
+  background: var(--sl-panel);
+  color: var(--sl-fg);
+}
+.sl-shop .sl-order-success {
+  max-width: 790px;
+  margin: 0 auto 22px;
+  padding: 26px 19px;
+  border: 1px solid var(--sl-line-warm);
+  border-radius: 15px;
+  background: var(--sl-surface);
+  text-align: center;
+}
+.sl-shop .sl-order-check {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+  font-family: Georgia, serif;
+  font-size: 25px;
+}
+.sl-shop .sl-order-title {
+  margin-block-end: 9px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(29px, 5vw, 44px);
+  font-weight: var(--sl-display-weight);
+  line-height: 1.11;
+  letter-spacing: var(--sl-display-tracking);
+}
+.sl-shop .sl-order-intro {
+  max-width: 570px;
+  margin-inline: auto;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.sl-shop .sl-order-panel {
+  max-width: 790px;
+  margin: 24px auto 0;
+  padding: clamp(20px, 3vw, 35px);
+  border: 1px solid var(--sl-line);
+  border-radius: 15px;
+  background: var(--sl-panel);
+}
+.sl-shop .sl-order-panel h2 {
+  margin-block-end: 18px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(23px, 3vw, 31px);
+  font-weight: var(--sl-display-weight);
+  line-height: 1.2;
+}
+.sl-shop .sl-order-linkline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sl-shop .sl-order-linkline input {
+  flex: 1;
+  min-width: 0;
+  height: 45px;
+  padding: 15px 16px;
+  border: 1px solid color-mix(in srgb, var(--sl-line) 70%, var(--sl-ornament));
+  border-radius: 8px;
+  background: var(--sl-panel);
+  font-size: 12px;
+}
+.sl-shop .sl-order-linkline button {
+  height: 45px;
+  padding-inline: 16px;
+  border: 1px solid var(--sl-accent);
+  border-radius: 7px;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.sl-shop .sl-order-hint {
+  margin-block-start: 10px;
+  color: var(--sl-muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+.sl-shop .sl-order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-block-end: 24px;
+}
+.sl-shop .sl-order-head h2 {
+  margin: 0;
+}
+.sl-shop .sl-order-pill {
+  padding: 9px 12px;
+  border: 1px solid var(--sl-line-warm);
+  border-radius: 50px;
+  background: var(--sl-surface);
+  color: var(--sl-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: calc(0.02em * var(--sl-track));
+  white-space: nowrap;
+}
+.sl-shop .sl-progress {
+  display: grid;
+  margin: 18px 0 24px;
+  padding-block-end: 19px;
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-progress li {
+  position: relative;
+  min-width: 0;
+  padding-inline: 2px;
+  text-align: center;
+}
+.sl-shop .sl-progress li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 17px;
+  inset-inline-start: calc(50% + 18px);
+  width: calc(100% - 36px);
+  height: 1px;
+  background: var(--sl-line);
+}
+.sl-shop .sl-progress li > span {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  margin: 0 auto 10px;
+  border: 1px solid var(--sl-line);
+  border-radius: 50%;
+  background: var(--sl-panel);
+  color: var(--sl-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+.sl-shop .sl-progress li:not([data-state="upcoming"]) > span {
+  border-color: var(--sl-accent);
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+}
+.sl-shop .sl-progress b {
+  display: block;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.sl-shop .sl-progress small {
+  display: block;
+  margin-block-start: 5px;
+  color: var(--sl-muted);
+  font-size: 10px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-progress [data-state="current"] b {
+  color: var(--sl-accent);
+}
+.sl-shop .sl-order-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px 28px;
+}
+.sl-shop .sl-order-meta dt {
+  margin-block-end: 8px;
+  color: var(--sl-muted);
+  font-size: 11px;
+}
+.sl-shop .sl-order-meta dd {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.sl-shop .sl-review-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  max-width: 790px;
+  margin: 18px auto 0;
+  padding: 19px 22px;
+  border: 1px solid var(--sl-line);
+  border-radius: 14px;
+  background: var(--sl-surface);
+}
+.sl-shop .sl-review-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f8e6d4;
+  color: #a5693d;
+  font-size: 23px;
+}
+.sl-shop .sl-review-callout strong {
+  display: block;
+  margin-block-end: 5px;
+  font-family: var(--sl-heading-font);
+  font-size: 22px;
+  font-weight: var(--sl-heading-weight);
+}
+.sl-shop .sl-review-callout p {
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.sl-shop .sl-review-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 12px 18px;
+  border: 1px solid var(--sl-accent);
+  border-radius: 5px;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.sl-shop .sl-order-item {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding-block: 12px;
+}
+.sl-shop .sl-order-thumb {
+  display: block;
+  width: 50px;
+  height: 59px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.sl-shop .sl-order-item h3 {
+  margin-block-end: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-order-item small {
+  color: var(--sl-muted);
+  font-size: 11px;
+}
+.sl-shop .sl-order-item > b {
+  font-size: 13px;
+}
+.sl-shop .sl-order-item-note {
+  margin-block-start: 6px;
+  padding-inline-start: 8px;
+  border-inline-start: 2px solid var(--sl-accent);
+  color: var(--sl-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-order-breakdown {
+  margin-block-start: 17px;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--sl-line);
+}
+.sl-shop .sl-order-breakdown summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 1px;
+  color: var(--sl-accent);
+  font-size: 12px;
+  font-weight: 800;
+  list-style: none;
+  cursor: pointer;
+}
+.sl-shop .sl-order-breakdown summary::-webkit-details-marker {
+  display: none;
+}
+.sl-shop .sl-order-breakdown summary::after {
+  content: "+";
+  font-size: 20px;
+  font-weight: 400;
+}
+.sl-shop .sl-order-breakdown[open] summary::after {
+  content: "\2212";
+}
+.sl-shop .sl-order-breakdown .sl-totals-row {
+  font-size: 12px;
+}
+.sl-shop .sl-order-breakdown .sl-totals-final {
+  font-size: 14px;
+}
+.sl-shop .sl-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 790px;
+  margin: 22px auto 0;
+}
+.sl-shop .sl-order-actions > :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 19px;
+  border: 1px solid var(--sl-line-deep);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sl-fg);
+  font-size: 12px;
+  font-weight: 800;
+}
+.sl-shop .sl-order-actions > .sl-order-primary {
+  gap: 2px;
+  border-color: var(--sl-accent);
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+}
+/* WhatsApp's own green on its own pale ground, so it reads the same in any shop theme. */
+.sl-shop .sl-order-actions > .sl-order-whatsapp {
+  gap: 7px;
+  border-color: #a4c8b7;
+  background: #f6fcf8;
+  color: #176d4c;
+}
+.sl-shop .sl-order-note {
+  max-width: 790px;
+  margin: 25px auto 10px;
+  padding-block: 5px;
+  padding-inline-start: 18px;
+  border-inline-start: 2px solid var(--sl-accent);
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.75;
+}
+.sl-shop .sl-order-alert {
+  max-width: 500px;
+  margin-block-start: 18px;
+  padding: 13px 17px;
+  border-inline-start: 3px solid var(--sl-danger);
+  background: color-mix(in srgb, var(--sl-danger) 12%, var(--sl-bg));
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sl-shop .sl-track-page {
+  max-width: 1200px;
+}
+@media (min-width: 751px) {
+  /* Keeps the heading level with the aside as in the design, whose column runs longer here. */
+  .sl-shop .sl-track-top > div:first-child {
+    padding-block-end: 57px;
+  }
+}
+.sl-shop .sl-track-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(270px, 0.8fr);
+  align-items: center;
+  gap: clamp(30px, 6vw, 105px);
+  padding-block: 22px 35px;
+}
+.sl-shop .sl-track-title {
+  margin-block: 14px 16px;
+  font-size: clamp(46px, 5.1vw, 76px);
+  line-height: 1.08;
+}
+.sl-shop .sl-track-intro {
+  max-width: 550px;
+  color: var(--sl-muted);
+  font-size: 15px;
+  line-height: 1.8;
+}
+.sl-shop .sl-track-form {
+  max-width: 500px;
+  margin-block: 30px 8px;
+}
+.sl-shop .sl-track-form label {
+  display: block;
+  margin-block: 19px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.sl-shop .sl-track-form input {
+  display: block;
+  width: 100%;
+  min-height: 54px;
+  margin-block-start: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--sl-line-warm);
+  border-radius: 7px;
+  background: var(--sl-panel);
+  font-size: 15px;
+}
+/* The inputs stay dir="ltr" for digits; this keeps them on the reading side of an Arabic page. */
+.sl-shop[dir="rtl"] .sl-track-form input {
+  text-align: end;
+}
+.sl-shop .sl-track-form input:focus {
+  border-color: var(--sl-accent);
+  outline: 2px solid color-mix(in srgb, var(--sl-accent) 30%, transparent);
+  outline-offset: 1px;
+}
+.sl-shop .sl-track-submit {
+  min-height: 55px;
+  margin-block-start: 22px;
+}
+.sl-shop .sl-track-hint {
+  margin-block-start: 15px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.sl-shop .sl-track-aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 430px;
+  padding: clamp(32px, 4vw, 56px);
+  overflow: hidden;
+  background: var(--sl-surface-deep);
+}
+.sl-shop .sl-track-aside::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid var(--sl-line-deep);
+  pointer-events: none;
+}
+.sl-shop .sl-track-mark {
+  margin-block-end: 16px;
+  color: var(--sl-accent);
+  font: 400 43px Georgia, serif;
+}
+.sl-shop .sl-track-shop {
+  font-size: calc(11px + var(--sl-caption-boost));
+  font-weight: 800;
+  letter-spacing: calc(0.22em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-track-aside h2 {
+  margin-block: 19px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(31px, 3.1vw, 43px);
+  font-weight: var(--sl-display-weight);
+  line-height: 1.22;
+  letter-spacing: calc(-0.035em * var(--sl-track));
+}
+.sl-shop .sl-track-aside > p:not(.sl-track-shop) {
+  max-width: 340px;
+  margin-block: 14px;
+  color: var(--sl-muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.sl-shop .sl-track-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-block-start: 26px;
+  padding-block-start: 18px;
+  border-block-start: 1px solid var(--sl-line-warm);
+  color: var(--sl-accent);
+  font-size: 11px;
+}
+.sl-shop .sl-track-points b {
+  display: block;
+  margin-block-start: 5px;
+  color: var(--sl-fg);
+  font-size: 12px;
+}
+.sl-shop .sl-result {
+  margin-block: 35px 18px;
+  padding-block-start: 50px;
+  border-block-start: 1px solid var(--sl-line);
+  scroll-margin-top: 95px;
+}
+.sl-shop .sl-result-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.sl-shop .sl-result-head h2 {
+  margin-block: 13px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(28px, 3.3vw, 45px);
+  font-weight: var(--sl-display-weight);
+  letter-spacing: calc(-0.035em * var(--sl-track));
+}
+.sl-shop .sl-result-head p:not(.sl-page-eyebrow) {
+  color: var(--sl-muted);
+  font-size: 13px;
+}
+.sl-shop .sl-result-status {
+  padding: 11px 13px;
+  border: 1px solid var(--sl-line);
+  background: var(--sl-surface);
+  color: var(--sl-accent);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.sl-shop .sl-result-status > span {
+  margin-inline-end: 5px;
+}
+.sl-shop .sl-result-status-bad {
+  border-color: var(--sl-danger);
+  color: var(--sl-danger);
+}
+.sl-shop .sl-timeline {
+  max-width: 600px;
+  margin-block: 35px 25px;
+  padding-inline-start: 4px;
+}
+.sl-shop .sl-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 33px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 82px;
+}
+.sl-shop .sl-timeline li:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  inset-block: 27px 0;
+  inset-inline-start: 15px;
+  width: 1px;
+  background: var(--sl-line);
+}
+.sl-shop .sl-timeline li[data-state="done"]:not(:last-child)::before {
+  background: var(--sl-accent);
+}
+.sl-shop .sl-timeline li > span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+.sl-shop .sl-timeline li[data-state="current"] > span {
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--sl-accent) 16%, var(--sl-bg));
+  font-size: 12px;
+}
+.sl-shop .sl-timeline li[data-bad] > span {
+  background: var(--sl-danger);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--sl-danger) 16%, var(--sl-bg));
+  color: #fff;
+}
+.sl-shop .sl-timeline li[data-state="upcoming"] > span {
+  border: 1px solid var(--sl-line);
+  background: var(--sl-panel);
+}
+.sl-shop .sl-timeline strong {
+  display: block;
+  padding-block-start: 4px;
+  font-size: 14px;
+}
+.sl-shop .sl-timeline li[data-state="upcoming"] strong {
+  color: var(--sl-muted);
+}
+.sl-shop .sl-timeline p {
+  margin-block: 6px 21px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.sl-shop .sl-timeline b {
+  font-weight: 600;
+}
+.sl-shop .sl-result-meta {
+  margin-block-start: 23px;
+  padding-block-start: 18px;
+  border-block-start: 1px solid var(--sl-line);
+}
+.sl-shop .sl-result-meta .sl-order-meta {
+  gap: 17px;
+  padding-block-end: 15px;
+}
+.sl-shop .sl-result-meta dt {
+  margin-block-end: 5px;
+}
+.sl-shop .sl-result-items {
+  margin-block-start: 16px;
+  padding-block-start: 14px;
+  border-block-start: 1px solid var(--sl-line);
+}
+.sl-shop .sl-result-items h2 {
+  margin-block-end: 7px;
+  font-family: var(--sl-heading-font);
+  font-size: 23px;
+  font-weight: var(--sl-display-weight);
+}
+.sl-shop .sl-result-items .sl-order-item {
+  grid-template-columns: 45px minmax(0, 1fr) auto;
+}
+.sl-shop .sl-result-items .sl-order-thumb {
+  width: 45px;
+  height: 49px;
+}
+/* The design's large item names here come from its heading rule for this list. */
+.sl-shop .sl-result-items .sl-order-item h3 {
+  margin-block-end: 7px;
+  font-family: var(--sl-heading-font);
+  font-size: 23px;
+  font-weight: var(--sl-display-weight);
+}
+.sl-shop .sl-result-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 19px;
+  border-block-start: 1px solid var(--sl-line);
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-result-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--sl-accent);
+  font-weight: 800;
+}
+.sl-shop .sl-narrow-page {
+  max-width: 820px;
+}
+.sl-shop .sl-info-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-end: 28px;
+}
+.sl-shop .sl-review-title {
+  margin-block-end: 12px;
+}
+.sl-shop .sl-review-lead {
+  margin-block: 6px 26px;
+  color: var(--sl-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.sl-shop .sl-review-panel {
+  margin-block-end: 14px;
+  padding: clamp(18px, 4vw, 30px);
+  border: 1px solid var(--sl-line);
+  border-radius: 12px;
+  background: var(--sl-panel);
+}
+.sl-shop .sl-review-product {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-block-end: 20px;
+}
+.sl-shop .sl-review-product img {
+  flex: none;
+  width: 67px;
+  height: 77px;
+  object-fit: cover;
+  border-radius: 7px;
+}
+.sl-shop .sl-review-product strong {
+  display: block;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-review-product small {
+  display: block;
+  margin-block-start: 5px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-review-label {
+  display: block;
+  margin-block-end: 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.sl-shop .sl-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-block: 7px 25px;
+}
+.sl-shop .sl-rating label {
+  padding: 5px 7px;
+  border-radius: 4px;
+  color: #c3b5af;
+  font-size: 37px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.16s, color 0.16s;
+}
+.sl-shop .sl-rating label:hover {
+  transform: scale(1.12);
+}
+.sl-shop .sl-rating label[data-on] {
+  color: #bc8542;
+}
+.sl-shop .sl-rating label:has(:focus-visible) {
+  outline: 2px solid var(--sl-accent);
+}
+.sl-shop .sl-rating-word {
+  margin-inline-start: 8px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.sl-shop .sl-review-textarea {
+  display: block;
+  width: 100%;
+  min-height: 135px;
+  padding: 15px;
+  border: 1px solid var(--sl-line);
+  border-radius: 8px;
+  background: var(--sl-panel);
+  color: var(--sl-fg);
+  font-size: 14px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.sl-shop .sl-review-textarea:focus-visible {
+  border-color: var(--sl-accent);
+  outline: 2px solid color-mix(in srgb, var(--sl-accent) 30%, transparent);
+  outline-offset: 1px;
+}
+.sl-shop .sl-review-note {
+  margin-block: 18px;
+  padding: 17px 19px;
+  border-inline-start: 2px solid var(--sl-accent);
+  border-start-end-radius: 7px;
+  border-end-end-radius: 7px;
+  background: var(--sl-surface);
+  color: color-mix(in srgb, var(--sl-fg) 72%, var(--sl-surface));
+  font-size: 12px;
+  line-height: 1.7;
+}
+.sl-shop .sl-review-note strong {
+  display: block;
+  margin-block-end: 12px;
+  color: var(--sl-fg);
+}
+.sl-shop .sl-review-note p {
+  margin-block-end: 12px;
+}
+.sl-shop .sl-review-warning {
+  max-width: none;
+  margin-block: 0 8px;
+  border-color: var(--sl-warn);
+  background: color-mix(in srgb, var(--sl-warn) 12%, var(--sl-bg));
+}
+.sl-shop .sl-review-error {
+  min-height: 15px;
+  margin-block: 8px;
+  color: var(--sl-danger);
+  font-size: 12px;
+}
+.sl-shop .sl-review-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 51px;
+  padding: 16px 20px;
+  border-radius: 6px;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+  font-weight: 800;
+}
+.sl-shop .sl-review-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sl-shop .sl-review-success {
+  padding: 34px 24px;
+  border-radius: 12px;
+  background: var(--sl-surface);
+  text-align: center;
+}
+.sl-shop .sl-review-done-icon {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  margin-inline: auto;
+  border-radius: 50%;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+}
+.sl-shop .sl-review-success h2,
+.sl-shop .sl-link-notice h1 {
+  margin-block: 12px;
+  font-family: var(--sl-heading-font);
+  font-size: 36px;
+  font-weight: var(--sl-display-weight);
+  line-height: 1.2;
+}
+.sl-shop .sl-review-success p,
+.sl-shop .sl-link-notice p {
+  margin-block-end: 14px;
+  color: var(--sl-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.sl-shop .sl-link-notice {
+  width: 100%;
+  max-width: 450px;
+  margin: 0;
+  text-align: center;
+}
+.sl-shop .sl-link-notice h1 {
+  font-size: 31px;
+}
+.sl-shop .sl-link-notice .sl-action {
+  display: inline-flex;
+  margin-block-start: 6px;
+}
+@media (max-width: 750px) {
+  .sl-shop .sl-order-page {
+    padding-block-start: 41px;
+  }
+  .sl-shop .sl-track-page {
+    padding-block-start: 41px;
+  }
+  .sl-shop .sl-track-top {
+    display: block;
+    padding-block-start: 0;
+  }
+  .sl-shop .sl-track-title {
+    font-size: clamp(39px, 10vw, 52px);
+  }
+  .sl-shop .sl-track-intro {
+    font-size: 14px;
+  }
+  .sl-shop .sl-track-aside {
+    min-height: 0;
+    margin-block-start: 40px;
+    padding: 30px;
+  }
+  .sl-shop .sl-track-aside h2 {
+    font-size: 32px;
+  }
+  .sl-shop .sl-track-points {
+    gap: 16px;
+  }
+  .sl-shop .sl-track-form {
+    margin-block-start: 26px;
+  }
+  .sl-shop .sl-result {
+    margin-block-start: 16px;
+    padding-block-start: 34px;
+  }
+  .sl-shop .sl-result-head {
+    display: block;
+  }
+  .sl-shop .sl-result-head h2 {
+    font-size: 31px;
+  }
+  .sl-shop .sl-result-status {
+    display: inline-flex;
+    margin-block-start: 20px;
+  }
+  .sl-shop .sl-timeline li {
+    min-height: 78px;
+  }
+}
+@media (max-width: 650px) {
+  .sl-shop .sl-order-page {
+    padding: 49px 19px 62px;
+  }
+}
+@media (max-width: 600px) {
+  .sl-shop .sl-review-callout {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px 13px;
+    padding: 17px 15px;
+  }
+  .sl-shop .sl-review-cta {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+  .sl-shop .sl-narrow-page {
+    padding-inline: 19px;
+  }
+  .sl-shop .sl-rating {
+    gap: 0;
+  }
+  .sl-shop .sl-rating label {
+    padding: 4px 5px;
+    font-size: 35px;
+  }
+}
+@media (max-width: 550px) {
+  .sl-shop .sl-order-panel {
+    margin-block-start: 15px;
+    padding: 19px 15px;
+  }
+  .sl-shop .sl-progress {
+    margin-block-start: 13px;
+  }
+  .sl-shop .sl-progress li {
+    padding-inline: 1px;
+  }
+  .sl-shop .sl-progress li > span {
+    width: 29px;
+    height: 29px;
+    font-size: 11px;
+  }
+  .sl-shop .sl-progress li:not(:last-child)::after {
+    inset-block-start: 14px;
+    inset-inline-start: calc(50% + 15px);
+    width: calc(100% - 30px);
+  }
+  .sl-shop .sl-progress b {
+    font-size: 9.5px;
+  }
+  .sl-shop .sl-progress small {
+    font-size: 9px;
+  }
+  .sl-shop .sl-order-linkline {
+    gap: 6px;
+  }
+  .sl-shop .sl-order-linkline button {
+    padding-inline: 9px;
+  }
+  .sl-shop .sl-order-panel .sl-order-meta {
+    gap: 16px;
+  }
+  .sl-shop .sl-order-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .sl-shop .sl-order-actions > .sl-order-primary {
+    grid-column: 1 / -1;
+  }
+}
+/* iPhones zoom the whole page when a field under 16px takes focus. */
+@supports (-webkit-touch-callout: none) {
+  .sl-shop :is(.sl-search input, .sl-price-inputs input, .sl-checkout-form :is(input, select, textarea), .sl-custom-note textarea, .sl-track-form input, .sl-review-textarea, .sl-order-linkline input) {
+    font-size: 16px;
+  }
+}
+
 @theme inline {
   --color-sl-bg: var(--sl-bg);
   --color-sl-panel: var(--sl-panel);
@@ -88,6 +3480,11 @@
   --color-sl-muted: var(--sl-muted);
   --color-sl-accent: var(--sl-accent);
   --color-sl-accent-ink: var(--sl-accent-ink);
+  --color-sl-ornament: var(--sl-ornament);
+  --color-sl-surface: var(--sl-surface);
+  --color-sl-band: var(--sl-band);
+  --color-sl-band-ink: var(--sl-band-ink);
+  --color-sl-line: var(--sl-line);
   --color-sl-cat: var(--sl-cat);
   --color-sl-border: var(--sl-border);
   --color-sl-control: var(--sl-control);

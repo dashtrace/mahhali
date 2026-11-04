@@ -42,7 +42,7 @@ export function registerOrders(r: OpenAPIRegistry, { secured, cronSecured, ok, e
   r.registerPath({
     method: "get",
     path: "/api/orders",
-    summary: "The order board: filter by status or courier, search by number, phone or name (owner, manager, staff)",
+    summary: "The order board: filter by status or courier, search by number, phone, customer name or item name (owner, manager, staff)",
     tags: ["Orders"],
     security: secured,
     request: { query: ListOrdersQuery },
@@ -93,10 +93,12 @@ export function registerOrders(r: OpenAPIRegistry, { secured, cronSecured, ok, e
     method: "get",
     path: "/api/delivery/orders",
     summary: "A courier's run: delivery users see only their courier's orders",
+    description:
+      "from and to filter delivered orders by delivery day, returned orders by last update, and orders still to deliver by the day they were placed. A lone to covers the 7 days ending that day; a lone from runs to today.",
     tags: ["Delivery"],
     security: secured,
     request: { query: DeliveryOrdersQuery },
-    responses: { 200: ok("Orders with address, phone and cash to collect"), 401: errors[401], 403: errors[403] },
+    responses: { 200: ok("Orders with address, phone and cash to collect"), 400: errors[400], 401: errors[401], 403: errors[403] },
   });
   r.registerPath({
     method: "post",

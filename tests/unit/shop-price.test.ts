@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePrice, parsePriceRange, shopHref } from "@/app/s/[slug]/_components/browse";
+import { filterHref, parsePrice, parsePriceRange, shopHref } from "@/app/s/[slug]/_components/browse";
 
 describe("shop price filter", () => {
   it("reads empty as no bound and amounts as minor units", () => {
@@ -23,5 +23,11 @@ describe("shop price filter", () => {
   it("builds listing links with only the set params", () => {
     expect(shopHref("demo", { q: "", cat: "c1", page: 2, min: undefined })).toBe("/s/demo/shop?cat=c1&page=2");
     expect(shopHref("demo", {})).toBe("/s/demo/shop");
+  });
+
+  it("keeps the other filters when one changes, and goes back to page 1", () => {
+    const filters = { q: "rose", cat: "c1", sort: "new", min: "10", max: "20" };
+    expect(filterHref("demo", filters, { cat: "c2" })).toBe("/s/demo/shop?q=rose&cat=c2&sort=new&min=10&max=20");
+    expect(filterHref("demo", filters, { cat: undefined, sort: undefined })).toBe("/s/demo/shop?q=rose&min=10&max=20");
   });
 });

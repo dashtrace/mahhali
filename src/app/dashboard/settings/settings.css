@@ -1,0 +1,270 @@
+/*
+ * The settings page's form-and-phone layout, from new_ui/references/owner-dashboard-settings-v2.html
+ * (.brand-layout, .preview-holder, .phone), with its sizes and breakpoints. The frame's colours are
+ * the dashboard's; the shop's own colours only appear inside the iframe.
+ */
+@layer components {
+  .sl-dash .brand-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(310px, 0.9fr);
+    gap: 22px;
+    align-items: start;
+  }
+  .sl-dash .brand-controls {
+    min-width: 0;
+  }
+  .sl-dash .preview-holder {
+    position: sticky;
+    top: 90px;
+  }
+  .sl-dash .preview-holder > b {
+    font-size: 14px;
+  }
+  .sl-dash .preview-views {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+  .sl-dash .preview-views .segbar {
+    margin: 0;
+  }
+  .sl-dash .phone {
+    width: min(100%, 370px);
+    margin: 15px auto 0;
+    border: 7px solid #203238;
+    border-radius: 32px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 22px 48px #071e2533;
+  }
+  .sl-dash .phone-screen {
+    display: block;
+    width: 100%;
+    /* 570px, leaving room for the bar above it on a short laptop screen. */
+    height: min(570px, calc(100dvh - 200px));
+    border: 0;
+  }
+  .sl-dash .preview-note {
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  /* The four tabs. */
+  .sl-dash .settings-tabs {
+    margin-bottom: 18px;
+  }
+  /* Same as .field label and .field p, for a <label> that wraps its own control. */
+  .sl-dash .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    margin: 0 0 7px;
+  }
+  .sl-dash .field-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 5px 0 0;
+  }
+
+  /* The browser's native look, which the CSS reset removes. */
+  .sl-dash .control::file-selector-button {
+    border: 1px solid #767676;
+    border-radius: 3px;
+    background: #efefef;
+    padding: 1px 6px;
+  }
+
+  .sl-dash .colorgrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .sl-dash .colorfield {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 9px;
+    background: #fff;
+  }
+  .sl-dash .colorfield input[type="color"] {
+    appearance: none;
+    border: 0;
+    background: none;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    flex: none;
+    cursor: pointer;
+  }
+  .sl-dash .colorfield input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+  .sl-dash .colorfield input[type="color"]::-webkit-color-swatch {
+    border-radius: 8px;
+    border: 1px solid #ccd5d6;
+  }
+  .sl-dash .colorfield strong {
+    display: block;
+    font-size: 11px;
+  }
+  .sl-dash .colorfield-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+  }
+  .sl-dash .colorfield code {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  /* A 24px target that adds nothing to the row's height. */
+  .sl-dash .colorfield-value button {
+    margin-block: -6px;
+    padding: 6px 2px;
+    border: 0;
+    background: none;
+    color: var(--blue);
+    font-size: 10px;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .sl-dash .palette-swatches {
+    display: flex;
+    gap: 6px;
+  }
+  .sl-dash .palette-swatches i {
+    display: block;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    border: 1px solid #e0d8d5;
+  }
+  .sl-dash .palette-card {
+    border: 1px solid var(--line);
+    background: white;
+    color: #000;
+    border-radius: 11px;
+    padding: 12px;
+    min-width: 146px;
+    flex: 1;
+    text-align: start;
+  }
+  .sl-dash .palette-card.selected {
+    border: 2px solid #208299;
+    background: #f0fafb;
+    padding: 11px;
+  }
+  .sl-dash .palette-card > span {
+    font-size: 12px;
+    font-weight: 800;
+    display: block;
+    margin: 8px 0 0;
+  }
+  .sl-dash .palette-card .palette-swatches {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+  }
+
+  .sl-dash .slide-item {
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .sl-dash .slide-item .cover {
+    height: 110px;
+    border-radius: 9px;
+    background: #e8d8d0;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+  .sl-dash .slide-item img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+  .sl-dash .slide-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .sl-dash .slide-actions button {
+    border: 1px solid var(--line);
+    background: #fff;
+    color: #000;
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .sl-dash .slide-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .sl-dash .settings-mapping {
+    display: grid;
+    gap: 12px;
+  }
+  .sl-dash .settings-mapping div {
+    border-bottom: 1px solid var(--line);
+    padding: 0 0 10px;
+  }
+  .sl-dash .settings-mapping b,
+  .sl-dash .settings-mapping small {
+    display: block;
+  }
+  .sl-dash .settings-mapping small {
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 420px) {
+    .sl-dash .colorgrid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 1150px) {
+    .sl-dash .brand-layout {
+      grid-template-columns: 1fr;
+    }
+    .sl-dash .preview-holder {
+      position: relative;
+      top: 0;
+    }
+    .sl-dash .phone {
+      width: min(100%, 360px);
+    }
+  }
+  @media (max-width: 780px) {
+    .sl-dash .brand-layout {
+      display: block;
+    }
+    .sl-dash .preview-views {
+      justify-content: center;
+      margin-top: 0;
+    }
+    /* What the bottom sheet draws besides the frame fits inside its 85dvh, so only the frame scrolls. */
+    .sl-dash .phone-screen {
+      height: min(480px, calc(85dvh - 245px));
+    }
+  }
+  /* A short phone: the frame needs the note's room more. */
+  @media (max-width: 780px) and (max-height: 740px) {
+    .sl-dash .preview-note {
+      display: none;
+    }
+    .sl-dash .phone-screen {
+      height: calc(85dvh - 180px);
+    }
+  }
+}

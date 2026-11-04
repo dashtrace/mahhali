@@ -19,7 +19,17 @@ export function statusLabel(t: CommonMessages, status: string): string {
   return t[`status${status}` as keyof CommonMessages] ?? status;
 }
 
+/** The button for an order's next forward step. */
+export function nextActionLabel(m: OrderMessages, next: string): string {
+  return { CONFIRMED: m.actConfirm, PACKED: m.actPack, OUT_FOR_DELIVERY: m.actSendOut }[next] ?? m.actViewOrder;
+}
+
 const intl = (locale: Locale) => (locale === "ar" ? "ar-LB-u-nu-latn" : "en-US");
+
+/** "1 Nov 2026", day first. */
+export function dayMonthYear(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale === "ar" ? intl(locale) : "en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
+}
 
 /** How long ago, for board cards: "12 min. ago", "3 hr. ago", "2 days ago". */
 export function age(iso: string, locale: Locale, now = Date.now()): string {

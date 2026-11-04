@@ -120,5 +120,5 @@ export function useCart(slug: string) {
 /** Header cart button with a count badge. `countLabel` is "Cart, {n} items". */
 export function CartLink({ slug, label, countLabel, className }: { slug: string; label: string; countLabel: string; className?: string }) {
   const { count } = useCart(slug);
-  return <IconButtonLink href={`/s/${slug}/cart`} icon="cart" label={count > 0 ? fill(countLabel, { n: count }) : label} count={count} className={className} />;
+  return <IconButtonLink href={`/s/${slug}/cart`} icon="bag" label={count > 0 ? fill(countLabel, { n: count }) : label} count={count} className={className} />;
 }

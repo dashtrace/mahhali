@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { EmailField } from "@/components/EmailField";
 import { PasswordField } from "@/components/PasswordField";
 import { Alert, Button, Field, Input, Select, cx } from "@/components/ui";
@@ -31,7 +31,10 @@ export function SignupForm({ m, locale }: { m: (typeof authMessages)["en"]; loca
   const [slugEdited, setSlugEdited] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "LBP">("USD");
 
-  async function submit(form: FormData) {
+  // onSubmit, not a form action: React resets a form after its action runs, wiping what was typed.
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
     setPending(true);
     setError(null);
     const optionalInt = (key: string) => (form.get(key) ? Number(form.get(key)) : undefined);
@@ -58,7 +61,7 @@ export function SignupForm({ m, locale }: { m: (typeof authMessages)["en"]; loca
   }
 
   return (
-    <form action={submit} className="flex flex-col gap-4">
+    <form onSubmit={submit} className="flex flex-col gap-4">
       {error && <Alert tone="error">{error}</Alert>}
       <h2 className={sectionTitle}>{m.accountSection}</h2>
       <Field label={m.yourName}>

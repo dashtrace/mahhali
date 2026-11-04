@@ -6,7 +6,7 @@ import { can } from "@/server/domain/policy";
 import { plain } from "@/server/http/json";
 import { courierService } from "@/server/services/courierService";
 import { pageActor } from "../../_server/session";
-import { Couriers } from "./_components/Couriers";
+import { AddCourier, Couriers } from "./_components/Couriers";
 
 export const metadata = { title: "Couriers" };
 
@@ -14,13 +14,15 @@ export default async function CouriersPage() {
   const actor = await pageActor("courier.read", "/dashboard/couriers");
   const locale = await getLocale();
   const m = catalogueMessages[locale];
+  const t = common[locale];
   const couriers = await courierService.list(actor, {});
+  const canWrite = can(actor.role, "courier.write");
   // Active first; the service sorts by name within each group.
   const sorted = [...couriers].sort((a, b) => Number(b.active) - Number(a.active));
   return (
     <>
-      <PageHeader title={m.couriersTitle} />
-      <Couriers couriers={plain(sorted)} canWrite={can(actor.role, "courier.write")} m={m} t={common[locale]} />
+      <PageHeader title={m.couriersTitle} subtitle={m.couriersSubtitle} actions={canWrite && <AddCourier m={m} t={t} />} />
+      <Couriers couriers={plain(sorted)} canWrite={canWrite} m={m} t={t} />
     </>
   );
 }

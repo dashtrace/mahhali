@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ButtonLink, EmptyState, PageHeader } from "@/components/ui";
 import { common } from "@/i18n/messages/common";
 import { orderMessages } from "@/i18n/messages/orders";
@@ -7,6 +8,7 @@ import { can } from "@/server/domain/policy";
 import { accountService } from "@/server/services/accountService";
 import { productService } from "@/server/services/productService";
 import { pageActor } from "../../../_server/session";
+import { DashIcon } from "../../_components/DashIcon";
 import { NewOrderForm } from "../_components/NewOrderForm";
 
 export const metadata = { title: "New order" };
@@ -34,7 +36,11 @@ export default async function NewOrderPage() {
 
   return (
     <>
-      <PageHeader back={{ href: "/dashboard", label: m.boardTitle }} title={m.newOrder} subtitle={m.newOrderSubtitle} />
+      <Link href="/dashboard" className="btn tiny">
+        <DashIcon name="left" size="sm" />
+        {m.boardTitle}
+      </Link>
+      <PageHeader title={m.newOrder} subtitle={m.newOrderSubtitle} />
       {variants.length ? (
         <NewOrderForm variants={variants} currency={me.shop.currency} locale={locale} m={m} t={t} />
       ) : (

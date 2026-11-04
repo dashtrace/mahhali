@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { PasswordField } from "@/components/PasswordField";
 import { Alert, Button, Field, Input } from "@/components/ui";
 import type { Locale } from "@/i18n/locale";
@@ -13,7 +13,10 @@ export function LoginForm({ m, next, locale }: { m: (typeof authMessages)["en"];
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(form: FormData) {
+  // onSubmit, not a form action: React resets a form after its action runs, wiping what was typed.
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
     setPending(true);
     setError(null);
     const { error } = await authClient.signIn.email({
@@ -30,7 +33,7 @@ export function LoginForm({ m, next, locale }: { m: (typeof authMessages)["en"];
   }
 
   return (
-    <form action={submit} className="flex flex-col gap-4">
+    <form onSubmit={submit} className="flex flex-col gap-4">
       {error && <Alert tone="error">{error}</Alert>}
       <Field label={m.email}>
         <Input name="email" type="email" autoComplete="email" inputMode="email" required dir="ltr" />

@@ -39,11 +39,45 @@ describe("validateTheme", () => {
   });
 
   it("names each pair below 4.5:1 with its ratio", () => {
-    const failures = validateTheme({ primary: "#777777", accent: "#ffff00", background: "#ffffff" });
+    const failures = validateTheme({ primary: "#777777", accent: "#000000", background: "#ffffff", text: "#999999" });
     expect(failures).toEqual([
       { pair: "text on primary", foreground: "#ffffff", background: "#777777", ratio: 4.48 },
-      { pair: "text on accent", foreground: "#ffffff", background: "#ffff00", ratio: 1.07 },
+      { pair: "body text on background", foreground: "#999999", background: "#ffffff", ratio: 2.85 },
     ]);
+  });
+
+  it("treats accent as decoration, so any accent passes", () => {
+    for (const accent of ["#ffff00", "#ffffff", "#b99b7b"]) {
+      expect(validateTheme({ primary: "#1e3a8a", accent, background: "#ffffff" })).toEqual([]);
+    }
+  });
+
+  it("checks the button label against primary, using buttonText when saved", () => {
+    const base = { primary: "#777777", accent: "#000000", background: "#ffffff" };
+    expect(validateTheme({ ...base, primary: "#767676", buttonText: "#000000" })).toEqual([]);
+    const pale = { ...base, primary: "#1e3a8a", buttonText: "#3f5a9a" };
+    expect(validateTheme(pale)).toEqual([expect.objectContaining({ pair: "text on primary", foreground: "#3f5a9a" })]);
+  });
+
+  it("checks muted against the background only when muted is saved", () => {
+    const base = { primary: "#1e3a8a", accent: "#b45309", background: "#ffffff" };
+    expect(validateTheme({ ...base, muted: "#999999" })).toEqual([{ pair: "muted text on background", foreground: "#999999", background: "#ffffff", ratio: 2.85 }]);
+    expect(validateTheme({ ...base, muted: "#666666" })).toEqual([]);
+  });
+
+  it("checks body text against the surface only when surface is saved", () => {
+    const base = { primary: "#1e3a8a", accent: "#b45309", background: "#ffffff" };
+    expect(validateTheme({ ...base, surface: "#000000" })).toEqual([{ pair: "body text on surface", foreground: "#000000", background: "#000000", ratio: 1 }]);
+    expect(validateTheme({ ...base, surface: "#f1f5f9" })).toEqual([]);
+    expect(validateTheme({ ...base, text: "#333333", surface: "#555555" })).toEqual([expect.objectContaining({ pair: "body text on surface", foreground: "#333333" })]);
+  });
+
+  it("checks the dark band only when dark is saved, using darkText or the background", () => {
+    const base = { primary: "#1e3a8a", accent: "#b45309", background: "#ffffff" };
+    expect(validateTheme({ ...base, darkText: "#ffffff" })).toEqual([]);
+    expect(validateTheme({ ...base, dark: "#111111" })).toEqual([]);
+    expect(validateTheme({ ...base, dark: "#cccccc" })).toEqual([expect.objectContaining({ pair: "text on dark band", foreground: "#ffffff", background: "#cccccc" })]);
+    expect(validateTheme({ ...base, dark: "#111111", darkText: "#444444" })).toEqual([expect.objectContaining({ pair: "text on dark band", foreground: "#444444" })]);
   });
 
   it("does not round a ratio just under 4.5 up to a pass", () => {
@@ -56,6 +90,12 @@ describe("validateTheme", () => {
     const base = { primary: "#1e3a8a", accent: "#b45309", background: "#ffffff" };
     expect(validateTheme({ ...base, text: "#999999" })).toEqual([{ pair: "body text on background", foreground: "#999999", background: "#ffffff", ratio: 2.85 }]);
     expect(validateTheme({ ...base, text: "#333333" })).toEqual([]);
+  });
+
+  it("still checks primary on the page when buttonText carries the button label", () => {
+    const pale = { primary: "#e0a030", accent: "#000000", background: "#ffffff", buttonText: "#000000" };
+    expect(validateTheme(pale).map((f) => f.pair)).toEqual(["links on background"]);
+    expect(validateTheme({ ...pale, primary: "#874258", buttonText: "#ffffff" })).toEqual([]);
   });
 
   it("refuses a pale brand colour on a light page and accepts it on a dark one", () => {

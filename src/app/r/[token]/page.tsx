@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { cache } from "react";
-import { EmptyState } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { checkoutMessages } from "@/i18n/messages/checkout";
 import { getLocale } from "@/i18n/server";
@@ -8,7 +7,8 @@ import { formatDate } from "@/lib/format";
 import { plain } from "@/server/http/json";
 import { reviewService } from "@/server/services/reviewService";
 import { requestIp } from "../../_server/session";
-import { attempt, shopLocale } from "../../_storefront/data";
+import { attempt, shopLocale, withCatalogue } from "../../_storefront/data";
+import { productForItem } from "../../_storefront/orderItems";
 import { ShopFrame } from "../../_storefront/ShopFrame";
 import { LinkNotice } from "../../t/_components/LinkNotice";
 import { ReviewForm } from "./ReviewForm";
@@ -37,20 +37,23 @@ export default async function ReviewPage({ params }: Props) {
     return <LinkNotice locale={locale} title={res.error.status === 429 ? m.rateLimited : m.error} />;
   }
   const data = plain(res.data);
+  const { shop: frame, products } = await withCatalogue(data.shop);
   const locale = shopLocale(data.shop.language);
   const m = checkoutMessages[locale];
+  const items = data.items.map((i) => ({ ...i, imageUrl: productForItem(products, i.name)?.images[0]?.url }));
 
   return (
-    <ShopFrame shop={data.shop} locale={locale}>
-      <div className="mx-auto max-w-xl py-2">
-        <h1 className="sl-heading text-[28px] leading-tight">{fill(m.reviewTitle, { n: data.order.number })}</h1>
-        <p className="mb-4 mt-1.5 text-sm leading-normal text-sl-muted">{fill(m.reviewLead, { name: data.customerFirstName })}</p>
-        {data.items.length === 0 ? (
-          <EmptyState title={m.nothingToReview} />
-        ) : (
-          <ReviewForm token={token} slug={data.shop.slug} items={data.items} expires={formatDate(data.expiresAt, locale)} m={m} />
-        )}
-      </div>
+    <ShopFrame shop={frame} locale={locale} page="sl-narrow-page">
+      <p className="sl-page-eyebrow">{m.reviewEyebrow}</p>
+      <h1 className="sl-page-title sl-review-title">{fill(m.reviewTitle, { n: data.order.number })}</h1>
+      <p className="sl-review-lead">{fill(m.reviewLead, { name: data.customerFirstName })}</p>
+      {data.items.length === 0 ? (
+        <div className="sl-empty">
+          <h2>{m.nothingToReview}</h2>
+        </div>
+      ) : (
+        <ReviewForm token={token} slug={data.shop.slug} items={items} expires={formatDate(data.expiresAt, locale)} m={m} />
+      )}
     </ShopFrame>
   );
 }

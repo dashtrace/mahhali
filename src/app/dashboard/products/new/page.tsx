@@ -5,6 +5,7 @@ import { getLocale } from "@/i18n/server";
 import { accountService } from "@/server/services/accountService";
 import { categoryService } from "@/server/services/storefrontService";
 import { pageActor } from "../../../_server/session";
+import { BackLink } from "../_components/kit";
 import { CreateProductForm } from "../_components/CreateProductForm";
 
 export const metadata = { title: "New product" };
@@ -16,7 +17,8 @@ export default async function NewProductPage() {
   const [me, categories] = await Promise.all([accountService.me(actor), categoryService.list(actor)]);
   return (
     <>
-      <PageHeader title={m.newProduct} back={{ href: "/dashboard/products", label: m.productsTitle }} />
+      <BackLink href="/dashboard/products">{m.backToProducts}</BackLink>
+      <PageHeader title={m.addProductTitle} subtitle={m.addProductSub} />
       <CreateProductForm currency={me.shop.currency} categories={categories.map(({ id, name }) => ({ id, name }))} m={m} t={common[locale]} />
     </>
   );

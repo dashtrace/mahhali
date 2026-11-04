@@ -1,4 +1,5 @@
-import { PageHeader, Segmented } from "@/components/ui";
+import Link from "next/link";
+import { PageHeader } from "@/components/ui";
 import { common } from "@/i18n/messages/common";
 import { shopMessages } from "@/i18n/messages/shop";
 import { getLocale } from "@/i18n/server";
@@ -10,9 +11,11 @@ import { categoryService, storefrontService } from "@/server/services/storefront
 import { pageActor } from "../../_server/session";
 import { readTheme } from "../../_server/theme";
 import { Branding } from "./_components/Branding";
+import { LivePreview, PreviewButton } from "./_components/LivePreview";
 import { SettingsForm } from "./_components/SettingsForm";
 import { SlidesEditor } from "./_components/SlidesEditor";
 import { StorefrontForm } from "./_components/StorefrontForm";
+import "./settings.css";
 
 export const metadata = { title: "Settings" };
 
@@ -29,15 +32,25 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const labels: Record<Tab, string> = { general: m.tabGeneral, storefront: m.tabStorefront, slides: m.tabSlides, branding: m.tabBranding };
 
   return (
-    <>
-      <PageHeader title={m.settingsTitle} />
-      <Segmented
-        label={m.settingsSections}
-        className="mb-4 max-w-xl"
-        items={TABS.map((x) => ({ label: labels[x], href: x === "general" ? "/dashboard/settings" : `/dashboard/settings?tab=${x}`, current: x === tab }))}
-      />
-      <div className="flex flex-col gap-4">{await section(tab)}</div>
-    </>
+    <LivePreview
+      key={tab}
+      locale={locale}
+      m={m}
+      head={
+        <>
+          <PageHeader title={m.settingsTitle} subtitle={m.settingsSubtitle} actions={<PreviewButton label={m.previewChanges} />} />
+          <nav aria-label={m.settingsSections} className="pills settings-tabs">
+            {TABS.map((x) => (
+              <Link key={x} href={x === "general" ? "/dashboard/settings" : `/dashboard/settings?tab=${x}`} aria-current={x === tab ? "page" : undefined} className="pill">
+                {labels[x]}
+              </Link>
+            ))}
+          </nav>
+        </>
+      }
+    >
+      {await section(tab)}
+    </LivePreview>
   );
 
   async function section(tab: Tab) {
@@ -50,19 +63,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       return <StorefrontForm storefront={storefront} categories={categories} whatsappPhone={settings.whatsappPhone} m={m} t={t} />;
     }
     if (tab === "slides") {
-      const [slides, branding] = await Promise.all([storefrontService.slides(actor), shopService.branding(actor)]);
-      return <SlidesEditor slides={slides} theme={readTheme(branding.theme)} max={MAX_SLIDES} m={m} t={t} />;
+      return <SlidesEditor slides={await storefrontService.slides(actor)} max={MAX_SLIDES} m={m} t={t} />;
     }
-    const [branding, settings, storefront] = await Promise.all([shopService.branding(actor), shopService.settings(actor), storefrontService.settings(actor)]);
-    return (
-      <Branding
-        theme={readTheme(branding.theme)}
-        logo={branding.logo}
-        shop={{ name: settings.name, currency: settings.currency, logoMode: storefront.logoMode, tagline: storefront.tagline }}
-        locale={locale}
-        m={m}
-        t={t}
-      />
-    );
+    const branding = await shopService.branding(actor);
+    return <Branding theme={readTheme(branding.theme)} logo={branding.logo} m={m} t={t} />;
   }
 }

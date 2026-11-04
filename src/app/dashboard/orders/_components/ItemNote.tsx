@@ -13,8 +13,8 @@ export function ItemNote({ label, note }: { label: string; note: string }) {
 /** The landmark callout couriers look for first. */
 export function Landmark({ label, text }: { label: string; text: string }) {
   return (
-    <p className="mt-2 flex gap-2 rounded-sl bg-sl-cat px-3 py-2 text-sm">
-      <Icon name="pin" className="mt-0.5 size-4 shrink-0 text-sl-accent" />
+    <p className="my-2.5 flex gap-2 rounded-sl bg-sl-cat px-3 py-2 text-xs leading-relaxed">
+      <Icon name="pin" className="mt-px size-4 shrink-0 text-sl-accent" />
       <span>
         <span className="font-bold">{label}:</span> {text}
       </span>

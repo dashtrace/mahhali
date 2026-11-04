@@ -19,7 +19,7 @@ export default async function CartPage({ params, searchParams }: Props) {
   const { shop, products } = await loadCatalogue(slug);
   const locale = shop.locale;
   return (
-    <ShopFrame shop={shop} locale={locale}>
+    <ShopFrame shop={shop} locale={locale} page>
       <Checkout
         slug={slug}
         products={products}

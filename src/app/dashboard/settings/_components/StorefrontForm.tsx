@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Alert, Card, Field, Input, SaveButton, Segmented, Select, Textarea, Toggle } from "@/components/ui";
+import { Alert } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
-import { api } from "@/lib/api";
-import { CardHead } from "../../products/_components/ProductExtras";
+import { ApiError, api } from "@/lib/api";
+import { isAllowedSocialUrl } from "@/server/domain/storefront";
 import { submitWith, useSave } from "../../products/_components/useAction";
+import { SaveBtn, SettingField } from "./fields";
+import { useLivePreview, useUnsaved } from "./LivePreview";
 
 type Storefront = {
   tagline: string | null;
@@ -20,7 +21,8 @@ type Storefront = {
   homeCategoryId: string | null;
   showTestimonials: boolean;
 };
-type Props = { storefront: Storefront; categories: { id: string; name: string }[]; whatsappPhone: string | null; m: ShopMessages; t: CommonMessages };
+type Msgs = { m: ShopMessages; t: CommonMessages };
+type Props = { storefront: Storefront; categories: { id: string; name: string }[]; whatsappPhone: string | null } & Msgs;
 
 const LOGO_MODES = [
   ["image-and-name", "logoImageAndName"],
@@ -29,55 +31,67 @@ const LOGO_MODES = [
 ] as const;
 const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
-/** A labelled single choice drawn as a segmented control. */
-function Choice({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+/** The content form's fields, for the save and for the preview. */
+function contentOf(f: FormData) {
+  // "category:<id>" picks a category; "category:" follows the first one.
+  const [homeSection, homeCategoryId] = text(f, "highlight").split(":");
+  return {
+    tagline: text(f, "tagline"),
+    logoMode: text(f, "logoMode"),
+    about: text(f, "about"),
+    shippingInfo: text(f, "shippingInfo"),
+    homeSection,
+    ...(homeSection === "category" ? { homeCategoryId: homeCategoryId || null } : {}),
+    showTestimonials: f.get("showTestimonials") === "on",
+  };
+}
+
+export function StorefrontForm({ storefront, categories, whatsappPhone, m, t }: Props) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[13px] font-bold">{label}</span>
-      {children}
-      {hint && <span className="text-xs leading-normal text-sl-muted">{hint}</span>}
-    </div>
+    <>
+      <ContentForm storefront={storefront} categories={categories} m={m} t={t} />
+      <ContactForm storefront={storefront} whatsappPhone={whatsappPhone} m={m} t={t} />
+    </>
   );
 }
 
-export function StorefrontForm({ storefront: s, categories, whatsappPhone, m, t }: Props) {
-  const [logoMode, setLogoMode] = useState(s.logoMode);
-  const save = useSave(t.error, logoMode);
+function ContentForm({ storefront: s, categories, m, t }: Pick<Props, "storefront" | "categories"> & Msgs) {
+  const save = useSave(t.error);
+  const preview = useLivePreview();
+  useUnsaved(save.dirty);
 
   async function submit(f: FormData) {
-    // "category:<id>" picks a category; "category:" follows the first one.
-    const [homeSection, homeCategoryId] = text(f, "highlight").split(":");
-    const body = {
-      tagline: text(f, "tagline"),
-      about: text(f, "about"),
-      shippingInfo: text(f, "shippingInfo"),
-      instagramUrl: text(f, "instagramUrl"),
-      facebookUrl: text(f, "facebookUrl"),
-      logoMode,
-      homeSection,
-      ...(homeSection === "category" ? { homeCategoryId: homeCategoryId || null } : {}),
-      showTestimonials: f.get("showTestimonials") === "on",
-    };
-    const phone = text(f, "whatsappPhone") || null;
-    // Two endpoints: the number belongs to the shop settings (it also feeds the order board).
-    await save.save(async () => {
-      await api("/api/shop/storefront", { method: "PATCH", body });
-      if (phone !== whatsappPhone) await api("/api/shop/settings", { method: "PATCH", body: { whatsappPhone: phone } });
-    });
+    if (await save.save(() => api("/api/shop/storefront", { method: "PATCH", body: contentOf(f) }))) preview.reload();
   }
 
   return (
-    <form key={JSON.stringify([s, whatsappPhone])} {...save.form} onSubmit={submitWith(submit)} className="flex max-w-3xl flex-col gap-4">
-      <Card className="flex flex-col gap-4">
-        <CardHead title={m.storefrontTitle} hint={m.storefrontHint} />
-        <Field label={m.tagline} hint={m.taglineHint}>
-          <Input name="tagline" defaultValue={s.tagline ?? ""} maxLength={80} />
-        </Field>
-        <Choice label={m.logoMode} hint={m.logoModeHint}>
-          <Segmented label={m.logoMode} items={LOGO_MODES.map(([v, key]) => ({ label: m[key], current: logoMode === v, onClick: () => setLogoMode(v) }))} />
-        </Choice>
-        <Field label={m.homeSection} hint={m.homeSectionHint}>
-          <Select name="highlight" defaultValue={s.homeSection === "category" ? `category:${s.homeCategoryId ?? ""}` : s.homeSection}>
+    <form
+      // Only this form's own values: a save in the other form must not wipe unsaved edits here.
+      key={JSON.stringify([s.tagline, s.logoMode, s.homeSection, s.homeCategoryId, s.showTestimonials, s.about, s.shippingInfo])}
+      {...save.form}
+      onChange={(e) => {
+        save.form.onChange(e);
+        preview.draft(contentOf(new FormData(e.currentTarget)));
+      }}
+      onSubmit={submitWith(submit)}
+    >
+      <div className="card">
+        <h2>{m.storefrontTitle}</h2>
+        <p className="hint">{m.storefrontHint}</p>
+        <SettingField label={m.tagline} hint={m.taglineHint}>
+          <input name="tagline" className="control" defaultValue={s.tagline ?? ""} maxLength={80} />
+        </SettingField>
+        <SettingField label={m.logoMode} hint={m.logoModeHint}>
+          <select name="logoMode" className="control" defaultValue={s.logoMode}>
+            {LOGO_MODES.map(([v, key]) => (
+              <option key={v} value={v}>
+                {m[key]}
+              </option>
+            ))}
+          </select>
+        </SettingField>
+        <SettingField label={m.homeSection} hint={m.homeSectionHint}>
+          <select name="highlight" className="control" defaultValue={s.homeSection === "category" ? `category:${s.homeCategoryId ?? ""}` : s.homeSection}>
             <option value="category:">{m.homecategory}</option>
             {categories.map((c) => (
               <option key={c.id} value={`category:${c.id}`}>
@@ -89,36 +103,87 @@ export function StorefrontForm({ storefront: s, categories, whatsappPhone, m, t 
                 {m[`home${v}`]}
               </option>
             ))}
-          </Select>
-        </Field>
-        <Toggle name="showTestimonials" label={m.showTestimonials} hint={m.showTestimonialsHint} defaultChecked={s.showTestimonials} />
-      </Card>
+          </select>
+        </SettingField>
+        <div className="field">
+          <label>
+            <input type="checkbox" name="showTestimonials" defaultChecked={s.showTestimonials} className="me-1 size-[17px] align-middle" /> {m.showTestimonials}
+          </label>
+          <p>{m.showTestimonialsHint}</p>
+        </div>
+      </div>
 
-      <Card className="flex flex-col gap-4">
-        <CardHead title={m.pagesTitle} />
-        <Field label={m.about} hint={m.aboutHint}>
-          <Textarea name="about" defaultValue={s.about ?? ""} maxLength={2000} rows={5} />
-        </Field>
-        <Field label={m.shippingInfo} hint={m.shippingInfoHint}>
-          <Textarea name="shippingInfo" defaultValue={s.shippingInfo ?? ""} maxLength={2000} rows={4} />
-        </Field>
-      </Card>
+      <div className="card">
+        <h2>{m.pagesTitle}</h2>
+        <p className="hint">{m.pagesHint}</p>
+        <SettingField label={m.about} hint={m.aboutHint}>
+          <textarea name="about" className="control area" defaultValue={s.about ?? ""} maxLength={2000} rows={5} />
+        </SettingField>
+        <SettingField label={m.shippingInfo} hint={m.shippingInfoHint}>
+          <textarea name="shippingInfo" className="control area" defaultValue={s.shippingInfo ?? ""} maxLength={2000} rows={4} />
+        </SettingField>
+        {save.error && <Alert tone="error" className="mb-3">{save.error}</Alert>}
+        <SaveBtn state={save} labels={t}>
+          {m.saveContent}
+        </SaveBtn>
+      </div>
+    </form>
+  );
+}
 
-      <Card className="flex flex-col gap-4">
-        <CardHead title={m.socialTitle} />
-        <Field label={m.instagramUrl} hint={fill(m.socialHint, { example: "https://www.instagram.com/yourshop" })}>
-          <Input name="instagramUrl" type="url" dir="ltr" defaultValue={s.instagramUrl ?? ""} maxLength={300} placeholder="https://www.instagram.com/…" />
-        </Field>
-        <Field label={m.facebookUrl} hint={fill(m.socialHint, { example: "https://www.facebook.com/yourshop" })}>
-          <Input name="facebookUrl" type="url" dir="ltr" defaultValue={s.facebookUrl ?? ""} maxLength={300} placeholder="https://www.facebook.com/…" />
-        </Field>
-        <Field label={m.whatsapp} hint={m.whatsappHint}>
-          <Input name="whatsappPhone" type="tel" inputMode="tel" dir="ltr" defaultValue={whatsappPhone ?? ""} placeholder="+961…" />
-        </Field>
-      </Card>
+function ContactForm({ storefront: s, whatsappPhone, m, t }: Pick<Props, "storefront" | "whatsappPhone"> & Msgs) {
+  const save = useSave(t.error);
+  const preview = useLivePreview();
+  useUnsaved(save.dirty);
+  /** An error useSave shows as it is, in the owner's language. */
+  const refuse = (message: string) => new ApiError(422, "VALIDATION", message);
 
-      {save.error && <Alert tone="error">{save.error}</Alert>}
-      <SaveButton state={save} labels={t} className="self-start" />
+  async function submit(f: FormData) {
+    const phone = text(f, "whatsappPhone") || null;
+    const links = { instagramUrl: text(f, "instagramUrl"), facebookUrl: text(f, "facebookUrl") };
+    // Two endpoints: the number belongs to the shop settings (it also feeds the order board).
+    // So nothing saves unless all of it can: links are checked here, then the number, which only the server can judge, goes first.
+    const saved = await save.save(async () => {
+      if (links.instagramUrl && !isAllowedSocialUrl("instagram", links.instagramUrl)) throw refuse(m.instagramInvalid);
+      if (links.facebookUrl && !isAllowedSocialUrl("facebook", links.facebookUrl)) throw refuse(m.facebookInvalid);
+      if (phone !== whatsappPhone) {
+        await api("/api/shop/settings", { method: "PATCH", body: { whatsappPhone: phone } }).catch((e) => {
+          throw e instanceof ApiError && e.status === 400 ? refuse(m.whatsappInvalid) : e;
+        });
+      }
+      await api("/api/shop/storefront", { method: "PATCH", body: links });
+    });
+    if (saved) preview.reload();
+  }
+
+  return (
+    <form
+      key={JSON.stringify([s.instagramUrl, s.facebookUrl, whatsappPhone])}
+      {...save.form}
+      onChange={(e) => {
+        save.form.onChange(e);
+        const f = new FormData(e.currentTarget);
+        preview.draft({ instagramUrl: text(f, "instagramUrl"), facebookUrl: text(f, "facebookUrl"), whatsappPhone: text(f, "whatsappPhone") || null });
+      }}
+      onSubmit={submitWith(submit)}
+      className="card"
+    >
+      <h2>{m.socialTitle}</h2>
+      <div className="split">
+        <SettingField label={m.instagramUrl} hint={fill(m.socialHint, { example: "https://www.instagram.com/yourshop" })}>
+          <input name="instagramUrl" type="url" className="control" dir="ltr" defaultValue={s.instagramUrl ?? ""} maxLength={300} placeholder="https://www.instagram.com/…" />
+        </SettingField>
+        <SettingField label={m.facebookUrl} hint={fill(m.socialHint, { example: "https://www.facebook.com/yourshop" })}>
+          <input name="facebookUrl" type="url" className="control" dir="ltr" defaultValue={s.facebookUrl ?? ""} maxLength={300} placeholder="https://www.facebook.com/…" />
+        </SettingField>
+        <SettingField label={m.whatsapp} hint={m.whatsappHint}>
+          <input name="whatsappPhone" type="tel" inputMode="tel" className="control" dir="ltr" defaultValue={whatsappPhone ?? ""} placeholder="+961…" />
+        </SettingField>
+      </div>
+      {save.error && <Alert tone="error" className="mb-3">{save.error}</Alert>}
+      <SaveBtn state={save} labels={t}>
+        {m.saveContact}
+      </SaveBtn>
     </form>
   );
 }

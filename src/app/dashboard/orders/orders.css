@@ -1,0 +1,203 @@
+/*
+ * Orders, Deliveries and order detail, ported from new_ui/references/owner-dashboard-settings-v2.html
+ * with its sizes and breakpoints, and with logical properties for Arabic.
+ */
+@layer components {
+  .sl-dash .wrap {
+    flex-wrap: wrap;
+  }
+  .sl-dash .kanban {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(190px, 1fr));
+    gap: 13px;
+    align-items: start;
+  }
+  .sl-dash .kanban-col {
+    border: 1px solid #dce6e8;
+    border-radius: 15px;
+    background: #eaf0f2;
+    padding: 10px;
+    min-width: 0;
+  }
+  .sl-dash .kanban-col.over {
+    outline: 2px dashed var(--blue);
+    outline-offset: 2px;
+  }
+  .sl-dash .collabel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 13px;
+  }
+  .sl-dash .kanban-scroller {
+    max-height: 605px;
+    overflow: auto;
+    padding-block: 1px 2px;
+    padding-inline: 1px 3px;
+    scrollbar-color: #c3d2d6 transparent;
+    scrollbar-width: thin;
+  }
+
+  .sl-dash .order-card {
+    position: relative;
+    background: white;
+    border: 1px solid #dde5e6;
+    border-radius: 12px;
+    padding: 13px;
+    margin-bottom: 9px;
+    box-shadow: 0 2px 8px #17373c07;
+  }
+  .sl-dash .order-card.busy {
+    opacity: 0.6;
+  }
+  /* The whole card opens the order; its action button sits above this. */
+  .sl-dash .order-card .card-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .sl-dash .order-card .meta {
+    font-size: 11px;
+    color: #60747a;
+    line-height: 1.6;
+  }
+  .sl-dash .order-card .who {
+    font-weight: 800;
+    margin: 10px 0 2px;
+  }
+  .sl-dash .order-card .amount {
+    font-weight: 800;
+    font-size: 15px;
+  }
+  .sl-dash .order-card > .btn {
+    position: relative;
+    width: 100%;
+    margin-top: 11px;
+    min-height: 37px;
+  }
+  .sl-dash .order-mobile {
+    display: none;
+  }
+  .sl-dash .order-list-view {
+    max-width: 850px;
+  }
+
+  .sl-dash .progress-line {
+    display: flex;
+    gap: 0;
+    margin: 16px 0 28px;
+    justify-content: space-between;
+  }
+  .sl-dash .progress-stop {
+    text-align: center;
+    flex: 1;
+    position: relative;
+    min-width: 0;
+  }
+  .sl-dash .progress-stop:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 18px;
+    inset-inline-start: calc(50% + 20px);
+    width: calc(100% - 40px);
+    height: 2px;
+    background: #d6e3e3;
+  }
+  .sl-dash .progress-stop.done:not(:last-child)::after {
+    background: #207d90;
+  }
+  .sl-dash .progress-stop > span {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #edf3f3;
+    border: 1px solid #c7d8d9;
+    color: #7b9094;
+    margin: 0 auto 9px;
+    position: relative;
+    z-index: 1;
+  }
+  .sl-dash .progress-stop.done > span {
+    background: #23778a;
+    border-color: #23778a;
+    color: #fff;
+  }
+  .sl-dash .progress-stop strong {
+    display: block;
+    font-size: 10px;
+  }
+  .sl-dash .progress-stop small {
+    font-size: 9px;
+    color: var(--muted);
+  }
+
+  .sl-dash .cash-box {
+    margin-top: 13px;
+    background: #e8f3f5;
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .sl-dash .cash-box strong {
+    font-size: 22px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .sl-dash .delivery-name {
+    font-weight: 800;
+    margin: 16px 0 3px;
+  }
+
+  /* Touch keyboards zoom the page into any field under 16px. */
+  @media (pointer: coarse) {
+    .sl-dash .control {
+      font-size: 16px;
+    }
+  }
+  @media (max-width: 1150px) {
+    .sl-dash .kanban {
+      grid-template-columns: repeat(4, minmax(185px, 1fr));
+      overflow: auto;
+    }
+  }
+  @media (max-width: 780px) {
+    .sl-dash .kanban {
+      display: none;
+    }
+    .sl-dash .order-mobile {
+      display: block;
+    }
+    /* Phones list the same orders as cards below. */
+    .sl-dash .history-table {
+      display: none;
+    }
+    .sl-dash .order-card {
+      padding: 14px;
+    }
+    .sl-dash .mobile-order-list .order-card {
+      padding: 16px;
+    }
+    .sl-dash .order-list-view {
+      max-width: none;
+    }
+    /* A driver's list has the Delivered and Failed forms in each card: one card per row. */
+    .sl-dash .deliveries-one {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    /* Same look, a 44px tap area. */
+    .sl-dash .contact-row .btn {
+      position: relative;
+    }
+    .sl-dash .contact-row .btn::after {
+      content: "";
+      position: absolute;
+      inset: -6px 0;
+    }
+  }
+}
+
+.sl-dash:lang(ar) :is(.progress-stop strong, .progress-stop small, .order-card .meta) {
+  font-size: 12px;
+}

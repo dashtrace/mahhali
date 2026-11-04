@@ -20,15 +20,19 @@ const PATHS = {
   x: "M6 6l12 12M18 6L6 18",
   close: "M6 6l12 12M18 6L6 18",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4",
-  bag: "M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2",
+  bag: "M5 8h14l1 13H4L5 8zM9 9V6a3 3 0 016 0v3",
   menu: "M4 7h16M4 12h16M4 17h16",
-  heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z",
+  heart: "M20.8 8.7c0 4.5-8.8 10.2-8.8 10.2S3.2 13.2 3.2 8.7a4.8 4.8 0 018.8-2.5 4.8 4.8 0 018.8 2.5z",
   home: "M3 10l9-7 9 7v11h-7v-7h-4v7H3z",
   grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
   cart: "M2 3h2l3 13h13l2-10H5M8 21h.01M18 21h.01",
   arrow: "M4 12h16M14 6l6 6-6 6",
+  arrowBack: "M20 12H4M10 6l-6 6 6 6",
+  arrowOut: "M6 18L18 6M8 6h10v10",
   back: "M15 18l-6-6 6-6",
   next: "M9 18l6-6-6-6",
+  pause: "M9 5v14M15 5v14",
+  play: "M8 5l11 7-11 7z",
   chevron: "M6 9l6 6 6-6",
   sliders: "M4 7h16M4 17h16M8 4v6M16 14v6M6 7a2 2 0 1 0 4 0 2 2 0 1 0-4 0M14 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0",
   calendar: "M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM7 3v4M17 3v4M3 10h18",
@@ -44,7 +48,16 @@ const PATHS = {
 export type IconName = keyof typeof PATHS;
 
 // Icons that point along the reading direction flip in Arabic.
-const MIRRORED: ReadonlySet<IconName> = new Set(["arrow", "back", "next"]);
+const MIRRORED: ReadonlySet<IconName> = new Set(["arrow", "arrowBack", "arrowOut", "back", "next"]);
+
+/** The storefront's outward arrow, a text glyph as in the approved design (.sl-arrow-out in globals.css). */
+export function ArrowOut() {
+  return (
+    <span aria-hidden className="sl-arrow-out">
+      ↗
+    </span>
+  );
+}
 
 /** `solid` fills the shape (active tab, saved heart). Decorative: label the control around it. */
 export function Icon({ name, className = "size-5", solid }: { name: IconName; className?: string; solid?: boolean }) {

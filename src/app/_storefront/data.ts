@@ -29,4 +29,20 @@ export const loadCatalogue = cache(async (slug: string) => {
   return { products: data.products, shop: { ...data.shop, locale: shopLocale(data.shop.language) } };
 });
 
-export type CatalogueProduct = Awaited<ReturnType<typeof loadCatalogue>>["products"][number];
+/**
+ * For pages that load a slim shop (tracking, reviews): what the frame shows on every
+ * other page, plus the products. A suspended shop has no catalogue but its order
+ * links keep working, so those keep the slim shop.
+ */
+export async function withCatalogue<S extends { slug: string }>(shop: S) {
+  const res = await catalogueService.forShop(shop.slug).catch((error) => {
+    if (error instanceof AppError) return null;
+    throw error;
+  });
+  if (!res) return { shop, products: [] as CatalogueProduct[] };
+  const { products, shop: full } = plain(res);
+  const { tagline, about, shippingInfo, showTestimonials, logoMode, instagramUrl, facebookUrl, categories } = full;
+  return { shop: { ...shop, tagline, about, shippingInfo, showTestimonials, logoMode, instagramUrl, facebookUrl, categories }, products };
+}
+
+export type CatalogueProduct =Awaited<ReturnType<typeof loadCatalogue>>["products"][number];

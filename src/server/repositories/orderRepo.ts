@@ -115,13 +115,14 @@ export const orderRepo = {
 
   async list(
     shopId: string,
-    f: { status?: OrderStatus; courierId?: string; number?: number; phoneDigits?: string; name?: string; cursor?: string; limit: number },
+    f: { status?: OrderStatus; courierId?: string; number?: number; phoneDigits?: string; name?: string; item?: string; cursor?: string; limit: number },
     client: Db = db,
   ) {
     const search: Prisma.OrderWhereInput[] = [];
     if (f.number !== undefined) search.push({ number: f.number });
     if (f.phoneDigits) search.push({ customerPhone: { contains: f.phoneDigits } });
     if (f.name) search.push({ customerName: { contains: f.name, mode: "insensitive" } });
+    if (f.item) search.push({ items: { some: { shopId, nameSnapshot: { contains: f.item, mode: "insensitive" } } } });
     const rows = await client.order.findMany({
       where: {
         shopId,
@@ -186,13 +187,28 @@ export const orderRepo = {
   },
 
   /** A courier's run: what the delivery screen lists. */
-  forCourier(shopId: string, f: { courierId?: string; statuses: OrderStatus[]; since?: Date }, client: Db = db) {
+  forCourier(
+    shopId: string,
+    f: { courierId?: string; statuses: OrderStatus[]; since?: Date; period?: { start: Date; end: Date } },
+    client: Db = db,
+  ) {
+    const within = f.period && { gte: f.period.start, lt: f.period.end };
     return client.order.findMany({
       where: {
         shopId,
         status: { in: f.statuses },
         ...(f.courierId ? { courierId: f.courierId } : {}),
         ...(f.since ? { updatedAt: { gte: f.since } } : {}),
+        // A returned order never reached the door, so it has no deliveredAt; one still on its way goes by the day it was placed.
+        ...(within
+          ? {
+              OR: [
+                { status: "DELIVERED" as const, deliveredAt: within },
+                { status: "RETURNED" as const, updatedAt: within },
+                { status: { in: ["PACKED", "OUT_FOR_DELIVERY"] as OrderStatus[] }, createdAt: within },
+              ],
+            }
+          : {}),
       },
       include: {
         items: { select: { nameSnapshot: true, qty: true, note: true } },

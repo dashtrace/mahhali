@@ -1,6 +1,7 @@
 import { GOVERNORATES } from "../domain/lebanon";
 import { ORDER_STATUSES } from "../domain/orderStatus";
 import { Amount, Email, Phone } from "./common";
+import { fromNotAfterTo, range, rangeMessage } from "./money";
 import { z } from "./zod";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -73,7 +74,7 @@ export const OrderStatusEnum = z.enum(ORDER_STATUSES).openapi("OrderStatus");
 export const ListOrdersQuery = z.object({
   status: OrderStatusEnum.optional(),
   courierId: z.string().min(1).max(64).optional(),
-  /** Order number (#1042), phone digits or part of the customer's name. */
+  /** Order number (#1042), phone digits, part of the customer's name or part of an item's name. */
   q: z.string().trim().max(80).optional(),
   cursor: z.string().min(1).max(64).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
@@ -107,11 +108,15 @@ export const DeliveredBody = z.object(Collected).openapi("DeliveredBody");
 
 export const FailedBody = z.object({ reason: text(300) }).openapi("FailedBody");
 
-export const DeliveryOrdersQuery = z.object({
-  view: z.enum(["active", "done"]).default("active"),
-  /** Desk roles only: one courier's run. */
-  courierId: z.string().min(1).max(64).optional(),
-});
+export const DeliveryOrdersQuery = z
+  .object({
+    view: z.enum(["active", "done"]).default("active"),
+    /** Desk roles only: one courier's run. */
+    courierId: z.string().min(1).max(64).optional(),
+    /** YYYY-MM-DD, inclusive, in UTC. When both are absent, view=done shows the last 7 days of activity and view=active shows everything. */
+    ...range,
+  })
+  .refine(fromNotAfterTo, rangeMessage);
 
 export type PlaceOrderInput = z.infer<typeof PlaceOrderBody>;
 export type ManualOrderInput = z.infer<typeof ManualOrderBody>;

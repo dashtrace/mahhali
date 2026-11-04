@@ -33,16 +33,45 @@ export function toAmountText(minor: Minor, currency: Currency): string {
   return currency === "USD" ? (Number(minor) / 100).toFixed(2) : String(minor);
 }
 
-export function formatDateTime(value: string | Date, locale: Locale = "en"): string {
-  return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+export function formatDateTime(value: string | Date, locale: Locale = "en", timeZone?: string): string {
+  return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(value));
 }
 
-export function formatDate(value: string | Date, locale: Locale = "en"): string {
-  return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium" }).format(new Date(value));
+export function formatDate(value: string | Date, locale: Locale = "en", timeZone?: string): string {
+  return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium", timeZone }).format(new Date(value));
+}
+
+export function formatMonth(value: string | Date, locale: Locale = "en"): string {
+  return new Intl.DateTimeFormat(intl(locale), { month: "short", year: "numeric" }).format(new Date(value));
 }
 
 export function formatNumber(value: number, locale: Locale = "en", digits = 0): string {
   return new Intl.NumberFormat(intl(locale), { maximumFractionDigits: digits }).format(value);
+}
+
+/** Defence in depth for owner links: the API only stores https links on allowlisted hosts. */
+export const httpsLink = (url: string | null | undefined) => (url?.startsWith("https://") ? url : null);
+
+/** "https://www.instagram.com/yourshop/" -> "@yourshop". Null for a link that isn't one plain handle, like facebook.com/profile.php. */
+export function socialHandle(url: string): string | null {
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    // A link still being typed in the live preview ("https://") isn't a URL yet.
+    return null;
+  }
+  const handle = /^\/([\w.-]+)\/?$/.exec(path)?.[1];
+  return handle && !handle.endsWith(".php") ? `@${handle}` : null;
+}
+
+/**
+ * How much room a shop name takes, in average letters, for fitting it in the phone header.
+ * At least its length, so a name of average letters keeps its size; wide letters count for more, or they'd be cut.
+ */
+export function nameUnits(name: string): number {
+  const letters = [...name];
+  return Math.max(letters.length, letters.reduce((sum, c) => sum + (/[A-Zmw]/.test(c) ? 1.5 : /[iljtfr ]/.test(c) ? 0.6 : 1), 0));
 }
 
 /** "+96171123456" -> https://wa.me/96171123456 for the one-tap WhatsApp button. */

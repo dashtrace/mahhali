@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Alert, Button } from "@/components/ui";
+import { Alert } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 
 /** Hide or publish again; the text itself is never editable. */
@@ -26,9 +26,9 @@ export function ModerateButton({ id, hidden, labels }: { id: string; hidden: boo
 
   return (
     <div className="flex flex-col items-start gap-2">
-      <Button tone="secondary" onClick={toggle} disabled={busy}>
+      <button type="button" className="btn tiny" onClick={toggle} disabled={busy}>
         {hidden ? labels.unhide : labels.hide}
-      </Button>
+      </button>
       {error && <Alert tone="error">{error}</Alert>}
     </div>
   );

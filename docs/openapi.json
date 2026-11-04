@@ -905,6 +905,30 @@
             "type": "string",
             "pattern": "^#[0-9a-fA-F]{6}$"
           },
+          "surface": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "muted": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "dark": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "darkText": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "border": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "buttonText": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
           "radius": {
             "type": "string",
             "enum": [
@@ -2663,7 +2687,7 @@
     },
     "/api/orders": {
       "get": {
-        "summary": "The order board: filter by status or courier, search by number, phone or name (owner, manager, staff)",
+        "summary": "The order board: filter by status or courier, search by number, phone, customer name or item name (owner, manager, staff)",
         "tags": [
           "Orders"
         ],
@@ -3142,6 +3166,7 @@
     "/api/delivery/orders": {
       "get": {
         "summary": "A courier's run: delivery users see only their courier's orders",
+        "description": "from and to filter delivered orders by delivery day, returned orders by last update, and orders still to deliver by the day they were placed. A lone to covers the 7 days ending that day; a lone from runs to today.",
         "tags": [
           "Delivery"
         ],
@@ -3173,6 +3198,26 @@
             "required": false,
             "name": "courierId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-01"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-01"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
           }
         ],
         "responses": {
@@ -3181,6 +3226,16 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
               }
             }
           },

@@ -1,3 +1,4 @@
+import { periodOf } from "../domain/metrics";
 import { toMinor } from "../domain/money";
 import { firstName } from "../domain/names";
 import { itemLabel, orderTotals, parseOrderNumber } from "../domain/orders";
@@ -300,6 +301,8 @@ export const orderService = {
     const search = q.q?.trim() ?? "";
     const number = search ? parseOrderNumber(search) : null;
     const digits = search.replace(/\D/g, "");
+    // Letters mean words: "Oud 1920" is not a phone number.
+    const isPhone = digits.length >= 4 && !/\p{L}/u.test(search);
     const filters = {
       status: q.status,
       courierId: q.courierId,
@@ -307,8 +310,10 @@ export const orderService = {
       limit: q.limit,
       ...(number !== null ? { number } : {}),
       // Local numbers ("03 123 456") are stored as +9613123456: match on the digits after the leading 0.
-      ...(digits.length >= 4 ? { phoneDigits: digits.replace(/^0/, "") } : {}),
-      ...(search && number === null && digits.length < 4 ? { name: search } : {}),
+      ...(isPhone ? { phoneDigits: digits.replace(/^0/, "") } : {}),
+      ...(search && number === null && !isPhone ? { name: search } : {}),
+      // Always, digits included: "1920" must still find "Oud 1920", next to any number or phone match.
+      ...(search ? { item: search } : {}),
     };
     const [page, counts] = await Promise.all([
       orderRepo.list(actor.shopId, filters),
@@ -412,13 +417,16 @@ export const orderService = {
   },
 
   /** The delivery phone screen: a courier's run, with what to collect. */
-  async deliveryList(actor: Actor, q: { view: "active" | "done"; courierId?: string }) {
+  async deliveryList(actor: Actor, q: { view: "active" | "done"; courierId?: string; from?: string; to?: string }) {
     const scope = courierScope(actor);
     if (scope === null) return [];
+    const done = q.view === "done";
+    const period = q.from || q.to ? periodOf(q.from, q.to, new Date(), 7) : undefined;
     const orders = await orderRepo.forCourier(actor.shopId, {
       courierId: scope ?? q.courierId,
-      statuses: q.view === "active" ? ["PACKED", "OUT_FOR_DELIVERY"] : ["DELIVERED", "RETURNED"],
-      since: q.view === "done" ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) : undefined,
+      statuses: done ? ["DELIVERED", "RETURNED"] : ["PACKED", "OUT_FOR_DELIVERY"],
+      since: done && !period ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) : undefined,
+      period,
     });
     return orders.map((o) => ({
       id: o.id,
@@ -440,6 +448,7 @@ export const orderService = {
       reportedUsdCents: o.reportedUsdCents,
       reportedLbp: o.reportedLbp,
       failureReason: o.failureReason,
+      createdAt: o.createdAt,
       deliveredAt: o.deliveredAt,
       canComplete: o.status === "OUT_FOR_DELIVERY",
     }));

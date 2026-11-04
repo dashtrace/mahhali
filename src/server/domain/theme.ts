@@ -1,4 +1,4 @@
-// A shop's look: three colours (and an optional text colour), a corner radius
+// A shop's look: three colours (and optional saved colour roles), a corner radius
 // and a font, applied as CSS variables on the catalogue, the tracking page and
 // the dashboard header. Pure: no I/O, so the contrast rules are unit-tested directly.
 export const RADII = ["none", "sm", "md", "lg", "full"] as const;
@@ -6,10 +6,18 @@ export const FONTS = ["system", "inter", "cairo", "tajawal"] as const;
 
 export type Theme = {
   primary: string;
+  /** Decoration only; never drawn behind or as text. */
   accent: string;
   background: string;
   /** Body text; black or white, whichever reads better on the background, when unset. */
   text?: string;
+  // The rest are derived from the colours above when unset (storefrontTokens).
+  surface?: string;
+  muted?: string;
+  dark?: string;
+  darkText?: string;
+  border?: string;
+  buttonText?: string;
   radius: (typeof RADII)[number];
   font: (typeof FONTS)[number];
 };
@@ -53,16 +61,21 @@ export function inkFor(background: string): "#000000" | "#ffffff" {
 export type ContrastFailure = { pair: string; foreground: string; background: string; ratio: number };
 
 /**
- * The colour pairs the pages draw text with, below AA. Buttons and badges put
- * their labels in the page background colour, and primary and accent are also
- * used for links and prices on the page, so both directions are the same pair.
+ * The colour pairs the pages draw text with, below AA. Button labels use
+ * buttonText, or the page background colour when unset. Accent is decoration, so
+ * it has no pair. Optional roles are only checked when saved; unset ones are derived.
  * Body text is the shop's text colour, or inkFor(background), which by construction is always at least 4.58.
  */
-export function validateTheme(theme: Pick<Theme, "primary" | "accent" | "background" | "text">): ContrastFailure[] {
+export function validateTheme(theme: Omit<Theme, "radius" | "font">): ContrastFailure[] {
+  const body = theme.text ?? inkFor(theme.background);
   const pairs = [
-    { pair: "text on primary", foreground: theme.background, background: theme.primary },
-    { pair: "text on accent", foreground: theme.background, background: theme.accent },
-    { pair: "body text on background", foreground: theme.text ?? inkFor(theme.background), background: theme.background },
+    { pair: "text on primary", foreground: theme.buttonText ?? theme.background, background: theme.primary },
+    { pair: "body text on background", foreground: body, background: theme.background },
+    // Links and prices draw primary on the page. Without buttonText the first pair already covers this.
+    ...(theme.buttonText ? [{ pair: "links on background", foreground: theme.primary, background: theme.background }] : []),
+    ...(theme.muted ? [{ pair: "muted text on background", foreground: theme.muted, background: theme.background }] : []),
+    ...(theme.surface ? [{ pair: "body text on surface", foreground: body, background: theme.surface }] : []),
+    ...(theme.dark ? [{ pair: "text on dark band", foreground: theme.darkText ?? theme.background, background: theme.dark }] : []),
   ];
   return pairs
     .map((p) => ({ ...p, ratio: contrastRatio(p.foreground, p.background) }))

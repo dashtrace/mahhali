@@ -4,18 +4,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
 import { MAX_QTY, addToCart, leftAfterCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
-import { Icon } from "@/components/Icon";
-import { Sheet } from "@/components/Sheet";
+import { ArrowOut, Icon } from "@/components/Icon";
 import { Button, ProductPhoto, QtyStepper, Textarea, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages, type StoreMessages } from "@/i18n/messages/store";
 import { formatMoney } from "@/lib/format";
 import type { StoreProduct } from "../../_components/load";
 
-// The product page's interactive parts: gallery, option pills, quantity,
-// customization note and the sticky Add to cart / Buy now bar. The bar lives in
-// ShopFrame's bottom slot, apart from the rest, so they share state through a
-// provider that wraps the whole frame.
+// The product page's interactive parts: gallery, price, option pills, quantity,
+// customization note and the Add to bag / Buy now buttons. The page lays them out
+// around its own static content, so they share state through a provider.
 
 type Product = Pick<StoreProduct, "id" | "name" | "options" | "images" | "variants" | "customization">;
 type Variant = Product["variants"][number];
@@ -114,7 +112,7 @@ export function ProductProvider({ product, slug, locale, children }: { product: 
 }
 
 /** Main photo with next / swipe (clamped), a counter and thumbnails. */
-export function Gallery() {
+export function Gallery({ collection }: { collection: string }) {
   const { product, m, photo, setPhoto, locale } = useProduct();
   const touchX = useRef<number | null>(null);
   const images = product.images;
@@ -130,30 +128,28 @@ export function Gallery() {
     setPhoto(Math.min(n - 1, Math.max(0, photo + (forward ? 1 : -1))));
   }
 
+  const pad = (i: number) => String(i).padStart(2, "0");
+
   return (
     <section aria-label={m.galleryLabel} className="min-w-0">
-      <div
-        // A fixed height on phones keeps the price and options in view; the whole photo still shows (contain).
-        className="relative h-56 touch-pan-y overflow-hidden rounded-[20px] border border-sl-border bg-sl-cat sm:h-72 md:aspect-[1/0.81] md:h-auto"
-        onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
-        onTouchEnd={onTouchEnd}
-      >
+      <div className="sl-detail-photo" onTouchStart={(e) => (touchX.current = e.touches[0].clientX)} onTouchEnd={onTouchEnd}>
         <ProductPhoto src={images[photo]?.url} name={product.name} alt={n > 0 ? photoName(photo) : ""} fit="contain" />
         {n > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setPhoto((photo + 1) % n)}
-              className="absolute end-2.5 top-2.5 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-sl-border bg-sl-panel px-3.5 text-xs font-bold text-sl-fg"
-            >
-              {m.nextPhoto}
-              <Icon name="arrow" className="size-3.5" />
-            </button>
-            <span aria-hidden className="absolute bottom-2.5 end-2.5 rounded-full bg-[#111b22bb] px-2.5 py-1 text-[11px] font-bold text-white tabular-nums" dir="ltr">
-              {photo + 1} / {n}
-            </span>
-          </>
+          <button
+            type="button"
+            onClick={() => setPhoto((photo + 1) % n)}
+            className="absolute end-2.5 top-2.5 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-sl-border bg-sl-panel px-3.5 text-xs font-bold text-sl-fg"
+          >
+            {m.nextPhoto}
+            <Icon name="arrow" className="size-3.5" />
+          </button>
         )}
+      </div>
+      <div className="sl-gallery-meta">
+        <span aria-hidden dir="ltr">
+          {n > 0 && `${pad(photo + 1)} / ${pad(n)}`}
+        </span>
+        <span>{collection}</span>
       </div>
       {n > 1 && (
         <ul aria-label={m.thumbsLabel} className="sl-scroll-row mt-2.5 gap-2.5 pb-1">
@@ -177,73 +173,56 @@ export function Gallery() {
   );
 }
 
-/** Price, option pills, quantity, stock line and the customization note. */
+/** The selected option's price, or the lowest when none is selected. */
+export function ProductPrice({ currency }: { currency: "USD" | "LBP" }) {
+  const { product, locale, variant } = useProduct();
+  const price = variant?.priceMinor ?? Math.min(...product.variants.map((v) => v.priceMinor));
+  return (
+    <p className="sl-detail-price">
+      <bdi>{formatMoney(price, currency, locale)}</bdi>
+    </p>
+  );
+}
+
+/** Option pills, quantity, what's already in the bag and the customization note. */
 export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
   const { product, m, locale, variant, room, inCart, qty, setQty, note, setNote, noteMax, noteError, noteRef, pick } = useProduct();
   const custom = product.customization;
-  const price = variant?.priceMinor ?? Math.min(...product.variants.map((v) => v.priceMinor));
 
   return (
     <div>
-      <p className="mb-3 mt-1 text-xl font-extrabold tabular-nums sm:text-2xl">
-        <bdi>{formatMoney(price, currency, locale)}</bdi>
-      </p>
-
-      <div className="mb-2 mt-3 flex items-baseline justify-between gap-2">
-        <span id="option-label" className="text-sm font-extrabold">
-          {product.options.length ? product.options.join(" · ") : product.variants.length > 1 ? m.chooseOption : m.option}
-        </span>
-        <span className="text-xs text-sl-muted">{m.priceMayVary}</span>
+      <div className="sl-option-line">
+        <span id="option-label">{product.options.length ? product.options.join(" · ") : product.variants.length > 1 ? m.chooseOption : m.option}</span>
+        <small>{m.priceMayVary}</small>
       </div>
-      <div role="group" aria-labelledby="option-label" className="flex flex-wrap gap-2">
+      <div role="group" aria-labelledby="option-label" className="sl-variants">
         {product.variants.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            aria-pressed={v.id === variant?.id}
-            disabled={!v.inStock}
-            onClick={() => pick(v)}
-            className="flex min-h-11 min-w-[82px] flex-col items-start gap-0.5 rounded-sl border border-sl-border bg-sl-panel px-3 py-2 text-start text-xs aria-pressed:border-sl-accent aria-pressed:bg-sl-cat aria-pressed:shadow-[inset_0_0_0_1px_var(--sl-accent)] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <strong className="text-[13px]">{variantName(v, m)}</strong>
-            <small className="text-xs text-sl-muted">
+          <button key={v.id} type="button" aria-pressed={v.id === variant?.id} disabled={!v.inStock} onClick={() => pick(v)} className={cx("sl-variant", v.id === variant?.id && "sl-on-surface")}>
+            {variantName(v, m)}
+            <small>
               <bdi>{fill(m.variantMeta, { price: formatMoney(v.priceMinor, currency, locale), stock: stockText(v, m) })}</bdi>
             </small>
           </button>
         ))}
       </div>
 
-      <div className="mb-2 mt-4 flex flex-wrap items-center justify-between gap-3.5">
-        <QtyStepper value={Math.min(qty, Math.max(1, room))} onChange={setQty} max={Math.max(1, room)} locale={locale} label={product.name} />
-        <p className="text-[13px] font-bold text-sl-muted">
-          {variant?.inStock ? (
-            <>
-              <span aria-hidden className="text-sl-ok">
-                ●{" "}
-              </span>
-              {stockLine(variant, inCart, m)}
-            </>
-          ) : (
-            <span className="text-sl-danger">{m.outOfStock}</span>
-          )}
-          <span className="block text-xs font-normal">{m.forSelected}</span>
-        </p>
+      <div className="sl-option-line">
+        <span>{m.quantity}</span>
+        <QtyStepper className="sl-qty" value={Math.min(qty, Math.max(1, room))} onChange={setQty} max={Math.max(1, room)} locale={locale} label={product.name} />
       </div>
       {variant && inCart > 0 && (
-        <p className="text-xs text-sl-muted">
-          {room > 0 ? fill(m.inCartAlready, { n: inCart }) : variant.left < MAX_QTY ? fill(m.allLeftInCart, { n: variant.left }) : m.maxInCart}
+        <p className="sl-in-bag">
+          {room > 0 ? `${stockLine(variant, inCart, m)} · ${fill(m.inCartAlready, { n: inCart })}` : variant.left < MAX_QTY ? fill(m.allLeftInCart, { n: variant.left }) : m.maxInCart}
         </p>
       )}
 
       {custom && (
-        <section aria-labelledby="customize-title" className="mb-2 mt-4 rounded-[15px] border border-sl-accent bg-sl-panel p-3.5">
-          <h2 id="customize-title" className="text-base font-bold">
-            {m.customizeTitle}
-          </h2>
-          <p className="mb-3 mt-1 text-xs leading-normal text-sl-muted">{m.customizeHelp}</p>
-          <label htmlFor="custom-note" className="mb-2 block text-[13px] font-bold">
+        <section aria-labelledby="customize-title" className="sl-custom-note">
+          <h2 id="customize-title">{m.customizeTitle}</h2>
+          <p>{m.customizeHelp}</p>
+          <label htmlFor="custom-note">
             {custom.label}
-            {custom.required ? <span aria-hidden> *</span> : <span className="font-normal text-sl-muted"> {m.customOptional}</span>}
+            {custom.required ? <span aria-hidden> *</span> : <span className="sl-optional"> {m.customOptional}</span>}
           </label>
           <Textarea
             id="custom-note"
@@ -255,7 +234,7 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
             placeholder={custom.placeholder ?? undefined}
             aria-invalid={!!noteError}
             aria-describedby="custom-note-help"
-            className="max-h-48 resize-y bg-sl-bg"
+            className="max-h-48 resize-y"
           />
           <div id="custom-note-help" className="mt-1.5 flex justify-between gap-2.5 text-xs text-sl-muted">
             <span className={cx(noteError && "font-semibold text-sl-danger")}>
@@ -271,31 +250,8 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
   );
 }
 
-/** The shipping & returns policy in a bottom sheet, so reading it keeps the chosen option, quantity and note. */
-export function PolicySheet({ label, title, children }: { label: string; title: string; children: ReactNode }) {
-  const { locale } = useProduct();
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen(true)}
-        className="inline-flex min-h-11 items-center gap-1.5 text-start text-[13px] font-extrabold text-sl-accent hover:underline"
-      >
-        {label}
-        <Icon name="arrow" className="size-3.5" />
-      </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={title} locale={locale} side="bottom">
-        {children}
-      </Sheet>
-    </>
-  );
-}
-
-/** Add to cart (stays) and Buy now (adds, then the cart), with a toast above the bar. */
-export function ProductBar() {
+/** Add to bag (stays) and Buy now (adds, then the bag), with a toast at the bottom of the screen. */
+export function ProductActions() {
   const { slug, m, variant, room, notice, setNotice, add } = useProduct();
   const router = useRouter();
 
@@ -307,31 +263,28 @@ export function ProductBar() {
 
   return (
     <>
-      <div role="status" className="pointer-events-none fixed inset-x-3.5 bottom-[calc(76px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md">
+      <div role="status" className="pointer-events-none fixed inset-x-3.5 bottom-[calc(25px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md">
         {notice && (
-          <div
-            className={cx(
-              "pointer-events-auto flex items-center gap-2 rounded-sl border bg-sl-panel py-1 pe-1 ps-3.5 text-[13px] shadow-[0_10px_24px_#0000001a]",
-              notice.tone === "ok" ? "border-sl-accent" : "border-sl-warn",
-            )}
-          >
+          <div className="sl-toast" data-tone={notice.tone}>
             <span className="min-w-0 flex-1">{notice.text}</span>
-            <Link href={`/s/${slug}/cart`} className="inline-flex min-h-11 shrink-0 items-center px-2 font-bold text-sl-accent">
+            <Link href={`/s/${slug}/cart`} className="inline-flex min-h-11 shrink-0 items-center px-2 font-bold underline underline-offset-2">
               {m.viewCart}
             </Link>
-            <button type="button" aria-label={m.dismiss} onClick={() => setNotice(null)} className="grid size-11 shrink-0 place-items-center text-sl-muted">
+            <button type="button" aria-label={m.dismiss} onClick={() => setNotice(null)} className="grid size-11 shrink-0 place-items-center">
               <Icon name="close" className="size-4" />
             </button>
           </div>
         )}
       </div>
-      <Button tone="outline" className="min-h-12 min-w-0 flex-1" disabled={!variant?.inStock || room < 1} onClick={() => add()}>
-        {variant?.inStock ? m.addToCart : m.outOfStock}
-      </Button>
-      <Button className="min-h-12 min-w-0 flex-1" disabled={!variant?.inStock} onClick={() => add("buy") && router.push(`/s/${slug}/cart`)}>
-        {m.buyNow}
-        <Icon name="arrow" className="size-4" />
-      </Button>
+      <div className="sl-detail-actions">
+        <Button tone="outline" className="sl-action" disabled={!variant?.inStock || room < 1} onClick={() => add()}>
+          {variant?.inStock ? m.addToCart : m.outOfStock}
+        </Button>
+        <Button className="sl-action" disabled={!variant?.inStock} onClick={() => add("buy") && router.push(`/s/${slug}/cart`)}>
+          {m.buyNow}
+          <ArrowOut />
+        </Button>
+      </div>
     </>
   );
 }

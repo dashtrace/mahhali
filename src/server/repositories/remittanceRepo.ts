@@ -44,6 +44,10 @@ export const remittanceRepo = {
     });
   },
 
+  find(shopId: string, id: string, client: Db = db) {
+    return client.remittance.findFirst({ where: { id, shopId }, include: withLines });
+  },
+
   /** Delivered orders of a courier that no remittance has paid for yet, oldest first. */
   unsettled(shopId: string, courierId: string, client: Db = db) {
     return client.order.findMany({

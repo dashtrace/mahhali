@@ -19,7 +19,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   return (
-    <html lang={locale} dir={dirOf(locale)} className={`${inter.variable} ${cairo.variable} ${tajawal.variable}`}>
+    <html lang={locale} dir={dirOf(locale)} data-scroll-behavior="smooth" className={`${inter.variable} ${cairo.variable} ${tajawal.variable}`}>
       <body className="min-h-dvh">{children}</body>
     </html>
   );

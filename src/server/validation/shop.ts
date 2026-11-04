@@ -28,8 +28,22 @@ const Hex = z
   .transform((v) => v.toLowerCase());
 
 export const ThemeBody = z
-  // Leaving out `text` keeps body text automatic (black or white for the background).
-  .object({ primary: Hex, accent: Hex, background: Hex, text: Hex.optional(), radius: z.enum(RADII), font: z.enum(FONTS) })
+  // Leaving out `text` keeps body text automatic (black or white for the background);
+  // leaving out a colour role derives it from the colours above.
+  .object({
+    primary: Hex,
+    accent: Hex,
+    background: Hex,
+    text: Hex.optional(),
+    surface: Hex.optional(),
+    muted: Hex.optional(),
+    dark: Hex.optional(),
+    darkText: Hex.optional(),
+    border: Hex.optional(),
+    buttonText: Hex.optional(),
+    radius: z.enum(RADII),
+    font: z.enum(FONTS),
+  })
   .openapi("Theme");
 
 export const BrandingBody = z

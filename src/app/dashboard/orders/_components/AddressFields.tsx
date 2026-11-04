@@ -1,17 +1,17 @@
-import { Field, Input, Select } from "@/components/ui";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { OrderMessages } from "@/i18n/messages/orders";
 import { GOVERNORATES } from "@/server/domain/lebanon";
+import { Field } from "./Field";
 import { govLabel } from "./labels";
 
 export type AddressValue = { governorate: string; district: string; area: string; addressLine: string; landmark: string | null };
 
 /** Lebanese address inputs (no postcode); read back with addressFrom(FormData). */
-export function AddressFields({ value, m, t }: { value?: AddressValue; m: OrderMessages; t: CommonMessages }) {
+export function AddressFields({ value, landmark = true, m, t }: { value?: AddressValue; landmark?: boolean; m: OrderMessages; t: CommonMessages }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="split gap-y-0">
       <Field label={m.governorate}>
-        <Select name="governorate" required defaultValue={value?.governorate ?? ""}>
+        <select name="governorate" required defaultValue={value?.governorate ?? ""} className="control">
           <option value="" disabled>
             {m.choose}
           </option>
@@ -20,20 +20,22 @@ export function AddressFields({ value, m, t }: { value?: AddressValue; m: OrderM
               {govLabel(m, g)}
             </option>
           ))}
-        </Select>
+        </select>
       </Field>
       <Field label={m.district}>
-        <Input name="district" required maxLength={60} defaultValue={value?.district} />
+        <input name="district" required maxLength={60} defaultValue={value?.district} className="control" />
       </Field>
       <Field label={m.area}>
-        <Input name="area" required maxLength={80} defaultValue={value?.area} />
+        <input name="area" required maxLength={80} defaultValue={value?.area} className="control" />
       </Field>
       <Field label={m.addressLine}>
-        <Input name="addressLine" required maxLength={200} defaultValue={value?.addressLine} />
+        <input name="addressLine" required maxLength={200} defaultValue={value?.addressLine} className="control" />
       </Field>
-      <Field label={`${m.landmark} (${t.optional})`} className="sm:col-span-2">
-        <Input name="landmark" maxLength={200} defaultValue={value?.landmark ?? ""} />
-      </Field>
+      {landmark && (
+        <Field label={`${m.landmark} (${t.optional})`} className="col-span-full">
+          <input name="landmark" maxLength={200} defaultValue={value?.landmark ?? ""} className="control" />
+        </Field>
+      )}
     </div>
   );
 }

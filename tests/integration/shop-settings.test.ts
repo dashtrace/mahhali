@@ -162,6 +162,31 @@ describe("branding", () => {
     expect((await branding(theme)).body.theme.text).toBeUndefined();
   });
 
+  it("saves every colour role exactly, and a body with only the original fields still works", async () => {
+    const shop = await signUpOwner();
+    const base = { primary: "#874258", accent: "#b99b7b", background: "#faf5f1", text: "#30282b", radius: "md", font: "system" };
+    const roles = { surface: "#f1e8e1", muted: "#756b68", dark: "#714558", darkText: "#fffaf5", border: "#e4d7d1", buttonText: "#ffffff" };
+    const saved = await branding({ ...base, ...roles }, shop.cookie);
+    expect(saved.status).toBe(200);
+    expect(saved.body.theme).toEqual({ ...base, ...roles });
+    expect((await call(getBranding, "/api/shop/branding", { cookie: shop.cookie })).body.theme).toEqual({ ...base, ...roles });
+    expect((await call(catalogue, "/catalogue", {}, { slug: shop.shop.slug })).body.shop.theme).toEqual({ ...base, ...roles });
+
+    const original = await branding(base, shop.cookie);
+    expect(original.status).toBe(200);
+    expect(original.body.theme).toEqual(base);
+  });
+
+  it("refuses a saved colour role that fails its pair", async () => {
+    const shop = await signUpOwner();
+    const base = { primary: "#874258", accent: "#b99b7b", background: "#faf5f1", radius: "md", font: "system" };
+    const res = await branding({ ...base, muted: "#cccccc" }, shop.cookie);
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe("LOW_CONTRAST");
+    expect(res.body.error.details).toEqual([expect.objectContaining({ pair: "muted text on background", foreground: "#cccccc" })]);
+    expect((await prisma.shop.findUniqueOrThrow({ where: { id: shop.shop.id } })).theme).toBeNull();
+  });
+
   it("refuses colours that make text hard to read and says which pair failed", async () => {
     const before = (await prisma.shop.findUniqueOrThrow({ where: { id: owner.shop.id } })).theme;
     const res = await branding({ primary: "#ffff00", accent: "#1e3a8a", background: "#ffffff", radius: "md", font: "system" });
@@ -175,7 +200,7 @@ describe("branding", () => {
 
   it("validates the theme shape", async () => {
     const ok = { primary: "#1e3a8a", accent: "#9d174d", background: "#ffffff", radius: "md", font: "system" };
-    for (const body of [{ preset: "neon" }, { ...ok, primary: "blue" }, { ...ok, text: "blue" }, { ...ok, radius: "huge" }, { ...ok, font: "comic" }, {}]) {
+    for (const body of [{ preset: "neon" }, { ...ok, primary: "blue" }, { ...ok, text: "blue" }, { ...ok, surface: "blue" }, { ...ok, radius: "huge" }, { ...ok, font: "comic" }, {}]) {
       expect((await branding(body)).status, JSON.stringify(body)).toBe(400);
     }
   });
