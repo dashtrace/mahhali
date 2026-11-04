@@ -165,6 +165,59 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
 
       <section className="card">
         <div className="sectionbar">
+          <h2 className="m-0">{m.byCourier}</h2>
+          <span className="hint">{fill(m.totalGaps, { amount: money(rec.totals.gaps.sumMinor), n: rec.totals.gaps.count })}</span>
+        </div>
+        {rec.couriers.length === 0 ? (
+          <div className="empty">{m.noActivity}</div>
+        ) : (
+          rec.couriers.map((c) => {
+            // shortcut: reconcile() returns no per-courier reported total, so orders without a doorstep gap count as reported = due; add reportedMinor to reconcile() for the exact figure.
+            const reported = c.expectedMinor + c.doorstepGaps.reduce((sum, r) => sum + r.diffMinor, 0n);
+            const open = openIssues([c]).count;
+            const received = cash(c.received, locale);
+            const figures = [
+              { label: m.due, value: money(c.expectedMinor) },
+              { label: m.reported, value: money(reported) },
+              { label: m.remitted, value: money(c.receivedMinor), hint: received !== money(c.receivedMinor) ? received : "" },
+              { label: m.gap, value: money(c.gaps.sumMinor), hint: fill(m.gapsHint, { n: c.gaps.count }), red: c.gaps.count > 0 },
+            ];
+            return (
+              <div key={c.courierId} className="line-item block">
+                <div className="between wrap">
+                  <div className="flex min-w-0 flex-wrap items-center gap-[9px]">
+                    <b className="min-w-0 break-words">{c.courierName ?? m.noCourierName}</b>
+                    <span className={`mini-badge ${open ? "red" : "green"}`}>{open ? fill(m.unresolved, { n: open }) : m.allClear}</span>
+                  </div>
+                  {courierId !== c.courierId && (
+                    <Link href={`?${new URLSearchParams({ from: rec.from, to: rec.to, courierId: c.courierId })}`} className="btn tiny">
+                      {m.showCourier}
+                    </Link>
+                  )}
+                </div>
+                <dl className="split4 mt-3 mb-0">
+                  {figures.map((f) => (
+                    <div key={f.label} className="min-w-0">
+                      <dt className="hint">{f.label}</dt>
+                      <dd className={`bold m-0 tabular-nums ${f.red ? "text-(--red)" : ""}`}>
+                        <bdi>{f.value}</bdi>
+                      </dd>
+                      {f.hint && (
+                        <dd className="hint m-0">
+                          <bdi>{f.hint}</bdi>
+                        </dd>
+                      )}
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            );
+          })
+        )}
+      </section>
+
+      <section className="card">
+        <div className="sectionbar">
           <h2 className="m-0">{m.pastTitle}</h2>
           <span className="hint">{m.newestFirst}</span>
         </div>
