@@ -81,14 +81,8 @@ export function NewOrderForm({
           <input name="phone" type="tel" required inputMode="tel" dir="ltr" autoComplete="off" placeholder={m.phonePlaceholder} className="control rtl:text-right" />
         </Field>
       </div>
-      <Field label={`${m.email} (${t.optional})`}>
-        <input name="email" type="email" maxLength={200} dir="ltr" autoComplete="off" className="control rtl:text-right" />
-      </Field>
 
-      <AddressFields m={m} t={t} />
-      <Field label={`${m.notes} (${t.optional})`}>
-        <textarea name="notes" maxLength={500} className="control area" />
-      </Field>
+      <AddressFields landmark={false} m={m} t={t} />
 
       <Field label={m.products}>
         <select
@@ -149,14 +143,29 @@ export function NewOrderForm({
         </div>
       )}
 
-      <div className="split">
-        <Field label={m.firstContactAt} hint={m.firstContactHint}>
-          <input name="firstContactAt" type="datetime-local" dir="ltr" className="control" />
-        </Field>
-        <Field label={`${m.deliveryFee} (${currency})`} hint={m.deliveryFeeHint}>
-          <input name="deliveryFee" inputMode="decimal" pattern={currency === "USD" ? "\\d{1,12}(\\.\\d{1,2})?" : "\\d{1,12}"} dir="ltr" className="control" />
-        </Field>
-      </div>
+      {/* Everything here is optional. Closed fields still submit. */}
+      <details className="mb-[17px]">
+        <summary className="bold cursor-pointer text-xs">{m.moreDetails}</summary>
+        <div className="mt-3">
+          <Field label={`${m.email} (${t.optional})`}>
+            <input name="email" type="email" maxLength={200} dir="ltr" autoComplete="off" className="control rtl:text-right" />
+          </Field>
+          <Field label={`${m.landmark} (${t.optional})`}>
+            <input name="landmark" maxLength={200} className="control" />
+          </Field>
+          <Field label={`${m.notes} (${t.optional})`}>
+            <textarea name="notes" maxLength={500} className="control area" />
+          </Field>
+          <div className="split">
+            <Field label={m.firstContactAt} hint={m.firstContactHint}>
+              <input name="firstContactAt" type="datetime-local" dir="ltr" className="control" />
+            </Field>
+            <Field label={`${m.deliveryFee} (${currency})`} hint={m.deliveryFeeHint}>
+              <input name="deliveryFee" inputMode="decimal" pattern={currency === "USD" ? "\\d{1,12}(\\.\\d{1,2})?" : "\\d{1,12}"} dir="ltr" className="control" />
+            </Field>
+          </div>
+        </div>
+      </details>
 
       {error && <Alert tone="error" className="mb-3">{error}</Alert>}
       <button type="submit" className="btn primary" disabled={busy}>

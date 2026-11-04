@@ -7,7 +7,7 @@ import { govLabel } from "./labels";
 export type AddressValue = { governorate: string; district: string; area: string; addressLine: string; landmark: string | null };
 
 /** Lebanese address inputs (no postcode); read back with addressFrom(FormData). */
-export function AddressFields({ value, m, t }: { value?: AddressValue; m: OrderMessages; t: CommonMessages }) {
+export function AddressFields({ value, landmark = true, m, t }: { value?: AddressValue; landmark?: boolean; m: OrderMessages; t: CommonMessages }) {
   return (
     <div className="split gap-y-0">
       <Field label={m.governorate}>
@@ -31,9 +31,11 @@ export function AddressFields({ value, m, t }: { value?: AddressValue; m: OrderM
       <Field label={m.addressLine}>
         <input name="addressLine" required maxLength={200} defaultValue={value?.addressLine} className="control" />
       </Field>
-      <Field label={`${m.landmark} (${t.optional})`} className="col-span-full">
-        <input name="landmark" maxLength={200} defaultValue={value?.landmark ?? ""} className="control" />
-      </Field>
+      {landmark && (
+        <Field label={`${m.landmark} (${t.optional})`} className="col-span-full">
+          <input name="landmark" maxLength={200} defaultValue={value?.landmark ?? ""} className="control" />
+        </Field>
+      )}
     </div>
   );
 }
