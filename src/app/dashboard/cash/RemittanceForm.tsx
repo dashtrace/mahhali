@@ -25,8 +25,9 @@ type Unsettled = {
 
 type Line = { checked: boolean; usd: string; lbp: string; fee: string };
 
-const cents = (text: string) => Math.round(Number(text || 0) * 100);
-const pounds = (text: string) => Math.round(Number(text || 0));
+// Half-typed text counts as nothing here; the server rejects it on save.
+const cents = (text: string) => Math.round((Number(text) || 0) * 100);
+const pounds = (text: string) => Math.round(Number(text) || 0);
 
 /** Prefilled with what the courier reported at the door, else what was due. */
 function startLine(o: Unsettled): Line {
