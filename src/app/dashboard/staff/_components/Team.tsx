@@ -190,7 +190,7 @@ function InviteForm({ couriers, m, t }: { couriers: Ref[] } & Msgs) {
       <h2>{m.inviteTitle}</h2>
       <form onSubmit={submitWith(submit)}>
         {action.error && <Alert tone="error" className="mb-3">{action.error}</Alert>}
-        <div className="split gap-y-0">
+        <div className="split">
           <Field label={m.emailAddress}>
             <input name="email" type="email" inputMode="email" autoComplete="off" required maxLength={200} dir="ltr" placeholder="person@example.com" className="control" />
           </Field>

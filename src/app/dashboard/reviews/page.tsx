@@ -4,7 +4,6 @@ import { fill, type Locale } from "@/i18n/locale";
 import { reviewMessages } from "@/i18n/messages/money";
 import { shopMessages } from "@/i18n/messages/shop";
 import { getLocale } from "@/i18n/server";
-import { formatDate } from "@/lib/format";
 import { can } from "@/server/domain/policy";
 import type { Actor } from "@/server/http/withRoute";
 import { reviewService } from "@/server/services/reviewService";
@@ -91,8 +90,7 @@ async function ProductReviews({ actor, status: raw, locale }: { actor: Actor; st
                   {r.authorName} · {m.verifiedBuyer} ·{" "}
                   <Link href={`/dashboard/orders/${r.order.id}`} className="underline-offset-2 hover:underline">
                     {fill(m.order, { n: r.order.number })}
-                  </Link>{" "}
-                  · {formatDate(r.createdAt, locale)}
+                  </Link>
                 </p>
                 {moderate && <ModerateButton id={r.id} hidden={hidden} labels={m} />}
               </article>
@@ -141,8 +139,7 @@ async function Testimonials({ actor, status: raw, locale }: { actor: Actor; stat
               </div>
               <p className="my-3.5 whitespace-pre-line break-words">{x.message}</p>
               <p className="hint">
-                {x.authorName} · {m.withConsent} · {formatDate(x.createdAt, locale)}
-                {x.moderatedAt && <> · {fill(s.moderatedOn, { date: formatDate(x.moderatedAt, locale) })}</>}
+                {x.authorName} · {m.withConsent}
               </p>
               {moderate && <TestimonialActions id={x.id} status={x.status} labels={{ approve: m.approve, reject: m.reject, testimonialFailed: s.testimonialFailed }} />}
             </article>
