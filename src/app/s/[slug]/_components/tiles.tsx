@@ -6,7 +6,7 @@ import { Badge, ProductPhoto, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
-import { formatMoney, formatMonth, httpsLink, whatsappLink } from "@/lib/format";
+import { formatMoney, formatMonth, httpsLink, socialHandle, whatsappLink } from "@/lib/format";
 import type { StoreProduct, StoreShop } from "./load";
 import { QuickAdd } from "./QuickAdd";
 
@@ -158,7 +158,7 @@ export function ContactList({ shop, locale, omitUnset }: { shop: Pick<StoreShop,
                 label={`${fill(m.visitLabel, { network: s.network })} (${t.opensNewTab})`}
                 icon={s.icon}
                 title={s.network}
-                sub={m.visitPage}
+                sub={socialHandle(s.href) ?? m.visitPage}
               />
             ) : (
               <SocialCard label={fill(m.notConfiguredLabel, { network: s.network })} icon={s.icon} title={s.network} sub={m.notConfigured} />
