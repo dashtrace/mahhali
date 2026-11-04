@@ -82,6 +82,41 @@
   --sl-heading-tracking: 0;
 }
 
+/*
+ * The home header at the top of the hero: one ink, and on a photo a fixed scrim
+ * rather than a theme colour, so it holds on any image. The drawer, a dialog
+ * inside the header, keeps the shop's colours.
+ */
+.sl-shop header[data-over="photo"] {
+  --sl-over-ink: #ffffff;
+}
+.sl-shop header[data-over="band"] {
+  --sl-over-ink: var(--sl-band-ink);
+}
+.sl-shop header[data-top="true"] {
+  color: var(--sl-over-ink);
+}
+.sl-shop header[data-top="true"] :is(a, button):not(dialog *) {
+  --sl-fg: var(--sl-over-ink);
+  --sl-muted: var(--sl-over-ink);
+  --sl-panel: color-mix(in srgb, var(--sl-over-ink) 13%, transparent);
+  --sl-border: color-mix(in srgb, var(--sl-over-ink) 50%, transparent);
+  outline-color: var(--sl-over-ink);
+}
+.sl-shop header[data-top="true"] nav a[aria-current="page"]:not(dialog *) {
+  color: var(--sl-over-ink);
+}
+.sl-shop header[data-top="true"][data-over="photo"]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: -1;
+  height: 120px;
+  pointer-events: none;
+  background: linear-gradient(#000000b3, #0000);
+}
+
 @theme inline {
   --color-sl-bg: var(--sl-bg);
   --color-sl-panel: var(--sl-panel);

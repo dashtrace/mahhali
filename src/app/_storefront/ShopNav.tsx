@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon } from "@/components/Icon";
 import { Sheet } from "@/components/Sheet";
 import { IconButton, cx } from "@/components/ui";
@@ -41,6 +41,27 @@ export function ShopMenu({ title, locale, children }: { title: string; locale: L
         {children}
       </Sheet>
     </>
+  );
+}
+
+const TOP_PX = 40;
+
+function subscribeScroll(onChange: () => void) {
+  addEventListener("scroll", onChange, { passive: true });
+  return () => removeEventListener("scroll", onChange);
+}
+
+/** Over the hero at the top of the page (colours in globals.css), a slim translucent bar once scrolled. */
+export function OverlayHeader({ tone, children }: { tone: "photo" | "band"; children: ReactNode }) {
+  const top = useSyncExternalStore(subscribeScroll, () => scrollY < TOP_PX, () => true);
+  return (
+    <header
+      data-over={tone}
+      data-top={top}
+      className="group fixed inset-x-0 top-0 z-30 border-b border-sl-border bg-sl-bg/85 backdrop-blur transition-colors duration-300 data-[top=true]:border-transparent data-[top=true]:bg-transparent data-[top=true]:backdrop-blur-none"
+    >
+      {children}
+    </header>
   );
 }
 

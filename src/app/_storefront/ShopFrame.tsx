@@ -8,7 +8,7 @@ import { whatsappLink } from "@/lib/format";
 import { themeTone, themeVars } from "../_server/theme";
 import { CartLink } from "./cart";
 import { playfair } from "./fonts";
-import { ShopMenu, ShopTopNav, WhatsAppFab } from "./ShopNav";
+import { OverlayHeader, ShopMenu, ShopTopNav, WhatsAppFab } from "./ShopNav";
 import { WishLink } from "./wishlist";
 
 export { Stars } from "@/components/ui";
@@ -39,7 +39,9 @@ const https = (url: string | null | undefined) => (url && url.startsWith("https:
  * on desktop; footer; WhatsApp button on the home page.
  * `bar` adds a sticky action bar at the bottom (product page: Add to cart / Buy
  * now). `back` swaps the menu button for a back link; `wish` swaps the header
- * wishlist link (product page: a WishButton variant="icon").
+ * wishlist link (product page: a WishButton variant="icon"). `overlay` (home page)
+ * floats the header over a full-width hero: "photo" for a slide, "band" for the
+ * themed hero of a shop without slides. Children then lay out their own width.
  */
 export function ShopFrame({
   shop,
@@ -47,6 +49,7 @@ export function ShopFrame({
   bar,
   back,
   wish,
+  overlay,
   children,
 }: {
   shop: FrameShop;
@@ -54,11 +57,41 @@ export function ShopFrame({
   bar?: ReactNode;
   back?: { href: string; label: string };
   wish?: ReactNode;
+  overlay?: "photo" | "band";
   children: ReactNode;
 }) {
   const t = common[locale];
   const base = `/s/${shop.slug}`;
   const whatsapp = shop.whatsappPhone ? whatsappLink(shop.whatsappPhone, t.whatsappGreeting) : null;
+  const headerRow = (
+    // The middle column takes what the buttons leave, so a long name truncates instead of overlapping them.
+    <div className="mx-auto grid h-[60px] max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 px-3 transition-[height] group-data-[top=false]:h-[52px] md:flex md:gap-4 md:px-4">
+      <div className="flex items-center">
+        {back ? (
+          <IconButtonLink href={back.href} label={back.label} icon="back" />
+        ) : (
+          <ShopMenu title={shop.name} locale={locale}>
+            <DrawerLinks shop={shop} t={t} />
+          </ShopMenu>
+        )}
+      </div>
+      <Link href={base} className="flex min-h-11 min-w-0 items-center justify-center">
+        <ShopLogo shop={shop} t={t} />
+      </Link>
+      <ShopTopNav slug={shop.slug} locale={locale} />
+      <div className="flex items-center justify-end gap-1 md:ms-auto md:gap-2">
+        <Link
+          href={`${base}/track`}
+          aria-label={t.trackOrder}
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sl border border-sl-border bg-sl-panel px-1.5 text-xs font-bold text-sl-fg md:hidden"
+        >
+          {t.navTrack}
+        </Link>
+        {wish ?? <WishLink slug={shop.slug} locale={locale} />}
+        <CartLink slug={shop.slug} label={t.navCart} countLabel={t.cartCount} />
+      </div>
+    </div>
+  );
   return (
     <div
       lang={locale}
@@ -71,40 +104,17 @@ export function ShopFrame({
         !!bar && "pb-[calc(76px+env(safe-area-inset-bottom))]",
       )}
     >
-      <header className="sticky top-0 z-30 border-b border-sl-border bg-sl-bg/95 backdrop-blur">
-        {/* The middle column takes what the buttons leave, so a long name truncates instead of overlapping them. */}
-        <div className="mx-auto grid h-[60px] max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 px-3 md:flex md:gap-4 md:px-4">
-          <div className="flex items-center">
-            {back ? (
-              <IconButtonLink href={back.href} label={back.label} icon="back" />
-            ) : (
-              <ShopMenu title={shop.name} locale={locale}>
-                <DrawerLinks shop={shop} t={t} />
-              </ShopMenu>
-            )}
-          </div>
-          <Link href={base} className="flex min-h-11 min-w-0 items-center justify-center">
-            <ShopLogo shop={shop} t={t} />
-          </Link>
-          <ShopTopNav slug={shop.slug} locale={locale} />
-          <div className="flex items-center justify-end gap-1 md:ms-auto md:gap-2">
-            <Link
-              href={`${base}/track`}
-              aria-label={t.trackOrder}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sl border border-sl-border bg-sl-panel px-1.5 text-xs font-bold text-sl-fg md:hidden"
-            >
-              {t.navTrack}
-            </Link>
-            {wish ?? <WishLink slug={shop.slug} locale={locale} />}
-            <CartLink slug={shop.slug} label={t.navCart} countLabel={t.cartCount} />
-          </div>
-        </div>
-      </header>
+      {overlay ? (
+        <OverlayHeader tone={overlay}>{headerRow}</OverlayHeader>
+      ) : (
+        <header className="sticky top-0 z-30 border-b border-sl-border bg-sl-bg/95 backdrop-blur">{headerRow}</header>
+      )}
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4">{children}</main>
+      <main className={overlay ? "flex-1" : "mx-auto w-full max-w-6xl flex-1 px-4 py-4"}>{children}</main>
 
       <footer className="border-t border-sl-border bg-sl-nav">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm">
+        {/* On the home page the end of the footer scrolls clear of the floating WhatsApp button. */}
+        <div className={cx("mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm", overlay && whatsapp && "pb-24 md:pb-6")}>
           <div>
             <p className="sl-heading text-lg">{shop.name}</p>
             {shop.tagline && <p className="text-sl-muted">{shop.tagline}</p>}
