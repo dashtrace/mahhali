@@ -268,7 +268,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                       <bdi>{e.actorName ? fill(m.byName, { name: e.actorName }) : e.type === "STATUS" && e.toValue === "NEW" && o.source === "CATALOGUE" ? m.byCustomer : m.bySystem}</bdi>
                     </p>
                   </div>
-                  <time dateTime={e.at} className="hint w-28 shrink-0 text-end">
+                  <time dateTime={e.at} className="hint w-32 shrink-0 text-end">
                     {formatDateTime(e.at, locale)}
                   </time>
                 </div>
