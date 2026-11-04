@@ -38,6 +38,10 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
   const money = (v: bigint) => formatMoney(v, rec.currency, locale);
   const courierName = (id: string) => couriers.find((c) => c.id === id)?.name ?? m.noCourierName;
 
+  const canRemit = can(actor.role, "remittance.write");
+  // A deactivated courier who still owes cash stays pickable, or the debt could never be settled.
+  const remitCouriers = canRemit ? (await Promise.all(couriers.map(async (c) => (c.active || (await remittanceService.unsettled(actor, c.id)).length > 0 ? [{ id: c.id, name: c.name }] : [])))).flat() : [];
+
   const issues = openIssues(rec.couriers);
   const unpaid = rec.couriers.reduce((sum, c) => sum + c.unpaid.reduce((s, r) => s + r.dueMinor, 0n), 0n);
   // Only remittances in this period get a row to link to.
@@ -58,9 +62,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
         title={m.title}
         subtitle={m.subtitle}
         actions={
-          can(actor.role, "remittance.write") && (
-            <RemittanceForm couriers={couriers.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }))} today={new Date().toISOString().slice(0, 10)} locale={locale} m={m} />
-          )
+          canRemit && <RemittanceForm couriers={remitCouriers} today={new Date().toISOString().slice(0, 10)} locale={locale} m={m} />
         }
       />
       <PeriodForm from={rec.from} to={rec.to} courierId={courierId} couriers={couriers.map((c) => ({ id: c.id, name: c.name }))} labels={m} />
