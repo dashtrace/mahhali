@@ -1,4 +1,4 @@
-import { Icon, type IconName } from "@/components/Icon";
+import { Icon } from "@/components/Icon";
 import { Stars, cx } from "@/components/ui";
 import { dirOf, type Locale } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
@@ -53,13 +53,6 @@ const SAMPLES: Sample[] = [
       { name: "زيت زيتون بكر", desc: "عصرة أولى من الكورة", minor: 1_200_000 },
     ],
   },
-];
-
-const TABS: { icon: IconName; key: "navHome" | "navShop" | "navTrack" | "navCart" }[] = [
-  { icon: "home", key: "navHome" },
-  { icon: "bag", key: "navShop" },
-  { icon: "box", key: "navTrack" },
-  { icon: "cart", key: "navCart" },
 ];
 
 function Phone({ s, className }: { s: Sample; className?: string }) {
@@ -149,15 +142,6 @@ function Phone({ s, className }: { s: Sample; className?: string }) {
                   </span>
                 </span>
               </span>
-            </span>
-          ))}
-        </div>
-
-        <div className="absolute inset-x-0 bottom-0 flex justify-around border-t border-sl-border bg-sl-nav px-2 pb-4 pt-2">
-          {TABS.map((tab, i) => (
-            <span key={tab.key} className={cx("flex flex-col items-center gap-0.5 text-[7.5px]", i === 0 ? "font-extrabold text-sl-accent" : "text-sl-muted")}>
-              <Icon name={tab.icon} className="size-3.5" />
-              {t[tab.key]}
             </span>
           ))}
         </div>
