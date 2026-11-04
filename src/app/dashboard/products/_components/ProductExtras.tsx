@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { fill } from "@/i18n/locale";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import { DashIcon } from "../../_components/DashIcon";
 import { Check, Field } from "./kit";
@@ -93,14 +91,7 @@ export function ExtrasFields({ value: x, onChange, categories, visibility, m }: 
   return (
     <>
       <h2>{m.displayTitle}</h2>
-      <Field
-        label={m.category}
-        hint={
-          <Link href="/dashboard/products/categories" className="font-bold text-sl-accent hover:underline">
-            {m.manageCategories}
-          </Link>
-        }
-      >
+      <Field label={m.category}>
         <select className="control" value={x.categoryId} onChange={(e) => set({ categoryId: e.target.value })}>
           <option value="">{m.noCategory}</option>
           {categories.map((c) => (
@@ -114,22 +105,18 @@ export function ExtrasFields({ value: x, onChange, categories, visibility, m }: 
       <Check label={m.featureOn} hint={m.featuredHint} checked={x.featured} onChange={(e) => set({ featured: e.target.checked })} />
 
       <h3>{m.specsTitle}</h3>
-      <p className="hint">{fill(m.specsHint, { max: MAX_SPECS })}</p>
+      <p className="hint">{m.specsHint}</p>
+      {/* Clearing both boxes removes a row: extrasBody drops empty ones when it saves. */}
       {x.specs.map((s, i) => {
         const filled = !!(s.label.trim() || s.value.trim());
         return (
-          <div key={i} className="flex items-start gap-2">
-            <div className="split min-w-0 flex-1">
-              <Field label={m.specLabel}>
-                <input className="control" value={s.label} onChange={(e) => setSpec(i, { label: e.target.value })} maxLength={40} required={filled} placeholder={m.specLabelPlaceholder} dir="auto" />
-              </Field>
-              <Field label={m.specValue}>
-                <input className="control" value={s.value} onChange={(e) => setSpec(i, { value: e.target.value })} maxLength={200} required={filled} placeholder={m.specValuePlaceholder} dir="auto" />
-              </Field>
-            </div>
-            <button type="button" className="btn tiny mt-[30px] shrink-0" aria-label={fill(m.removeSpec, { n: i + 1 })} onClick={() => set({ specs: x.specs.filter((_, j) => j !== i) })}>
-              <DashIcon name="x" size="sm" />
-            </button>
+          <div key={i} className="split">
+            <Field label={m.specLabel}>
+              <input className="control" value={s.label} onChange={(e) => setSpec(i, { label: e.target.value })} maxLength={40} required={filled} placeholder={m.specLabelPlaceholder} dir="auto" />
+            </Field>
+            <Field label={m.specValue}>
+              <input className="control" value={s.value} onChange={(e) => setSpec(i, { value: e.target.value })} maxLength={200} required={filled} placeholder={m.specValuePlaceholder} dir="auto" />
+            </Field>
           </div>
         );
       })}
@@ -140,7 +127,7 @@ export function ExtrasFields({ value: x, onChange, categories, visibility, m }: 
       <hr className="separator" />
 
       <label className="flex items-center gap-[9px]">
-        <input type="checkbox" className="size-4 shrink-0" checked={x.custom} onChange={(e) => set({ custom: e.target.checked })} />
+        <input type="checkbox" className="ms-1 me-[3px] my-[3px] shrink-0" checked={x.custom} onChange={(e) => set({ custom: e.target.checked })} />
         {m.customEnable}
       </label>
       <p className="hint">{m.customHint}</p>

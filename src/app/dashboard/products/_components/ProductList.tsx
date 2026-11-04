@@ -20,7 +20,7 @@ export type ProductRow = {
   featured: boolean;
   href: string;
 };
-export type ProductMode = "active" | "archived" | "all";
+export type ProductMode = "active" | "all";
 
 // shortcut: the API returns every product and this list filters them in the browser; add server paging if shops pass a few thousand.
 const PAGE = 24;
@@ -64,7 +64,7 @@ export function ProductList({
   const needle = query.trim().toLocaleLowerCase();
   const list = rows.filter(
     (p) =>
-      (mode === "all" || p.archived === (mode === "archived")) &&
+      (mode === "all" || !p.archived) &&
       (!category || p.categoryId === category) &&
       (!needle || p.name.toLocaleLowerCase().includes(needle)) &&
       (!lowOnly || low(p)),
@@ -93,8 +93,7 @@ export function ProductList({
           {(
             [
               ["active", m.activeOnly],
-              ["archived", m.archivedOnly],
-              ["all", t.all],
+              ["all", m.includingArchived],
             ] as const
           ).map(([k, label]) => (
             <button key={k} type="button" aria-pressed={mode === k} onClick={() => change(setMode)(k)}>
@@ -105,12 +104,10 @@ export function ProductList({
       </div>
       <div className="between mt-3 mb-4">
         <span className="hint">{fill(m.results, { n: list.length })}</span>
-        {lowCount > 0 && (
-          <button type="button" className={`btn tiny ${lowOnly ? "soft" : ""}`} aria-pressed={lowOnly} onClick={() => change(setLowOnly)(!lowOnly)}>
-            <DashIcon name="warning" size="sm" />
-            {fill(m.lowOrOut, { n: lowCount })}
-          </button>
-        )}
+        <button type="button" className={`btn tiny ${lowOnly ? "soft" : ""}`} aria-pressed={lowOnly} onClick={() => change(setLowOnly)(!lowOnly)}>
+          <DashIcon name="warning" size="sm" />
+          {fill(m.lowOrOut, { n: lowCount })}
+        </button>
       </div>
 
       {list.length === 0 ? (

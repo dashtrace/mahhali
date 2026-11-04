@@ -80,16 +80,7 @@ export function ProductEditor({
         <div className="min-w-0">
           <h2>{m.glanceTitle}</h2>
           <div className="number">{fill(m.available, { n: available })}</div>
-          <p className={`hint ${live.length > 1 ? "mb-0" : ""}`}>{fill(m.glanceSub, { reserved, total: available + reserved })}</p>
-          {live.length > 1 && (
-            <ul className="hint mt-2">
-              {live.map((v) => (
-                <li key={v.id}>
-                  <bdi>{variantLabel(v, m)}</bdi>: {fill(m.available, { n: v.available })} · {fill(m.reserved, { n: v.reserved })}
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="hint">{fill(m.glanceSub, { reserved, total: available + reserved })}</p>
         </div>
         {canAdjust && (
           <button type="button" className="btn shrink-0" onClick={() => go("inventory")}>
@@ -173,7 +164,7 @@ function OptionsStep({ product, onDone, ...c }: { product: Product; onDone: () =
       <h3>{m.variants}</h3>
       <p className="hint">{product.options.length ? m.variantsHint : m.variantsHintNone}</p>
       {product.variants.map((v) => (
-        <VariantRow key={v.id} variant={v} options={product.options} {...c} />
+        <VariantRow key={v.id} variant={v} options={product.options} only={product.variants.length === 1} {...c} />
       ))}
       {product.options.length > 0 && <AddVariant key={product.options.join("|")} productId={product.id} options={product.options} {...c} />}
       {unsaved && (
@@ -181,7 +172,7 @@ function OptionsStep({ product, onDone, ...c }: { product: Product; onDone: () =
           {m.unsavedChanges}
         </p>
       )}
-      <div className="mt-4">
+      <div className={product.options.length > 0 ? "mt-4" : ""}>
         <button
           type="button"
           className="btn primary"
@@ -239,16 +230,20 @@ function OptionNames({ product, m, t }: { product: Product } & Common) {
   );
 }
 
-function VariantRow({ variant: v, options, currency, m, t }: { variant: Variant; options: string[] } & Common) {
+/** One variant; a product's only variant sits flat in the step, with no card or heading of its own. */
+function VariantRow({ variant: v, options, only, currency, m, t }: { variant: Variant; options: string[]; only: boolean } & Common) {
   const edit = useSave(t.error);
+  // Hiding the only variant would empty the product; Archive on the Display step does that properly.
+  const canHide = !only || v.archived;
   return (
-    <section aria-label={variantLabel(v, m)} className={`inner-card mb-3 ${v.archived ? "border-dashed" : ""}`}>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <h3 className="m-0">{variantLabel(v, m)}</h3>
-        <span className={`mini-badge ${v.available > 0 ? "green" : "red"}`}>{fill(m.available, { n: v.available })}</span>
-        {v.reserved > 0 && <span className="mini-badge amber">{fill(m.reserved, { n: v.reserved })}</span>}
-        {v.archived && <span className="mini-badge gray">{m.hidden}</span>}
-      </div>
+    <section aria-label={variantLabel(v, m)} className={only ? "" : `inner-card mb-3 ${v.archived ? "border-dashed" : ""}`}>
+      {!only && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <h3 className="m-0">{variantLabel(v, m)}</h3>
+          {v.reserved > 0 && <span className="mini-badge amber">{fill(m.reserved, { n: v.reserved })}</span>}
+          {v.archived && <span className="mini-badge gray">{m.hidden}</span>}
+        </div>
+      )}
       <form
         key={JSON.stringify([options, v.optionValues, v.sku, v.priceMinor])}
         {...edit.form}
@@ -272,16 +267,26 @@ function VariantRow({ variant: v, options, currency, m, t }: { variant: Variant;
           <Field label={fill(m.priceRequired, { currency })}>
             <input className="control" name="price" defaultValue={toAmountText(v.priceMinor, currency)} required dir="ltr" inputMode="decimal" />
           </Field>
+          {/* Read-only: stock changes go through the Inventory step, so each one keeps its reason and history. */}
+          <Field label={m.stock}>
+            <input className="control" readOnly tabIndex={-1} value={v.available} dir="ltr" />
+          </Field>
           <SkuField name="sku" defaultValue={v.sku ?? ""} m={m} />
         </div>
-        <div className="actions">
-          <button type="submit" className="btn" disabled={edit.busy || !edit.dirty}>
-            {edit.busy ? t.saving : edit.saved ? t.saved : m.saveVariant}
-          </button>
-          <button type="button" className="btn tiny" disabled={edit.busy} onClick={() => edit.run(() => api(`/api/variants/${v.id}`, { method: "PATCH", body: { archived: !v.archived } }))}>
-            {v.archived ? m.showVariant : m.hideVariant}
-          </button>
-        </div>
+        {(canHide || edit.dirty || edit.busy || edit.saved) && (
+          <div className={`actions ${only ? "mb-4" : ""}`}>
+            {(edit.dirty || edit.busy || edit.saved) && (
+              <button type="submit" className="btn" disabled={edit.busy || !edit.dirty}>
+                {edit.busy ? t.saving : edit.saved ? t.saved : m.saveVariant}
+              </button>
+            )}
+            {canHide && (
+              <button type="button" className="btn tiny" disabled={edit.busy} onClick={() => edit.run(() => api(`/api/variants/${v.id}`, { method: "PATCH", body: { archived: !v.archived } }))}>
+                {v.archived ? m.showVariant : m.hideVariant}
+              </button>
+            )}
+          </div>
+        )}
       </form>
     </section>
   );
@@ -378,7 +383,7 @@ function Photos({ product, onDone, m, t }: { product: Product; onDone: () => voi
           </select>
         </Field>
       )}
-      <Field label={action.busy ? m.uploading : m.uploadPhoto} hint={m.photosHint}>
+      <Field label={action.busy ? m.uploading : m.uploadPhoto}>
         <input
           className="control"
           type="file"
@@ -524,10 +529,22 @@ function StockCard({ variant: v, single, locale, m, t }: { variant: Variant; sin
         {done && <Alert tone="success" className="mb-3">{m.stockUpdated}</Alert>}
         <div className="split">
           <Field label={m.delta} hint={m.deltaHint}>
-            <input className="control" name="delta" type="number" dir="ltr" required min={-100000} max={100000} step={1} inputMode="numeric" placeholder="+10 / -3" />
+            <input
+              className="control"
+              name="delta"
+              type="number"
+              dir="ltr"
+              required
+              min={-100000}
+              max={100000}
+              step={1}
+              inputMode="numeric"
+              placeholder="+10 / -3"
+              onChange={(e) => e.target.setCustomValidity(e.target.value !== "" && Number(e.target.value) === 0 ? m.deltaNonZero : "")}
+            />
           </Field>
           <Field label={m.reason}>
-            <select className="control" name="reason" defaultValue="">
+            <select className="control" name="reason" defaultValue={m.reasonShipment}>
               <option value={m.reasonShipment}>{m.reasonShipment}</option>
               <option value={m.reasonRecount}>{m.reasonRecount}</option>
               <option value={m.reasonDamaged}>{m.reasonDamaged}</option>

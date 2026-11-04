@@ -5,9 +5,9 @@ import { cloneElement, useEffect, useId, useRef, type ReactElement, type ReactNo
 import { DashIcon } from "../../_components/DashIcon";
 
 /** The demo's "Back to products" button above a page head. */
-export function BackLink({ href, children }: { href: string; children: ReactNode }) {
+export function BackLink({ href, className = "mb-3.5", children }: { href: string; className?: string; children: ReactNode }) {
   return (
-    <Link href={href} className="btn tiny mb-3.5">
+    <Link href={href} className={`btn tiny ${className}`}>
       <DashIcon name="left" size="sm" />
       {children}
     </Link>
@@ -30,9 +30,8 @@ export function Field({ label, hint, children, className }: { label: ReactNode; 
 export function Check({ label, hint, ...props }: { label: ReactNode; hint?: ReactNode } & Omit<React.ComponentProps<"input">, "type">) {
   return (
     <div className="field">
-      <label className="flex items-center gap-[9px]">
-        <input type="checkbox" className="size-4 shrink-0" {...props} />
-        {label}
+      <label>
+        <input type="checkbox" className="check-box" {...props} /> {label}
       </label>
       {hint && <p>{hint}</p>}
     </div>

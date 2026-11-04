@@ -20,7 +20,9 @@ export function CategoryManager({ categories, canWrite, max, m, t }: Props) {
 
   return (
     <>
-      <BackLink href="/dashboard/products">{m.backToProducts}</BackLink>
+      <BackLink href="/dashboard/products" className="mb-4">
+        {m.backToProducts}
+      </BackLink>
       <PageHeader
         title={m.categoriesTitle}
         subtitle={m.categoriesHint}
@@ -57,7 +59,7 @@ export function CategoryManager({ categories, canWrite, max, m, t }: Props) {
           ))}
         {canWrite && (
           <div className="info-inline mb-[15px]">
-            <DashIcon name="info" size="sm" /> {reorder ? m.reorderOn : fill(m.reorderOff, { max })}
+            <DashIcon name="info" size="sm" /> {reorder ? m.reorderOn : m.reorderOff}
           </div>
         )}
         {categories.length === 0 ? (
@@ -121,7 +123,7 @@ function Row({
       <span className="grip">{canWrite && <DashIcon name="grip" />}</span>
       <div className="min-w-0">
         <b className="break-words">{c.name}</b>
-        <p className="hint mt-[3px] mb-0">{fill(m.positionCount, { i: index + 1, n: c.count })}</p>
+        <p className="hint mt-[3px] mb-0">{fill(c.count === 1 ? m.positionCountOne : m.positionCount, { i: index + 1, n: c.count })}</p>
         {!renaming && action.error && <Alert tone="error" className="mt-2">{action.error}</Alert>}
       </div>
       {canWrite && (
@@ -130,11 +132,11 @@ function Row({
             <>
               <button type="button" aria-label={fill(m.moveUp, { name: c.name })} disabled={action.busy || index === 0} onClick={() => move(c.id, index - 1)}>
                 <DashIcon name="up" size="sm" />
-                <span className="block">{m.moveUpShort}</span>
+                <span className="desktop-only">{m.moveUpShort}</span>
               </button>
               <button type="button" aria-label={fill(m.moveDown, { name: c.name })} disabled={action.busy || last} onClick={() => move(c.id, index + 1)}>
                 <DashIcon name="down" size="sm" />
-                <span className="block">{m.moveDownShort}</span>
+                <span className="desktop-only">{m.moveDownShort}</span>
               </button>
             </>
           ) : (

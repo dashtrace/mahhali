@@ -44,7 +44,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       href: canWrite ? `/dashboard/products/${p.id}` : `/s/${me.shop.slug}/p/${p.id}`,
     };
   });
-  const mode: ProductMode = sp.show === "archived" || sp.show === "all" ? sp.show : "active";
+  const mode: ProductMode = sp.show === "archived" || sp.show === "all" ? "all" : "active";
 
   return (
     <>

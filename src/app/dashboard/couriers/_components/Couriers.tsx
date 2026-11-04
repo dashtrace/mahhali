@@ -70,24 +70,17 @@ export function AddCourier({ m, t }: Msgs) {
 }
 
 export function Couriers({ couriers, canWrite, m, t }: { couriers: Courier[]; canWrite: boolean } & Msgs) {
-  return (
-    <>
-      <div className="info-inline mb-4">
-        <DashIcon name="info" size="sm" /> {m.courierNote}
-      </div>
-      {couriers.length === 0 ? (
-        <div className="empty">
-          <strong>{m.noCouriers}</strong>
-          {m.noCouriersHint}
-        </div>
-      ) : (
-        <div className="split">
-          {couriers.map((c) => (
-            <CourierCard key={c.id} courier={c} canWrite={canWrite} m={m} t={t} />
-          ))}
-        </div>
-      )}
-    </>
+  return couriers.length === 0 ? (
+    <div className="empty">
+      <strong>{m.noCouriers}</strong>
+      {m.noCouriersHint}
+    </div>
+  ) : (
+    <div className="split">
+      {couriers.map((c) => (
+        <CourierCard key={c.id} courier={c} canWrite={canWrite} m={m} t={t} />
+      ))}
+    </div>
   );
 }
 
