@@ -11,6 +11,7 @@ import { themeVars } from "../_server/theme";
 import { DashIcon, type DashIconName } from "./_components/DashIcon";
 import { AllPages, BottomNav, SideNav, type NavGroup } from "./_components/Nav";
 import "./dashboard.css";
+import "./orders/orders.css";
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
 
