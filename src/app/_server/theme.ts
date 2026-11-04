@@ -63,12 +63,16 @@ export function storefrontTokens(t: Theme) {
   const tint = mix(t.primary, t.background, 8);
   const surface = t.surface ?? (reads(ink, tint) ? tint : t.background);
   const muted = t.muted ?? derivedMuted(ink, t.background);
+  const accentInk = t.buttonText ?? t.background;
+  const surfaceAccent = reads(t.primary, surface) ? t.primary : ink;
   return {
     "--sl-accent": t.primary,
-    "--sl-accent-ink": t.buttonText ?? t.background,
+    "--sl-accent-ink": accentInk,
     "--sl-ornament": t.accent,
     "--sl-surface": surface,
-    "--sl-surface-accent": reads(t.primary, surface) ? t.primary : ink,
+    "--sl-surface-accent": surfaceAccent,
+    // A button on the surface fills with --sl-surface-accent, which button text was never checked against.
+    "--sl-surface-accent-ink": reads(accentInk, surfaceAccent) ? accentInk : inkFor(surfaceAccent),
     "--sl-surface-muted": reads(muted, surface) ? muted : derivedMuted(ink, surface),
     "--sl-muted": muted,
     "--sl-band": band,

@@ -139,6 +139,7 @@
 /* Accent and muted are only guaranteed on the page; these are checked against the surface. */
 .sl-shop .sl-on-surface {
   --sl-accent: var(--sl-surface-accent);
+  --sl-accent-ink: var(--sl-surface-accent-ink);
   --sl-muted: var(--sl-surface-muted);
 }
 .sl-shop [id^="home-"] {

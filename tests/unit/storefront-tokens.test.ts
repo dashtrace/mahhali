@@ -74,6 +74,7 @@ describe("storefrontTokens", () => {
       "--sl-ornament": "#b99b7b",
       "--sl-surface": "#f1e8e1",
       "--sl-surface-accent": "#874258",
+      "--sl-surface-accent-ink": "#ffffff",
       "--sl-surface-muted": "#706767",
       "--sl-muted": "#756b68",
       "--sl-band": "#714558",
@@ -86,6 +87,13 @@ describe("storefrontTokens", () => {
     const tokens = storefrontTokens(readTheme({ ...ROSEWOOD, surface: "#c9a0ae" }));
     expect(tokens["--sl-surface-accent"]).toBe(ROSEWOOD.text);
     expect(contrastRatio(tokens["--sl-surface-muted"], "#c9a0ae")).toBeGreaterThanOrEqual(MIN_CONTRAST);
+  });
+
+  it("keeps button text readable when the surface swaps the button to the ink", () => {
+    const theme = { primary: "#767676", background: "#ffffff", text: "#000000", surface: "#8a8a8a", buttonText: "#000000" };
+    const tokens = storefrontTokens(readTheme(theme));
+    expect(tokens["--sl-surface-accent"]).toBe("#000000");
+    expect(contrastRatio(tokens["--sl-surface-accent-ink"], tokens["--sl-surface-accent"])).toBeGreaterThanOrEqual(MIN_CONTRAST);
   });
 });
 
