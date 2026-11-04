@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { toAmountText } from "@/lib/format";
 import { CardHead } from "../../products/_components/ProductExtras";
 import { submitWith, useSave } from "../../products/_components/useAction";
+import { useLivePreview } from "./LivePreview";
 
 type Settings = {
   name: string;
@@ -24,6 +25,7 @@ const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 // The WhatsApp number lives on the Storefront tab; leaving it out of this PATCH keeps it as it is.
 export function SettingsForm({ settings: s, catalogueUrl, m, t }: { settings: Settings; catalogueUrl: string; m: ShopMessages; t: CommonMessages }) {
   const save = useSave(t.error);
+  const preview = useLivePreview();
   const amount = fill(m.deliveryFee, { currency: s.currency });
   const amountPattern = s.currency === "USD" ? "\\d+(\\.\\d{1,2})?" : "\\d+";
 
@@ -39,12 +41,22 @@ export function SettingsForm({ settings: s, catalogueUrl, m, t }: { settings: Se
       // The rate cannot be cleared once set, so an empty box leaves it as it is.
       ...(rate ? { usdLbpRate: rate } : {}),
     };
-    await save.save(() => api("/api/shop/settings", { method: "PATCH", body }));
+    if (await save.save(() => api("/api/shop/settings", { method: "PATCH", body }))) preview.reload();
   }
 
   return (
     <Card className="max-w-3xl">
-      <form key={JSON.stringify(s)} {...save.form} onSubmit={submitWith(submit)} className="grid gap-4 sm:grid-cols-2">
+      <form
+        key={JSON.stringify(s)}
+        {...save.form}
+        onChange={(e) => {
+          save.form.onChange(e);
+          const f = new FormData(e.currentTarget);
+          preview.draft({ name: text(f, "name") || s.name, language: text(f, "language") });
+        }}
+        onSubmit={submitWith(submit)}
+        className="grid gap-4 sm:grid-cols-2"
+      >
         <div className="sm:col-span-2">
           <CardHead title={m.shopDetails} />
         </div>

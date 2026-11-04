@@ -10,9 +10,11 @@ import { categoryService, storefrontService } from "@/server/services/storefront
 import { pageActor } from "../../_server/session";
 import { readTheme } from "../../_server/theme";
 import { Branding } from "./_components/Branding";
+import { LivePreview } from "./_components/LivePreview";
 import { SettingsForm } from "./_components/SettingsForm";
 import { SlidesEditor } from "./_components/SlidesEditor";
 import { StorefrontForm } from "./_components/StorefrontForm";
+import "./settings.css";
 
 export const metadata = { title: "Settings" };
 
@@ -36,7 +38,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         className="mb-4 max-w-xl"
         items={TABS.map((x) => ({ label: labels[x], href: x === "general" ? "/dashboard/settings" : `/dashboard/settings?tab=${x}`, current: x === tab }))}
       />
-      <div className="flex flex-col gap-4">{await section(tab)}</div>
+      <LivePreview key={tab} locale={locale} m={m}>
+        <div className="flex flex-col gap-4">{await section(tab)}</div>
+      </LivePreview>
     </>
   );
 
@@ -53,16 +57,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       const [slides, branding] = await Promise.all([storefrontService.slides(actor), shopService.branding(actor)]);
       return <SlidesEditor slides={slides} theme={readTheme(branding.theme)} max={MAX_SLIDES} m={m} t={t} />;
     }
-    const [branding, settings, storefront] = await Promise.all([shopService.branding(actor), shopService.settings(actor), storefrontService.settings(actor)]);
-    return (
-      <Branding
-        theme={readTheme(branding.theme)}
-        logo={branding.logo}
-        shop={{ name: settings.name, currency: settings.currency, logoMode: storefront.logoMode, tagline: storefront.tagline }}
-        locale={locale}
-        m={m}
-        t={t}
-      />
-    );
+    const branding = await shopService.branding(actor);
+    return <Branding theme={readTheme(branding.theme)} logo={branding.logo} m={m} t={t} />;
   }
 }

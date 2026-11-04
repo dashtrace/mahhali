@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Button, Card, EmptyState, Field, IconButton, Input, SaveButton } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { fill } from "@/i18n/locale";
@@ -8,10 +8,12 @@ import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
 import type { Theme } from "@/server/domain/theme";
+import { NEW_SLIDE } from "../../../preview/storefront/draft";
 import { themeTone, themeVars } from "../../../_server/theme";
 import { FilePicker } from "../../products/_components/FilePicker";
 import { CardHead } from "../../products/_components/ProductExtras";
 import { submitWith, useAction, useSave } from "../../products/_components/useAction";
+import { useLivePreview } from "./LivePreview";
 
 type Slide = { id: string; imageUrl: string; kicker: string | null; title: string; body: string | null };
 type Text = { kicker: string; title: string; body: string };
@@ -65,7 +67,7 @@ export function SlidesEditor({ slides, theme, max, m, t }: Props) {
       {slides.map((s, i) => (
         <SlideCard key={s.id} slide={s} index={i} last={i === slides.length - 1} theme={theme} m={m} t={t} />
       ))}
-      {slides.length >= max ? <Alert tone="note">{fill(m.slideLimit, { max })}</Alert> : <AddSlide theme={theme} m={m} t={t} />}
+      {slides.length >= max ? <Alert tone="note">{fill(m.slideLimit, { max })}</Alert> : <AddSlide index={slides.length} theme={theme} m={m} t={t} />}
     </div>
   );
 }
@@ -75,14 +77,18 @@ function SlideCard({ slide: s, index, last, theme, m, t }: { slide: Slide; index
   // Set from the upload's response, so the new image shows before the page refresh lands.
   const [image, setImage] = useState(s.imageUrl);
   const action = useSave(t.error, text);
+  const preview = useLivePreview();
   const n = index + 1;
+  const reloadIf = (ok: boolean) => {
+    if (ok) preview.reload();
+  };
 
   function changeImage(file: File) {
     const form = new FormData();
     form.set("file", file);
-    action.run(async () => setImage((await api<{ imageUrl: string }>(`/api/shop/slides/${s.id}/image`, { body: form })).imageUrl));
+    action.run(async () => setImage((await api<{ imageUrl: string }>(`/api/shop/slides/${s.id}/image`, { body: form })).imageUrl)).then(reloadIf);
   }
-  const move = (position: number) => action.run(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: { position } }));
+  const move = (position: number) => action.run(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: { position } })).then(reloadIf);
 
   return (
     <Card className="flex flex-col gap-3">
@@ -96,7 +102,7 @@ function SlideCard({ slide: s, index, last, theme, m, t }: { slide: Slide; index
             icon="x"
             className="text-sl-danger"
             disabled={action.busy}
-            onClick={() => confirm(m.deleteSlideConfirm) && action.run(() => api(`/api/shop/slides/${s.id}`, { method: "DELETE" }))}
+            onClick={() => confirm(m.deleteSlideConfirm) && action.run(() => api(`/api/shop/slides/${s.id}`, { method: "DELETE" })).then(reloadIf)}
           />
         </div>
       </div>
@@ -104,8 +110,15 @@ function SlideCard({ slide: s, index, last, theme, m, t }: { slide: Slide; index
       <FilePicker onFile={changeImage} busy={action.busy} className="self-start">
         {m.changeImage}
       </FilePicker>
-      <form onSubmit={submitWith(() => action.save(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: text })))} className="flex flex-col gap-3">
-        <TextFields value={text} onChange={setText} m={m} />
+      <form onSubmit={submitWith(() => action.save(() => api(`/api/shop/slides/${s.id}`, { method: "PATCH", body: text })).then(reloadIf))} className="flex flex-col gap-3">
+        <TextFields
+          value={text}
+          onChange={(next) => {
+            setText(next);
+            preview.draft({ focus: index, slides: { [s.id]: next } });
+          }}
+          m={m}
+        />
         {action.error && <Alert tone="error">{action.error}</Alert>}
         <SaveButton state={action} labels={t} tone="secondary" className="self-start" />
       </form>
@@ -113,11 +126,20 @@ function SlideCard({ slide: s, index, last, theme, m, t }: { slide: Slide; index
   );
 }
 
-function AddSlide({ theme, m, t }: Shared) {
+function AddSlide({ index, theme, m, t }: { index: number } & Shared) {
   const blank: Text = { kicker: "", title: "", body: "" };
   const [text, setText] = useState<Text>(blank);
   const [pick, setPick] = useState<{ file: File; url: string } | null>(null);
   const add = useAction(t.error);
+  const preview = useLivePreview();
+  const url = pick?.url;
+  const { kicker, title, body } = text;
+
+  // The frame shares this origin, so it can show the picked file before it is uploaded.
+  useEffect(() => {
+    if (url) preview.draft({ focus: index, slides: { [NEW_SLIDE]: { imageUrl: url, kicker, title: title || m.slideTitlePlaceholder, body } } });
+    else preview.draft({ slides: { [NEW_SLIDE]: null } });
+  }, [preview, url, kicker, title, body, index, m.slideTitlePlaceholder]);
 
   function choose(file: File) {
     if (pick) URL.revokeObjectURL(pick.url);
@@ -135,6 +157,7 @@ function AddSlide({ theme, m, t }: Shared) {
       URL.revokeObjectURL(pick.url);
       setPick(null);
       setText(blank);
+      preview.reload();
     }
   }
 

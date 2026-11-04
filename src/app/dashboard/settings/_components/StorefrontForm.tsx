@@ -8,6 +8,7 @@ import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
 import { CardHead } from "../../products/_components/ProductExtras";
 import { submitWith, useSave } from "../../products/_components/useAction";
+import { useLivePreview } from "./LivePreview";
 
 type Storefront = {
   tagline: string | null;
@@ -29,6 +30,22 @@ const LOGO_MODES = [
 ] as const;
 const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
+/** The form's storefront fields, for the save and for the preview. */
+function fieldsOf(f: FormData) {
+  // "category:<id>" picks a category; "category:" follows the first one.
+  const [homeSection, homeCategoryId] = text(f, "highlight").split(":");
+  return {
+    tagline: text(f, "tagline"),
+    about: text(f, "about"),
+    shippingInfo: text(f, "shippingInfo"),
+    instagramUrl: text(f, "instagramUrl"),
+    facebookUrl: text(f, "facebookUrl"),
+    homeSection,
+    ...(homeSection === "category" ? { homeCategoryId: homeCategoryId || null } : {}),
+    showTestimonials: f.get("showTestimonials") === "on",
+  };
+}
+
 /** A labelled single choice drawn as a segmented control. */
 function Choice({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -43,38 +60,38 @@ function Choice({ label, hint, children }: { label: string; hint?: string; child
 export function StorefrontForm({ storefront: s, categories, whatsappPhone, m, t }: Props) {
   const [logoMode, setLogoMode] = useState(s.logoMode);
   const save = useSave(t.error, logoMode);
+  const preview = useLivePreview();
 
   async function submit(f: FormData) {
-    // "category:<id>" picks a category; "category:" follows the first one.
-    const [homeSection, homeCategoryId] = text(f, "highlight").split(":");
-    const body = {
-      tagline: text(f, "tagline"),
-      about: text(f, "about"),
-      shippingInfo: text(f, "shippingInfo"),
-      instagramUrl: text(f, "instagramUrl"),
-      facebookUrl: text(f, "facebookUrl"),
-      logoMode,
-      homeSection,
-      ...(homeSection === "category" ? { homeCategoryId: homeCategoryId || null } : {}),
-      showTestimonials: f.get("showTestimonials") === "on",
-    };
+    const body = { ...fieldsOf(f), logoMode };
     const phone = text(f, "whatsappPhone") || null;
     // Two endpoints: the number belongs to the shop settings (it also feeds the order board).
-    await save.save(async () => {
+    const saved = await save.save(async () => {
       await api("/api/shop/storefront", { method: "PATCH", body });
       if (phone !== whatsappPhone) await api("/api/shop/settings", { method: "PATCH", body: { whatsappPhone: phone } });
     });
+    if (saved) preview.reload();
   }
 
   return (
-    <form key={JSON.stringify([s, whatsappPhone])} {...save.form} onSubmit={submitWith(submit)} className="flex max-w-3xl flex-col gap-4">
+    <form
+      key={JSON.stringify([s, whatsappPhone])}
+      {...save.form}
+      onChange={(e) => {
+        save.form.onChange(e);
+        const f = new FormData(e.currentTarget);
+        preview.draft({ ...fieldsOf(f), whatsappPhone: text(f, "whatsappPhone") || null });
+      }}
+      onSubmit={submitWith(submit)}
+      className="flex max-w-3xl flex-col gap-4"
+    >
       <Card className="flex flex-col gap-4">
         <CardHead title={m.storefrontTitle} hint={m.storefrontHint} />
         <Field label={m.tagline} hint={m.taglineHint}>
           <Input name="tagline" defaultValue={s.tagline ?? ""} maxLength={80} />
         </Field>
         <Choice label={m.logoMode} hint={m.logoModeHint}>
-          <Segmented label={m.logoMode} items={LOGO_MODES.map(([v, key]) => ({ label: m[key], current: logoMode === v, onClick: () => setLogoMode(v) }))} />
+          <Segmented label={m.logoMode} items={LOGO_MODES.map(([v, key]) => ({ label: m[key], current: logoMode === v, onClick: () => { setLogoMode(v); preview.draft({ logoMode: v }); } }))} />
         </Choice>
         <Field label={m.homeSection} hint={m.homeSectionHint}>
           <Select name="highlight" defaultValue={s.homeSection === "category" ? `category:${s.homeCategoryId ?? ""}` : s.homeSection}>

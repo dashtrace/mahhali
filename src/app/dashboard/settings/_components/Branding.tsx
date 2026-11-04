@@ -1,21 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Button, Card, Field, SaveButton, Select, cx } from "@/components/ui";
-import { Icon, type IconName } from "@/components/Icon";
-import { fill, type Locale } from "@/i18n/locale";
+import { Icon } from "@/components/Icon";
+import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
-import { formatMoney } from "@/lib/format";
 import { FONTS, PALETTES, RADII, inkFor, validateTheme, type PaletteName, type Theme } from "@/server/domain/theme";
-import { themeTone, themeVars } from "../../../_server/theme";
 import { FilePicker } from "../../products/_components/FilePicker";
 import { CardHead } from "../../products/_components/ProductExtras";
 import { useAction } from "../../products/_components/useAction";
+import { useLivePreview } from "./LivePreview";
+import { STORE_PALETTES, type StorePaletteName } from "./palettes";
 
-type PreviewShop = { name: string; currency: "USD" | "LBP"; logoMode: string; tagline: string | null };
-type Props = { theme: Theme; logo: string | null; shop: PreviewShop; locale: Locale; m: ShopMessages; t: CommonMessages };
+type Props = { theme: Theme; logo: string | null; m: ShopMessages; t: CommonMessages };
 
 const PAIR_KEYS = {
   "text on primary": "pairPrimary",
@@ -29,30 +28,35 @@ const PAIR_KEYS = {
 const KEYS = ["primary", "accent", "background", "text", "surface", "muted", "dark", "darkText", "border", "buttonText", "radius", "font"] as const;
 const same = (a: Theme, b: Theme) => KEYS.every((k) => a[k] === b[k]);
 
-export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: Props) {
+export function Branding({ theme: saved, logo: savedLogo, m, t }: Props) {
   const [theme, setTheme] = useState<Theme>(saved);
   // Set from the upload's response, so the new logo shows before the page refresh lands.
   const [logo, setLogo] = useState(savedLogo);
   const [done, setDone] = useState(false);
   const save = useAction(t.error);
+  const preview = useLivePreview();
   const failures = validateTheme(theme);
   const set = <K extends keyof Theme>(k: K, v: Theme[K]) => {
     setDone(false);
     setTheme({ ...theme, [k]: v });
   };
+  useEffect(() => preview.draft({ theme }), [preview, theme]);
+  const palettes: { name: StorePaletteName | PaletteName; value: Theme }[] = [
+    ...(Object.keys(STORE_PALETTES) as StorePaletteName[]).map((name) => ({ name, value: { ...STORE_PALETTES[name], radius: theme.radius, font: theme.font } })),
+    ...(Object.keys(PALETTES) as PaletteName[]).map((name) => ({ name, value: { ...PALETTES[name] } })),
+  ];
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <>
       <div className="flex min-w-0 flex-col gap-4">
         <Card className="flex flex-col gap-4">
           <CardHead title={m.brandingTitle} />
 
           <fieldset>
             <legend className="mb-2 text-[13px] font-bold">{m.palettes}</legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {(Object.keys(PALETTES) as PaletteName[]).map((name) => {
-                const p = PALETTES[name];
-                const active = same(theme, p);
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {palettes.map(({ name, value }) => {
+                const active = same(theme, value);
                 return (
                   <button
                     key={name}
@@ -60,7 +64,7 @@ export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: 
                     aria-pressed={active}
                     onClick={() => {
                       setDone(false);
-                      setTheme({ ...p });
+                      setTheme(value);
                     }}
                     className={cx(
                       "flex min-h-11 items-center gap-2 rounded-sl-sm border bg-sl-panel px-3 py-2 text-sm font-bold",
@@ -68,7 +72,7 @@ export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: 
                     )}
                   >
                     <span className="flex shrink-0 overflow-hidden rounded-full border border-sl-border" aria-hidden>
-                      {[p.primary, p.accent, p.background].map((c) => (
+                      {[value.primary, value.accent, value.background].map((c) => (
                         <span key={c} className="size-4" style={{ background: c }} />
                       ))}
                     </span>
@@ -155,120 +159,27 @@ export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: 
             state={{ busy: save.busy, dirty: !same(theme, saved), saved: done }}
             labels={t}
             disabled={failures.length > 0}
-            onClick={async () => setDone(await save.run(() => api("/api/shop/branding", { method: "PATCH", body: theme })))}
+            onClick={async () => {
+              const ok = await save.run(() => api("/api/shop/branding", { method: "PATCH", body: theme }));
+              setDone(ok);
+              if (ok) preview.reload();
+            }}
           >
             {m.saveBranding}
           </SaveButton>
         </Card>
 
-        <Logo logo={logo} onChange={setLogo} m={m} t={t} />
+        <Logo
+          logo={logo}
+          onChange={(next) => {
+            setLogo(next);
+            preview.reload();
+          }}
+          m={m}
+          t={t}
+        />
       </div>
-
-      <section aria-labelledby="branding-preview" className="flex flex-col gap-2 lg:sticky lg:top-[76px]">
-        <h2 id="branding-preview" className="text-[13px] font-bold">
-          {m.preview}
-        </h2>
-        <p className="text-xs text-sl-muted">{m.previewHint}</p>
-        <MiniShop theme={theme} logo={logo} shop={shop} locale={locale} m={m} />
-      </section>
-    </div>
-  );
-}
-
-/** A phone-sized storefront drawn with the sl-* tokens of the theme being edited. Decorative. */
-function MiniShop({ theme, logo, shop, locale, m }: { theme: Theme; logo: string | null; shop: PreviewShop; locale: Locale; m: ShopMessages }) {
-  const showImage = logo && shop.logoMode !== "name-only";
-  const showName = !showImage || shop.logoMode === "image-and-name";
-  const tiles: [string, string, number][] = [
-    [m.previewProduct, m.previewDescription, shop.currency === "USD" ? 2400 : 2_150_000],
-    [m.previewProduct2, m.previewDescription, shop.currency === "USD" ? 1850 : 1_650_000],
-  ];
-  const tabs: IconName[] = ["home", "grid", "truck", "cart"];
-
-  return (
-    <div
-      aria-hidden
-      lang={locale}
-      data-tone={themeTone(theme)}
-      style={{ ...themeVars(theme), fontFamily: "var(--font-shop)" }}
-      className="sl-shop mx-auto w-full max-w-[320px] overflow-hidden rounded-[26px] border border-sl-border bg-sl-bg text-sl-fg shadow-[0_10px_24px_#0000000d]"
-    >
-      <div className="flex h-12 items-center gap-2 border-b border-sl-border bg-sl-panel px-3">
-        <span className="grid size-8 place-items-center rounded-sl border border-sl-border">
-          <Icon name="menu" className="size-4" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col items-center leading-tight">
-          <span className="flex max-w-full items-center gap-1.5">
-            {showImage && (
-              // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
-              <img src={logo} alt="" className="h-7 max-w-24 object-contain" />
-            )}
-            {showName && <span className="sl-heading truncate text-[15px]">{shop.name}</span>}
-          </span>
-          {shop.tagline && <span className="max-w-full truncate text-[10px] text-sl-muted">{shop.tagline}</span>}
-        </span>
-        <span className="grid size-8 place-items-center rounded-sl border border-sl-border">
-          <Icon name="bag" className="size-4" />
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-3 p-3">
-        <div className="flex h-[112px] flex-col justify-center gap-1 rounded-[16px] bg-sl-hero px-4 text-sl-hero-ink">
-          <span className="text-[9px] font-extrabold uppercase tracking-[0.15em] text-sl-accent rtl:tracking-normal">{m.previewHeroKicker}</span>
-          <span className="sl-heading text-lg leading-tight">{m.previewHeroTitle}</span>
-          <span className="mt-1 self-start rounded-full bg-sl-accent px-3 py-1 text-[11px] font-bold text-sl-accent-ink">{m.previewButton}</span>
-        </div>
-
-        <div>
-          <p className="sl-heading mb-1.5 text-sm">{m.previewCategories}</p>
-          <div className="flex gap-3">
-            {(["heart", "star", "box", "grid"] as const).map((icon) => (
-              <span key={icon} className="grid size-10 place-items-center rounded-full border border-sl-border bg-sl-cat text-sl-accent">
-                <Icon name={icon} className="size-4" />
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="sl-heading mb-1.5 text-sm">{m.previewBestSellers}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {tiles.map(([name, desc, minor], i) => (
-              <div key={name} className="relative overflow-hidden rounded-sl border border-sl-border bg-sl-panel">
-                <div className="aspect-[4/3] bg-sl-cat" />
-                {i === 0 && (
-                  // Accent has no contrast rule, so the label picks its own ink.
-                  <span style={{ color: inkFor(theme.accent) }} className="absolute start-1.5 top-1.5 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold">{m.previewBadge}</span>
-                )}
-                <div className="flex flex-col gap-0.5 p-2">
-                  <span className="truncate text-[11px] font-bold">{name}</span>
-                  <span className="truncate text-[10px] text-sl-muted">{desc}</span>
-                  <span className="flex items-center justify-between">
-                    <bdi className="text-xs font-extrabold tabular-nums">{formatMoney(minor, shop.currency, locale)}</bdi>
-                    <span className="grid size-5 place-items-center rounded-full bg-sl-accent text-sl-accent-ink">
-                      <Icon name="plus" className="size-3" />
-                    </span>
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <span className="flex h-9 flex-1 items-center justify-center rounded-sl border border-sl-accent text-[11px] font-bold text-sl-accent">{m.previewAddToCart}</span>
-          <span className="flex h-9 flex-1 items-center justify-center rounded-sl bg-sl-accent text-[11px] font-bold text-sl-accent-ink">{m.previewButton}</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 border-t border-sl-border bg-sl-nav py-2">
-        {tabs.map((icon, i) => (
-          <span key={icon} className={cx("grid place-items-center", i === 0 ? "text-sl-accent" : "text-sl-muted")}>
-            <Icon name={icon} solid={i === 0} className="size-5" />
-          </span>
-        ))}
-      </div>
-    </div>
+    </>
   );
 }
 

@@ -1,0 +1,84 @@
+/*
+ * The settings page's form-and-phone layout, from new_ui/references/owner-dashboard-settings-v2.html
+ * (.brand-layout, .preview-holder, .phone), with its sizes and breakpoints. The frame's colours are
+ * the dashboard's; the shop's own colours only appear inside the iframe.
+ */
+@layer components {
+  .sl-dash .brand-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(310px, 0.9fr);
+    gap: 22px;
+    align-items: start;
+  }
+  .sl-dash .brand-controls {
+    min-width: 0;
+  }
+  .sl-dash .preview-holder {
+    position: sticky;
+    top: 90px;
+  }
+  .sl-dash .preview-holder > b {
+    font-size: 14px;
+  }
+  .sl-dash .preview-views {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+  .sl-dash .preview-views .segbar {
+    margin: 0;
+  }
+  .sl-dash .phone {
+    width: min(100%, 370px);
+    margin: 15px auto 0;
+    border: 7px solid #203238;
+    border-radius: 32px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 22px 48px #071e2533;
+  }
+  .sl-dash .phone-screen {
+    display: block;
+    width: 100%;
+    /* The demo's 570px, leaving room for the bar above it on a short laptop screen. */
+    height: min(570px, calc(100dvh - 200px));
+    border: 0;
+  }
+  .sl-dash .preview-note {
+    margin-top: 12px;
+    text-align: center;
+  }
+  .sl-dash .preview-open {
+    display: none;
+    width: 100%;
+    margin-bottom: 14px;
+  }
+
+  @media (max-width: 1150px) {
+    .sl-dash .brand-layout {
+      grid-template-columns: 1fr;
+    }
+    .sl-dash .preview-holder {
+      position: relative;
+      top: 0;
+    }
+    .sl-dash .phone {
+      width: min(100%, 360px);
+    }
+  }
+  @media (max-width: 780px) {
+    .sl-dash .brand-layout {
+      display: block;
+    }
+    .sl-dash .preview-open {
+      display: inline-flex;
+    }
+    .sl-dash .preview-views {
+      justify-content: center;
+      margin-top: 0;
+    }
+    .sl-dash .phone-screen {
+      height: min(480px, calc(85dvh - 190px));
+    }
+  }
+}
