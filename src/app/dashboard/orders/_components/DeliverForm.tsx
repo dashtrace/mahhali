@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
-import { Icon } from "@/components/Icon";
+import { Alert } from "@/components/ui";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { OrderMessages } from "@/i18n/messages/orders";
 import { api, errorMessage } from "@/lib/api";
 import { toAmountText } from "@/lib/format";
+import { DashIcon } from "../../_components/DashIcon";
+import { Field } from "./Field";
 
 /**
  * Delivered (with the cash collected, in dollars and pounds) or Failed (with a
@@ -56,43 +57,43 @@ export function DeliverForm({
 
   if (!mode) {
     return (
-      <div className="grid grid-cols-2 gap-2">
-        <Button className="min-h-14 text-base" onClick={() => setMode("delivered")}>
-          <Icon name="check" />
+      <div className="split mt-3">
+        <button type="button" className="btn primary full min-h-12" onClick={() => setMode("delivered")}>
+          <DashIcon name="check" size="sm" />
           {m.delivered}
-        </Button>
-        <Button tone="secondary" className="min-h-14 border-sl-danger text-base text-sl-danger" onClick={() => setMode("failed")}>
-          <Icon name="x" />
+        </button>
+        <button type="button" className="btn warn full min-h-12" onClick={() => setMode("failed")}>
+          <DashIcon name="x" size="sm" />
           {m.failed}
-        </Button>
+        </button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
-      {error && <Alert tone="error">{error}</Alert>}
+    <form onSubmit={submit} className="mt-3">
+      {error && <Alert tone="error" className="mb-3">{error}</Alert>}
       {mode === "delivered" ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="split">
           <Field label={m.collectedUsd}>
-            <Input value={usd} onChange={(e) => setUsd(e.target.value)} inputMode="decimal" dir="ltr" placeholder="0.00" autoFocus={currency === "USD"} />
+            <input value={usd} onChange={(e) => setUsd(e.target.value)} inputMode="decimal" dir="ltr" placeholder="0.00" autoFocus={currency === "USD"} className="control" />
           </Field>
           <Field label={m.collectedLbp}>
-            <Input value={lbp} onChange={(e) => setLbp(e.target.value)} inputMode="numeric" dir="ltr" placeholder="0" autoFocus={currency === "LBP"} />
+            <input value={lbp} onChange={(e) => setLbp(e.target.value)} inputMode="numeric" dir="ltr" placeholder="0" autoFocus={currency === "LBP"} className="control" />
           </Field>
         </div>
       ) : (
         <Field label={m.failReason}>
-          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} required maxLength={300} placeholder={m.failPlaceholder} autoFocus />
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} required maxLength={300} placeholder={m.failPlaceholder} autoFocus className="control area" />
         </Field>
       )}
-      <div className="grid grid-cols-2 gap-2">
-        <Button type="button" tone="secondary" onClick={() => setMode(null)} disabled={busy}>
+      <div className="split">
+        <button type="button" className="btn full" onClick={() => setMode(null)} disabled={busy}>
           {t.cancel}
-        </Button>
-        <Button type="submit" tone={mode === "failed" ? "danger" : "primary"} disabled={busy}>
+        </button>
+        <button type="submit" className={`btn full ${mode === "failed" ? "warn" : "primary"}`} disabled={busy}>
           {busy ? t.saving : mode === "delivered" ? m.confirmDelivered : m.confirmFailed}
-        </Button>
+        </button>
       </div>
     </form>
   );

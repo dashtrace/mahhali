@@ -1,15 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
-import { Alert, Button, ButtonLink, Field, Input, SaveButton, Select, Textarea } from "@/components/ui";
-import { fill } from "@/i18n/locale";
+import { useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { Alert } from "@/components/ui";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { OrderMessages } from "@/i18n/messages/orders";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { useSave } from "../../products/_components/useAction";
 import { AddressFields, addressFrom, type AddressValue } from "./AddressFields";
-import { statusLabel } from "./labels";
+import { Field } from "./Field";
+import { nextActionLabel } from "./labels";
 
 type Status = "NEW" | "CONFIRMED" | "PACKED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "RETURNED";
 
@@ -36,6 +37,7 @@ export function StatusActions({
   const [cancelling, setCancelling] = useState(false);
   const [note, setNote] = useState("");
   const next = allowedNext.find((s) => s !== "CANCELLED" && s !== "DELIVERED" && s !== "RETURNED");
+  const needsCourier = next === "OUT_FOR_DELIVERY" && !hasCourier;
 
   async function move(to: Status, body: { note?: string } = {}) {
     setMoving(true);
@@ -54,50 +56,61 @@ export function StatusActions({
     }
   }
 
+  if (cancelling) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          move("CANCELLED", { note: note.trim() || undefined });
+        }}
+      >
+        {error && <Alert tone="error" className="mb-3">{error}</Alert>}
+        <Field label={`${m.cancelReason} (${t.optional})`}>
+          <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} autoFocus className="control" />
+        </Field>
+        <div className="actions">
+          <button type="button" className="btn" onClick={() => setCancelling(false)} disabled={busy}>
+            {m.keepOrder}
+          </button>
+          <button type="submit" className="btn warn" disabled={busy}>
+            {m.confirmCancel}
+          </button>
+        </div>
+      </form>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-3">
-      {error && <Alert tone="error">{error}</Alert>}
-      {next === "OUT_FOR_DELIVERY" && !hasCourier ? (
-        <>
-          <p className="text-sm text-sl-muted">{m.courierRequired}</p>
-          <ButtonLink href="#courier" block>
+    <>
+      {error && <Alert tone="error" className="mb-3">{error}</Alert>}
+      {needsCourier && <p className="hint">{m.courierRequired}</p>}
+      <div className="actions">
+        {needsCourier ? (
+          <a href="#courier" className="btn primary">
             {m.assignCourier}
-          </ButtonLink>
-        </>
-      ) : (
-        next && (
-          <Button block disabled={busy} onClick={() => move(next)} className="min-h-12 text-base">
-            {fill(m.moveTo, { status: statusLabel(t, next) })}
-          </Button>
-        )
-      )}
-      {allowedNext.includes("CANCELLED") &&
-        (cancelling ? (
-          <form
-            className="flex flex-col gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              move("CANCELLED", { note: note.trim() || undefined });
-            }}
-          >
-            <Field label={`${m.cancelReason} (${t.optional})`}>
-              <Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} autoFocus />
-            </Field>
-            <div className="grid grid-cols-2 gap-2">
-              <Button tone="secondary" onClick={() => setCancelling(false)} disabled={busy}>
-                {m.keepOrder}
-              </Button>
-              <Button type="submit" tone="danger" disabled={busy}>
-                {m.confirmCancel}
-              </Button>
-            </div>
-          </form>
+          </a>
         ) : (
-          <Button tone="ghost" block onClick={() => setCancelling(true)} className="text-sl-danger">
+          next && (
+            <button type="button" className="btn primary" disabled={busy} onClick={() => move(next)}>
+              {nextActionLabel(m, next)}
+            </button>
+          )
+        )}
+        {allowedNext.includes("CANCELLED") && (
+          <button type="button" className="btn warn" onClick={() => setCancelling(true)}>
             {m.cancelOrder}
-          </Button>
-        ))}
-    </div>
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function SaveButton({ state, t, children }: { state: { busy: boolean; dirty: boolean; saved: boolean }; t: CommonMessages; children?: ReactNode }) {
+  return (
+    <button type="submit" className="btn primary" disabled={state.busy || !state.dirty}>
+      <span aria-live="polite">{state.busy ? t.saving : state.saved ? `✓ ${t.saved}` : (children ?? t.save)}</span>
+    </button>
   );
 }
 
@@ -121,14 +134,14 @@ export function CourierForm({
 
   if (!couriers.length && !courierId) {
     return (
-      <div className="flex flex-col gap-2 text-sm text-sl-muted">
-        <p>{m.noCouriers}</p>
+      <>
+        <p className="hint">{m.noCouriers}</p>
         {canAddCourier && (
-          <ButtonLink href="/dashboard/couriers" tone="secondary">
+          <Link href="/dashboard/couriers" className="btn">
             {m.addCourier}
-          </ButtonLink>
+          </Link>
         )}
-      </div>
+      </>
     );
   }
 
@@ -138,20 +151,19 @@ export function CourierForm({
         e.preventDefault();
         save.save(() => api(`/api/orders/${orderId}`, { method: "PATCH", body: { courierId: value || null } }));
       }}
-      className="flex flex-col gap-2"
     >
-      {save.error && <Alert tone="error">{save.error}</Alert>}
+      {save.error && <Alert tone="error" className="mb-3">{save.error}</Alert>}
       <Field label={m.courierTitle}>
-        <Select value={value} onChange={(e) => setValue(e.target.value)}>
+        <select value={value} onChange={(e) => setValue(e.target.value)} className="control">
           <option value="">{m.unassigned}</option>
           {couriers.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
           ))}
-        </Select>
+        </select>
       </Field>
-      <SaveButton state={save} labels={t}>
+      <SaveButton state={save} t={t}>
         {m.saveCourier}
       </SaveButton>
     </form>
@@ -182,23 +194,23 @@ export function EditOrderForm({
 
   if (!open) {
     return (
-      <Button tone="secondary" block onClick={() => setOpen(true)}>
+      <button type="button" className="btn tiny mt-3" onClick={() => setOpen(true)}>
         {m.editAddress}
-      </Button>
+      </button>
     );
   }
   return (
-    <form {...save.form} onSubmit={submit} className="flex flex-col gap-3">
-      {save.error && <Alert tone="error">{save.error}</Alert>}
+    <form {...save.form} onSubmit={submit} className="mt-4">
+      {save.error && <Alert tone="error" className="mb-3">{save.error}</Alert>}
       <AddressFields value={address} m={m} t={t} />
       <Field label={`${m.notes} (${t.optional})`}>
-        <Textarea name="notes" maxLength={500} defaultValue={notes ?? ""} />
+        <textarea name="notes" maxLength={500} defaultValue={notes ?? ""} className="control area" />
       </Field>
-      <div className="grid grid-cols-2 gap-2">
-        <Button tone="secondary" onClick={() => setOpen(false)} disabled={save.busy}>
+      <div className="actions">
+        <button type="button" className="btn" onClick={() => setOpen(false)} disabled={save.busy}>
           {t.cancel}
-        </Button>
-        <SaveButton state={save} labels={t} />
+        </button>
+        <SaveButton state={save} t={t} />
       </div>
     </form>
   );
