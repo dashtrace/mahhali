@@ -145,7 +145,7 @@
   scroll-margin-top: 85px;
 }
 /* The approved design leaves line-height to the font unless it sets one. */
-.sl-shop :is(.sl-nav, .sl-hero, .sl-categories, .sl-section, .sl-story, .sl-band, .sl-footer) {
+.sl-shop :is(.sl-nav, .sl-hero, .sl-categories, .sl-section, .sl-story, .sl-band, .sl-footer, .sl-page) {
   line-height: normal;
 }
 /* The approved design's arrow is a small bold glyph; its drawing fills the middle half of this box. */
@@ -207,7 +207,7 @@
   min-height: 44px;
   opacity: 0.9;
 }
-.sl-shop .sl-nav-links a:is(:hover, [aria-current="page"]) {
+.sl-shop .sl-nav-links a:hover {
   opacity: 1;
   text-decoration: underline;
   text-underline-offset: 5px;
@@ -650,6 +650,12 @@
   border-radius: 50%;
   background: var(--sl-accent);
   color: var(--sl-accent-ink);
+}
+/* The approved design's plus is a bold glyph. */
+.sl-shop .sl-tile-add svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.4;
 }
 .sl-shop .sl-tile-add::after {
   content: "";
@@ -1341,6 +1347,973 @@
   .sl-shop .sl-marquee:hover .sl-marquee-track,
   .sl-shop .sl-marquee:focus-within .sl-marquee-track {
     animation-play-state: paused;
+  }
+}
+
+/*
+ * The inner pages (catalogue, product, wishlist, bag, checkout), ported from the
+ * same design with its 750px and 700px breakpoints. Its header is fixed and its
+ * top padding includes it; ours is sticky, so the 68px comes off.
+ */
+.sl-shop:has(> .sl-page) .sl-header {
+  border-color: var(--sl-line);
+}
+.sl-shop .sl-page {
+  width: 100%;
+  max-width: 1210px;
+  min-height: 66vh;
+  margin-inline: auto;
+  padding: calc(clamp(102px, 11vw, 135px) - 68px) clamp(17px, 5vw, 60px) 90px;
+}
+.sl-shop .sl-page-eyebrow {
+  margin-block-end: 16px;
+  color: var(--sl-accent);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 800;
+  letter-spacing: calc(0.2em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-page-title {
+  margin-block-end: 13px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(33px, 5vw, 56px);
+  font-weight: var(--sl-heading-weight);
+  line-height: 1.1;
+  letter-spacing: calc(-0.04em * var(--sl-track));
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-dot {
+  color: var(--sl-accent);
+}
+.sl-shop .sl-page-lead {
+  margin-block-end: 28px;
+  color: var(--sl-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.sl-shop .sl-section-title {
+  margin-block-end: 13px;
+  font-family: var(--sl-heading-font);
+  font-size: clamp(25px, 3.4vw, 37px);
+  font-weight: var(--sl-heading-weight);
+  line-height: 1.25;
+  letter-spacing: calc(-0.03em * var(--sl-track));
+}
+.sl-shop .sl-empty {
+  padding: 50px 4px;
+  border-block-start: 1px solid var(--sl-line);
+}
+.sl-shop .sl-empty h2 {
+  margin-block-end: 13px;
+  font-family: var(--sl-heading-font);
+  font-size: 25px;
+  font-weight: var(--sl-heading-weight);
+}
+.sl-shop .sl-empty p {
+  max-width: 420px;
+  margin-block-end: 13px;
+  color: var(--sl-muted);
+  font-size: 13px;
+}
+.sl-shop .sl-text-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-block-start: 10px;
+  padding-block-end: 5px;
+  border-block-end: 1px solid var(--sl-accent);
+  color: var(--sl-accent);
+  font-size: 13px;
+  font-weight: 800;
+}
+.sl-shop .sl-reset-filters {
+  display: inline-block;
+  margin-block-start: 15px;
+  padding: 10px 17px;
+  border-radius: 20px;
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+}
+
+/* Catalogue tools */
+.sl-shop .sl-shop-tools {
+  max-width: 690px;
+  margin: 30px auto 20px;
+}
+.sl-shop .sl-search {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: 580px;
+  margin-block-end: 8px;
+  padding: 5px 0 12px;
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-search:focus-within {
+  border-color: var(--sl-accent);
+}
+.sl-shop .sl-search svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--sl-muted);
+}
+.sl-shop .sl-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 15px 16px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 800;
+  outline: 0;
+}
+.sl-shop .sl-search input::placeholder {
+  color: var(--sl-muted);
+}
+.sl-shop .sl-filter-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  margin-block-start: 8px;
+  font-size: 13px;
+}
+.sl-shop .sl-filter-note a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  color: var(--sl-accent);
+  font-weight: 700;
+}
+.sl-shop .sl-filter-row {
+  display: flex;
+  gap: 8px;
+  padding: 20px 0 15px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sl-shop .sl-filter-row::-webkit-scrollbar {
+  display: none;
+}
+.sl-shop .sl-filter-row > li {
+  flex: none;
+}
+.sl-shop .sl-pill {
+  position: relative;
+  display: block;
+  padding: 10px 16px;
+  border: 1px solid var(--sl-line);
+  border-radius: 100px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.sl-shop .sl-pill::after {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+.sl-shop .sl-pill[aria-current] {
+  border-color: var(--sl-accent);
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+}
+.sl-shop .sl-price {
+  margin: 15px 0 17px;
+}
+.sl-shop .sl-price-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 50px;
+  padding: 12px 18px;
+  border: 1px solid var(--sl-line);
+  border-radius: 24px;
+  background: var(--sl-panel);
+  color: var(--sl-fg);
+  font-size: 13px;
+  font-weight: 750;
+}
+.sl-shop .sl-price-trigger[data-active] {
+  border-color: var(--sl-accent);
+  color: var(--sl-accent);
+}
+.sl-shop .sl-price-trigger svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.sl-shop .sl-price-panel {
+  margin-block-start: 10px;
+  padding: 23px;
+  border: 1px solid var(--sl-line);
+  border-radius: 18px;
+  background: var(--sl-panel);
+  box-shadow: 0 8px 28px #4a20350c;
+}
+.sl-shop .sl-price-panel h2 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.sl-shop .sl-price-panel > p:not([role]) {
+  margin: 6px 0 16px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.sl-shop .sl-price-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+}
+.sl-shop .sl-price-inputs label {
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sl-shop .sl-price-inputs label > span {
+  font-size: 12px;
+}
+.sl-shop .sl-price-inputs input {
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--sl-line);
+  border-radius: 12px;
+  background: var(--sl-panel);
+  font-size: 14px;
+  font-weight: 700;
+}
+.sl-shop .sl-price-error {
+  margin-block-start: 10px;
+  color: var(--sl-danger);
+  font-size: 12px;
+}
+.sl-shop .sl-price-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-block-start: 15px;
+}
+.sl-shop .sl-price-actions button {
+  padding: 11px 19px;
+  border-radius: 26px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.sl-shop .sl-price-actions button:first-child {
+  border: 1px solid var(--sl-line);
+  background: var(--sl-panel);
+}
+.sl-shop .sl-result-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block: 4px 15px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-result-label a {
+  position: relative;
+  flex: none;
+  color: var(--sl-accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sl-shop .sl-result-label a::after {
+  content: "";
+  position: absolute;
+  inset: -14px -8px;
+}
+
+/* Product cards */
+.sl-shop .sl-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(13px, 2.4vw, 23px);
+  max-width: 690px;
+  margin-inline: auto;
+}
+.sl-shop .sl-card-grid > li {
+  min-width: 0;
+}
+.sl-shop .sl-card-grid-saved {
+  max-width: 800px;
+  margin-inline: 0;
+}
+.sl-shop .sl-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.sl-shop .sl-card-photo {
+  position: relative;
+  aspect-ratio: 1 / 1.04;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(140deg, var(--sl-surface), var(--sl-line));
+}
+.sl-shop .sl-card-grid-tall .sl-card-photo {
+  aspect-ratio: 4 / 5;
+  min-height: 160px;
+}
+.sl-shop .sl-card-photo img {
+  transition: transform 0.5s;
+}
+.sl-shop .sl-card-photo:hover img {
+  transform: scale(1.025);
+}
+/* The button is 44px for touch around a 34px circle, so the circle lands 9px from the corner. */
+.sl-shop .sl-card-heart {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+}
+.sl-shop .sl-card-heart button > span {
+  width: 34px;
+  height: 34px;
+}
+.sl-shop .sl-card-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 12px 2px 8px;
+}
+.sl-shop .sl-card-type {
+  color: var(--sl-accent);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 700;
+  letter-spacing: calc(0.08em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-card-name {
+  margin-block: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.sl-shop .sl-card-name a:hover {
+  text-decoration: underline;
+}
+.sl-shop .sl-card-desc {
+  overflow: hidden;
+  color: var(--sl-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sl-shop .sl-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-block-start: auto;
+  padding-block-start: 8px;
+  font-size: 15px;
+}
+
+/* Product page */
+.sl-shop .sl-crumbs {
+  margin: -18px 0 22px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-crumbs a {
+  display: inline-block;
+  margin-block: -14px;
+  padding-block: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.sl-shop .sl-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.88fr);
+  gap: clamp(30px, 5vw, 85px);
+  max-width: 1130px;
+  margin-inline: auto;
+}
+/* A grid, as in the design: a portrait photo takes the full width and its foot is cropped by the frame. */
+.sl-shop .sl-detail-photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: min(600px, 55vw);
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--sl-surface);
+  touch-action: pan-y;
+}
+.sl-shop .sl-gallery-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block-start: 11px;
+  color: var(--sl-muted);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 700;
+  letter-spacing: calc(0.1em * var(--sl-track));
+  text-transform: uppercase;
+}
+.sl-shop .sl-detail-title {
+  margin-block-end: 12px;
+  font-size: clamp(34px, 3.8vw, 51px);
+}
+.sl-shop .sl-detail-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-detail-rating a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sl-shop .sl-stars {
+  color: #d48c3e;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.sl-shop .sl-detail-price {
+  margin: 20px 0 12px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.sl-shop .sl-detail-short {
+  margin-block-end: 22px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sl-shop .sl-option-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block-start: 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.sl-shop .sl-option-line small {
+  color: var(--sl-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.sl-shop .sl-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 25px;
+}
+.sl-shop .sl-variant {
+  min-width: 125px;
+  padding: 9px 15px;
+  border: 1px solid var(--sl-line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: start;
+}
+.sl-shop .sl-variant[aria-pressed="true"] {
+  border-color: var(--sl-accent);
+  background: var(--sl-surface);
+}
+.sl-shop .sl-variant:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.sl-shop .sl-variant small {
+  display: block;
+  padding-block-start: 3px;
+  color: var(--sl-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.sl-shop .sl-qty {
+  gap: 20px;
+  padding: 4px;
+  border-color: var(--sl-line);
+  border-radius: 30px;
+  background: transparent;
+}
+.sl-shop .sl-qty button {
+  width: 30px;
+  height: 30px;
+  background: var(--sl-surface);
+}
+.sl-shop .sl-qty button::after {
+  inset: -7px;
+}
+.sl-shop .sl-qty svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.4;
+}
+.sl-shop .sl-qty > span {
+  min-width: 15px;
+  font-size: 13px;
+  font-weight: 400;
+}
+/* The minus resting at 1 is the normal state, not a warning; running out of room is. */
+.sl-shop :is(.sl-qty, .sl-cart-qty) button:first-child:disabled {
+  opacity: 1;
+}
+.sl-shop .sl-in-bag {
+  margin-block-start: 10px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-custom-note {
+  margin-block-start: 22px;
+}
+.sl-shop .sl-custom-note h2,
+.sl-shop .sl-custom-note label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.sl-shop .sl-custom-note > p {
+  margin: 7px 0 10px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.sl-shop .sl-optional {
+  color: var(--sl-muted);
+  font-weight: 400;
+}
+.sl-shop .sl-custom-note textarea {
+  display: block;
+  min-height: 42px;
+  padding: 10px 2px;
+  border-width: 0 0 1px;
+  border-color: var(--sl-line);
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+}
+.sl-shop .sl-detail-actions {
+  display: flex;
+  gap: 9px;
+  margin: 25px 0 29px;
+}
+.sl-shop .sl-action {
+  flex: 1;
+  gap: 15px;
+  min-width: 0;
+  min-height: 49px;
+  padding: 12px 17px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.sl-shop .sl-action-text {
+  gap: 2px;
+}
+.sl-shop .sl-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline-start: 20px;
+  border-radius: 13px;
+  background: var(--sl-fg);
+  box-shadow: 0 14px 50px #22131c33;
+  color: var(--sl-bg);
+  font-size: 13px;
+  pointer-events: auto;
+}
+.sl-shop .sl-accordions {
+  border-block-start: 1px solid var(--sl-line);
+}
+.sl-shop .sl-accordions details {
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-accordions summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-block: 21px;
+  font-size: 15px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.sl-shop .sl-accordions summary::-webkit-details-marker {
+  display: none;
+}
+.sl-shop .sl-plus {
+  position: relative;
+  flex: none;
+  width: 17px;
+  height: 17px;
+}
+.sl-shop .sl-plus::before,
+.sl-shop .sl-plus::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-start: 1px;
+  width: 15px;
+  height: 1px;
+  background: var(--sl-fg);
+  transition: transform 0.2s;
+}
+.sl-shop .sl-plus::after {
+  transform: rotate(90deg);
+}
+.sl-shop details[open] .sl-plus::after {
+  transform: rotate(0);
+}
+.sl-shop .sl-accordion-body {
+  max-width: 530px;
+  padding-block-end: 19px;
+  padding-inline-end: 23px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.sl-shop .sl-accordion-body p {
+  font-size: 13px;
+}
+.sl-shop .sl-accordion-body dt {
+  display: inline;
+  color: var(--sl-fg);
+  font-weight: 600;
+}
+.sl-shop .sl-accordion-body dt::after {
+  content: ": ";
+}
+.sl-shop .sl-accordion-body dd {
+  display: inline;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-below-detail {
+  max-width: 1130px;
+  margin: 70px auto 0;
+  padding-block-start: 32px;
+  border-block-start: 1px solid var(--sl-line);
+  scroll-margin-block-start: 85px;
+}
+.sl-shop .sl-below-note {
+  margin-block-end: 13px;
+  color: var(--sl-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.sl-shop .sl-review-lines {
+  max-width: 800px;
+}
+.sl-shop .sl-review-lines > li {
+  padding-block: 19px;
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-review-lines .sl-stars {
+  display: block;
+  margin-block-end: 10px;
+}
+.sl-shop .sl-review-lines p {
+  margin-block-end: 8px;
+  font-size: 13px;
+  font-style: italic;
+}
+.sl-shop:lang(ar) .sl-review-lines p {
+  font-style: normal;
+}
+.sl-shop .sl-review-lines small {
+  color: var(--sl-muted);
+  font-size: 11px;
+}
+.sl-shop .sl-related .sl-card-grid {
+  max-width: 430px;
+  margin: 20px 0;
+}
+
+/* Bag and checkout */
+.sl-shop .sl-cart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
+  gap: 45px;
+  align-items: start;
+}
+.sl-shop .sl-cart-line {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+  padding-block: 20px;
+  border-block-end: 1px solid var(--sl-line);
+}
+.sl-shop .sl-cart-thumb {
+  display: block;
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--sl-surface);
+}
+.sl-shop .sl-cart-line h3 {
+  margin-block: 4px 6px;
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-cart-meta {
+  margin-block: 4px 10px;
+  color: var(--sl-muted);
+  font-size: 12px;
+}
+.sl-shop .sl-cart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.sl-shop .sl-cart-qty {
+  gap: 14px;
+}
+.sl-shop .sl-cart-qty button {
+  width: 18px;
+  height: 26px;
+  border: 0;
+  background: none;
+}
+.sl-shop .sl-cart-qty button::after {
+  inset: -9px -7px;
+}
+.sl-shop .sl-cart-qty svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+}
+.sl-shop .sl-cart-qty > span {
+  min-width: 10px;
+  font-size: 16px;
+}
+.sl-shop .sl-cart-remove {
+  position: relative;
+  padding: 4px;
+  font-size: 18px;
+  text-decoration: underline;
+}
+.sl-shop .sl-cart-remove::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
+}
+.sl-shop .sl-cart-cost {
+  font-size: 14px;
+  font-weight: 700;
+}
+.sl-shop .sl-cart-summary {
+  padding: 26px;
+  border-radius: 7px;
+  background: var(--sl-surface);
+}
+@media (min-width: 751px) {
+  .sl-shop .sl-cart-summary {
+    position: sticky;
+    inset-block-start: 88px;
+  }
+}
+.sl-shop .sl-cart-summary h2 {
+  margin-block-end: 22px;
+  font-family: var(--sl-heading-font);
+  font-size: 25px;
+  font-weight: var(--sl-heading-weight);
+}
+.sl-shop .sl-totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block: 9px;
+  font-size: 13px;
+}
+.sl-shop .sl-totals-final {
+  margin-block-start: 9px;
+  padding-block-start: 20px;
+  border-block-start: 1px solid var(--sl-line);
+  font-size: 17px;
+  font-weight: 800;
+}
+.sl-shop .sl-cart-summary .sl-action {
+  margin-block-start: 26px;
+}
+.sl-shop .sl-summary-note {
+  margin-block-start: 14px;
+  color: var(--sl-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.sl-shop .sl-subback {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: max-content;
+  margin-block: -30px 38px;
+  color: var(--sl-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.sl-shop .sl-subback::after {
+  content: "";
+  position: absolute;
+  inset: -14px 0;
+}
+.sl-shop .sl-checkout-form .sl-section-title {
+  margin-block-start: 28px;
+}
+.sl-shop .sl-checkout-form .sl-section-title:first-child {
+  margin-block-start: 3px;
+}
+.sl-shop .sl-checkout-form label {
+  gap: 5px;
+  margin-block: 18px;
+  font-size: 12px;
+  font-weight: 700;
+}
+/* Margins don't collapse inside a grid, so the side-by-side fields keep the same rhythm this way. */
+.sl-shop .sl-checkout-form > .grid {
+  row-gap: 18px;
+  margin-block: 18px;
+}
+.sl-shop .sl-checkout-form > .grid > label {
+  margin-block: 0;
+}
+.sl-shop .sl-checkout-form label > span {
+  font-size: 12px;
+}
+.sl-shop .sl-checkout-form label > span:not(:first-child) {
+  font-weight: 400;
+}
+.sl-shop .sl-checkout-form :is(input, select, textarea) {
+  min-height: 48px;
+  padding: 13px 14px;
+  border: 1px solid var(--sl-line);
+  border-radius: 8px;
+  background: var(--sl-panel);
+  font-size: 14px;
+  font-weight: 700;
+}
+/* These fields set their own border, so the states the shared control gives have to be restated. */
+.sl-shop :is(.sl-checkout-form, .sl-price-inputs, .sl-custom-note) :is(input, select, textarea):focus-visible {
+  border-color: var(--sl-accent);
+}
+.sl-shop :is(.sl-checkout-form, .sl-price-inputs, .sl-custom-note) :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--sl-danger);
+}
+.sl-shop .sl-checkout-form :is(input, select) {
+  height: 48px;
+}
+.sl-shop .sl-checkout-form textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+.sl-shop .sl-checkout-help {
+  margin-block-end: 14px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 750px) {
+  .sl-shop .sl-page {
+    padding: 31px 17px 64px;
+  }
+  .sl-shop .sl-page-title {
+    font-size: 36px;
+  }
+  .sl-shop .sl-page-eyebrow {
+    font-size: calc(9px + var(--sl-caption-boost));
+  }
+  .sl-shop .sl-card-grid {
+    gap: 13px;
+  }
+  .sl-shop .sl-detail {
+    display: block;
+  }
+  .sl-shop .sl-detail-photo {
+    height: auto;
+    aspect-ratio: 1 / 0.91;
+    border-radius: 4px;
+  }
+  .sl-shop .sl-detail-content {
+    padding-block-start: 29px;
+  }
+  .sl-shop .sl-detail-title {
+    font-size: 35px;
+  }
+  .sl-shop .sl-detail-price {
+    font-size: 25px;
+  }
+  .sl-shop .sl-detail-actions {
+    margin-block-start: 21px;
+  }
+  .sl-shop .sl-below-detail {
+    margin-block-start: 47px;
+  }
+  .sl-shop .sl-accordions {
+    margin-block-start: 10px;
+  }
+  .sl-shop .sl-accordions summary {
+    font-size: 14px;
+  }
+  .sl-shop .sl-cart-layout {
+    display: block;
+  }
+  .sl-shop .sl-cart-summary {
+    margin-block-start: 26px;
+  }
+  .sl-shop .sl-cart-line {
+    grid-template-columns: 76px minmax(0, 1fr) auto;
+    gap: 11px;
+    padding-block: 16px;
+  }
+  .sl-shop .sl-cart-thumb {
+    width: 76px;
+    height: 76px;
+  }
+  .sl-shop .sl-cart-cost {
+    font-size: 12px;
+  }
+}
+@media (max-width: 700px) {
+  .sl-shop .sl-price-inputs {
+    gap: 10px;
+  }
+  .sl-shop .sl-price-panel {
+    padding: 18px;
+  }
+  .sl-shop .sl-price-actions button {
+    padding: 11px 16px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 355px) {
+  .sl-shop .sl-page {
+    padding-inline: 12px;
+  }
+  .sl-shop .sl-card-grid {
+    gap: 9px;
+  }
+  .sl-shop .sl-card-row {
+    font-size: 13px;
+  }
+  .sl-shop .sl-detail-actions {
+    gap: 6px;
+  }
+  .sl-shop .sl-action {
+    padding: 10px;
+  }
+}
+/* iPhones zoom the whole page when a field under 16px takes focus. */
+@supports (-webkit-touch-callout: none) {
+  .sl-shop :is(.sl-search input, .sl-price-inputs input, .sl-checkout-form :is(input, select, textarea), .sl-custom-note textarea) {
+    font-size: 16px;
   }
 }
 
