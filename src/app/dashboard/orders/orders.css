@@ -6,11 +6,6 @@
   .sl-dash .wrap {
     flex-wrap: wrap;
   }
-  /* The full placeholder says what search covers, so it must not be cut at the demo's narrow width. */
-  .sl-dash .toolbar .search .control {
-    width: 100%;
-  }
-
   .sl-dash .kanban {
     display: grid;
     grid-template-columns: repeat(4, minmax(190px, 1fr));
@@ -75,7 +70,7 @@
     font-weight: 800;
     font-size: 15px;
   }
-  .sl-dash .order-card .btn {
+  .sl-dash .order-card > .btn {
     position: relative;
     width: 100%;
     margin-top: 11px;
@@ -168,8 +163,7 @@
     }
   }
   @media (max-width: 780px) {
-    .sl-dash .kanban,
-    .sl-dash .history-desktop {
+    .sl-dash .kanban {
       display: none;
     }
     .sl-dash .order-mobile {

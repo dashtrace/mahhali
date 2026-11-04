@@ -4,30 +4,105 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { Alert } from "@/components/ui";
+import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { OrderMessages } from "@/i18n/messages/orders";
 import { ApiError, api, errorMessage } from "@/lib/api";
-import { useSave } from "../../products/_components/useAction";
+import { Dialog } from "../../products/_components/kit";
+import { submitWith, useAction, useSave } from "../../products/_components/useAction";
 import { AddressFields, addressFrom, type AddressValue } from "./AddressFields";
 import { Field } from "./Field";
 import { nextActionLabel } from "./labels";
 
 type Status = "NEW" | "CONFIRMED" | "PACKED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "RETURNED";
 
-/** The forward move and Cancel. Delivered and Failed live in the delivery section. */
-export function StatusActions({
-  orderId,
-  allowedNext,
-  hasCourier,
+/** What assigning a courier needs. Null when the role can't assign. */
+export type AssignProps = { couriers: { id: string; name: string }[]; canAddCourier: boolean } | null;
+
+/** A packed order's next step: choose its courier and send it out, in one go. */
+export function AssignCourierDialog({
+  order,
+  couriers,
+  canAddCourier,
+  onClose,
+  onDone,
   m,
   t,
 }: {
-  orderId: string;
-  allowedNext: readonly Status[];
-  hasCourier: boolean;
+  order: { id: string; number: number; courierId: string | null };
+  couriers: { id: string; name: string }[];
+  canAddCourier: boolean;
+  onClose: () => void;
+  onDone?: () => void;
   m: OrderMessages;
   t: CommonMessages;
 }) {
+  const action = useAction(m.actionFailed);
+  const title = fill(m.assignTitle, { n: order.number });
+  return (
+    <Dialog title={title} closeLabel={t.close} onClose={onClose}>
+      {couriers.length === 0 ? (
+        <>
+          <p className="hint">{m.noCouriers}</p>
+          {canAddCourier && (
+            <Link href="/dashboard/couriers" className="btn">
+              {m.addCourier}
+            </Link>
+          )}
+        </>
+      ) : (
+        <form
+          onSubmit={submitWith(async (f) => {
+            const courierId = String(f.get("courierId"));
+            // A retry after a failed send finds the courier already saved, which is harmless.
+            const ok = await action.run(async () => {
+              if (courierId !== order.courierId) await api(`/api/orders/${order.id}`, { method: "PATCH", body: { courierId } });
+              await api(`/api/orders/${order.id}/transitions`, { body: { to: "OUT_FOR_DELIVERY" } });
+            });
+            if (ok) {
+              onDone?.();
+              onClose();
+            }
+          })}
+        >
+          <p className="hint">{m.assignHint}</p>
+          {action.error && <Alert tone="error" className="mb-3">{action.error}</Alert>}
+          <Field label={m.courierTitle}>
+            <select name="courierId" className="control" defaultValue={couriers.some((c) => c.id === order.courierId) ? (order.courierId ?? undefined) : undefined}>
+              {couriers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="actions">
+            <button type="submit" className="btn primary" disabled={action.busy}>
+              {m.assignAndSend}
+            </button>
+          </div>
+        </form>
+      )}
+    </Dialog>
+  );
+}
+
+/** The forward move and Cancel. Delivered and Failed live in the delivery section. */
+export function StatusActions({
+  order,
+  allowedNext,
+  assign,
+  m,
+  t,
+}: {
+  order: { id: string; number: number; courierId: string | null };
+  allowedNext: readonly Status[];
+  assign: AssignProps;
+  m: OrderMessages;
+  t: CommonMessages;
+}) {
+  const orderId = order.id;
+  const [assigning, setAssigning] = useState(false);
   const router = useRouter();
   const [moving, setMoving] = useState(false);
   // Stays busy until the refreshed order renders, so the next step can't be sent twice.
@@ -37,7 +112,6 @@ export function StatusActions({
   const [cancelling, setCancelling] = useState(false);
   const [note, setNote] = useState("");
   const next = allowedNext.find((s) => s !== "CANCELLED" && s !== "DELIVERED" && s !== "RETURNED");
-  const needsCourier = next === "OUT_FOR_DELIVERY" && !hasCourier;
 
   async function move(to: Status, body: { note?: string } = {}) {
     setMoving(true);
@@ -47,10 +121,7 @@ export function StatusActions({
       setCancelling(false);
       startTransition(() => router.refresh());
     } catch (e) {
-      if (e instanceof ApiError && e.code === "COURIER_REQUIRED") {
-        setError(m.courierRequired);
-        location.hash = "courier";
-      } else setError(errorMessage(e, m.actionFailed));
+      setError(e instanceof ApiError && e.code === "COURIER_REQUIRED" ? m.courierRequired : errorMessage(e, m.actionFailed));
     } finally {
       setMoving(false);
     }
@@ -83,12 +154,11 @@ export function StatusActions({
   return (
     <>
       {error && <Alert tone="error" className="mb-3">{error}</Alert>}
-      {needsCourier && <p className="hint">{m.courierRequired}</p>}
       <div className="actions">
-        {needsCourier ? (
-          <a href="#courier" className="btn primary">
+        {next === "OUT_FOR_DELIVERY" && assign ? (
+          <button type="button" className="btn primary" onClick={() => setAssigning(true)}>
             {m.assignCourier}
-          </a>
+          </button>
         ) : (
           next && (
             <button type="button" className="btn primary" disabled={busy} onClick={() => move(next)}>
@@ -102,6 +172,7 @@ export function StatusActions({
           </button>
         )}
       </div>
+      {assigning && assign && <AssignCourierDialog order={order} {...assign} onClose={() => setAssigning(false)} m={m} t={t} />}
     </>
   );
 }

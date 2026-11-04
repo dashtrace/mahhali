@@ -11,6 +11,7 @@ import { api, errorMessage } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 import { appendOrders, mergeOrders, PAGE_SIZE } from "../orders/_components/boardPages";
 import { dayMonthYear, nextActionLabel } from "../orders/_components/labels";
+import { AssignCourierDialog, type AssignProps } from "../orders/_components/OrderActions";
 import { DashIcon } from "./DashIcon";
 import { StatusBadge } from "./StatusBadge";
 
@@ -42,6 +43,7 @@ type Props = {
   counts: Partial<Record<Status, number>>;
   selected: Status;
   q?: string;
+  assign: AssignProps;
   locale: Locale;
   m: OrderMessages;
   t: CommonMessages;
@@ -51,7 +53,7 @@ type Props = {
  * Phones: status tabs and one list at a time.
  * Wide screens: four columns with drag and drop, or the history table.
  */
-export function BoardClient({ view, pages, counts, selected, q, locale, m, t }: Props) {
+export function BoardClient({ view, pages, counts, selected, q, assign, locale, m, t }: Props) {
   const router = useRouter();
   const statuses = view === "history" ? HISTORY : ACTIVE;
   const [tab, setTab] = useState<Status>(statuses.includes(selected) ? selected : statuses[0]);
@@ -75,6 +77,10 @@ export function BoardClient({ view, pages, counts, selected, q, locale, m, t }: 
   // `counts` ignores the search, so while searching there is no total to show.
   const remaining = (s: Status) => (q ? null : Math.max(0, (counts[s] ?? 0) - listOf(s).length));
   const countOf = (s: Status) => (q ? `${listOf(s).length}${cursorOf(s) ? "+" : ""}` : (counts[s] ?? 0));
+  const dropLoaded = (order: BoardOrder) => {
+    const left = more[order.status];
+    if (left) setMore({ ...more, [order.status]: { ...left, orders: left.orders.filter((o) => o.id !== order.id) } });
+  };
 
   async function move(order: BoardOrder, to: Status) {
     if (!order.allowedNext.includes(to)) {
@@ -85,8 +91,7 @@ export function BoardClient({ view, pages, counts, selected, q, locale, m, t }: 
     setError(null);
     try {
       await api(`/api/orders/${order.id}/transitions`, { body: { to } });
-      const left = more[order.status];
-      if (left) setMore({ ...more, [order.status]: { ...left, orders: left.orders.filter((o) => o.id !== order.id) } });
+      dropLoaded(order);
       router.refresh();
     } catch (e) {
       setError(errorMessage(e, m.moveFailed));
@@ -117,7 +122,7 @@ export function BoardClient({ view, pages, counts, selected, q, locale, m, t }: 
     }
   }
 
-  const card = (o: BoardOrder) => <OrderCard key={o.id} order={o} busy={busy === o.id} onMove={move} locale={locale} m={m} label={label} />;
+  const card = (o: BoardOrder) => <OrderCard key={o.id} order={o} busy={busy === o.id} onMove={move} onAssigned={dropLoaded} assign={assign} locale={locale} m={m} t={t} label={label} />;
   const showing = (shown: number, total: number | null) => (
     <p className="load-note">{total === null ? fill(m.showingX, { x: shown }) : fill(m.showingOf, { x: shown, n: total })}</p>
   );
@@ -153,7 +158,7 @@ export function BoardClient({ view, pages, counts, selected, q, locale, m, t }: 
           })}
         </div>
       ) : (
-        <div className="card history-desktop">
+        <div className="card">
           <div className="between wrap mb-[13px]">
             <b>{m.historyTitle}</b>
             <span className="hint">{m.historyHint}</span>
@@ -283,17 +288,24 @@ function OrderCard({
   order,
   busy,
   onMove,
+  onAssigned,
+  assign,
   locale,
   m,
+  t,
   label,
 }: {
   order: BoardOrder;
   busy: boolean;
   onMove: (o: BoardOrder, to: Status) => void;
+  onAssigned: (o: BoardOrder) => void;
+  assign: AssignProps;
   locale: Locale;
   m: OrderMessages;
+  t: CommonMessages;
   label: (s: Status) => string;
 }) {
+  const [assigning, setAssigning] = useState(false);
   const next = order.allowedNext.find((s) => s !== "CANCELLED" && s !== "RETURNED");
   const href = `/dashboard/orders/${order.id}`;
   const button = `btn ${order.status === "NEW" ? "primary" : "soft"}`;
@@ -345,10 +357,10 @@ function OrderCard({
         <Link href={`${href}#deliver`} className={button}>
           {m.actViewDelivery} {arrow}
         </Link>
-      ) : next === "OUT_FOR_DELIVERY" && !order.courier ? (
-        <Link href={`${href}#courier`} className={button}>
+      ) : next === "OUT_FOR_DELIVERY" && assign ? (
+        <button type="button" className={button} onClick={() => setAssigning(true)}>
           {m.assignCourier} {arrow}
-        </Link>
+        </button>
       ) : next ? (
         <button type="button" className={button} disabled={busy} onClick={() => onMove(order, next)}>
           {nextActionLabel(m, next)} {arrow}
@@ -357,6 +369,9 @@ function OrderCard({
         <Link href={href} className={button}>
           {m.actViewOrder} {arrow}
         </Link>
+      )}
+      {assigning && assign && (
+        <AssignCourierDialog order={{ ...order, courierId: order.courier?.id ?? null }} {...assign} onClose={() => setAssigning(false)} onDone={() => onAssigned(order)} m={m} t={t} />
       )}
     </article>
   );

@@ -9,9 +9,8 @@ import { Field } from "../orders/_components/Field";
 const STEP = 12;
 
 /**
- * From, To (Delivered tab only) and Courier (desk roles only). Applies as soon as a value changes.
- * The inputs show the default range, but the URL only carries dates the user actually changed:
- * no dates keeps the service's own "recent activity" default.
+ * From, To and Courier (desk roles only). Applies as soon as a value changes.
+ * The inputs show the default range, but the URL only carries dates the user actually changed.
  */
 export function DeliveryFilters({
   view,
@@ -35,7 +34,6 @@ export function DeliveryFilters({
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [dates, setDates] = useState({ from: from ?? defaultFrom, to: to ?? defaultTo });
-  const dated = view === "done";
   const invalid = dates.from !== "" && dates.to !== "" && dates.from > dates.to;
 
   function apply(next: { from: string; to: string }, courier = courierId) {
@@ -50,22 +48,17 @@ export function DeliveryFilters({
     timer.current = setTimeout(() => router.push(`?${query}`), 400);
   }
 
-  if (!dated && !couriers.length) return null;
   return (
     <div className="card">
       <div className="split3">
-        {dated && (
-          <>
-            <Field label={m.fromDate}>
-              <input type="date" className="control" value={dates.from} max={defaultTo} aria-invalid={invalid} onChange={(e) => apply({ ...dates, from: e.target.value })} />
-            </Field>
-            <Field label={m.toDate}>
-              <input type="date" className="control" value={dates.to} max={defaultTo} aria-invalid={invalid} onChange={(e) => apply({ ...dates, to: e.target.value })} />
-            </Field>
-          </>
-        )}
+        <Field label={m.fromDate}>
+          <input type="date" className="control" value={dates.from} max={defaultTo} aria-invalid={invalid} onChange={(e) => apply({ ...dates, from: e.target.value })} />
+        </Field>
+        <Field label={m.toDate}>
+          <input type="date" className="control" value={dates.to} max={defaultTo} aria-invalid={invalid} onChange={(e) => apply({ ...dates, to: e.target.value })} />
+        </Field>
         {couriers.length > 0 && (
-          <Field label={m.courierTitle} className={dated ? undefined : "mb-0"}>
+          <Field label={m.courierTitle}>
             <select className="control" value={courierId ?? ""} onChange={(e) => apply(dates, e.target.value)}>
               <option value="">{m.allCouriers}</option>
               {couriers.map((c) => (
@@ -77,14 +70,13 @@ export function DeliveryFilters({
           </Field>
         )}
       </div>
-      {dated &&
-        (invalid ? (
-          <p role="alert" className="hint mb-0 font-bold text-[var(--red)]">
-            {m.rangeInvalid}
-          </p>
-        ) : (
-          <p className="hint mb-0">{m.rangeHint}</p>
-        ))}
+      {invalid ? (
+        <p role="alert" className="hint mb-0 font-bold text-[var(--red)]">
+          {m.rangeInvalid}
+        </p>
+      ) : (
+        <p className="hint mb-0">{m.rangeHint}</p>
+      )}
     </div>
   );
 }

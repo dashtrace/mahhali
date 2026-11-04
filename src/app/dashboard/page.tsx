@@ -9,6 +9,7 @@ import { getLocale } from "@/i18n/server";
 import { ORDER_STATUSES, type OrderStatus } from "@/server/domain/orderStatus";
 import { can } from "@/server/domain/policy";
 import { plain } from "@/server/http/json";
+import { courierService } from "@/server/services/courierService";
 import { orderService } from "@/server/services/orderService";
 import { pageActor } from "../_server/session";
 import { BoardClient } from "./_components/Board";
@@ -37,7 +38,10 @@ export default async function OrdersBoardPage({
   const q = sp.q?.trim() || undefined;
 
   const statuses = view === "history" ? HISTORY : ACTIVE;
-  const lists = await Promise.all(statuses.map((status) => orderService.list(actor, { status, q, limit: PAGE_SIZE })));
+  const [lists, couriers] = await Promise.all([
+    Promise.all(statuses.map((status) => orderService.list(actor, { status, q, limit: PAGE_SIZE }))),
+    can(actor.role, "order.assignCourier") ? courierService.list(actor, { active: true }) : null,
+  ]);
   const pages = Object.fromEntries(statuses.map((s, i) => [s, { orders: lists[i].orders, nextCursor: lists[i].nextCursor }]));
   const viewHref = (v: string, search = q) => `/dashboard?${new URLSearchParams({ ...(v === "history" ? { view: v } : {}), ...(search ? { q: search } : {}) })}`;
 
@@ -96,6 +100,7 @@ export default async function OrdersBoardPage({
         counts={lists[0].counts}
         selected={selected}
         q={q}
+        assign={couriers && { couriers: couriers.map((c) => ({ id: c.id, name: c.name })), canAddCourier: can(actor.role, "courier.write") }}
         locale={locale}
         m={m}
         t={t}

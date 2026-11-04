@@ -16,6 +16,7 @@ import { pageActor } from "../../../_server/session";
 import { CopyLink } from "../../_components/Board";
 import { DashIcon } from "../../_components/DashIcon";
 import { StatusBadge } from "../../_components/StatusBadge";
+import { remittanceHref } from "../../cash/remittance";
 import { ContactButtons } from "../_components/Contact";
 import { DeliverForm } from "../_components/DeliverForm";
 import { ItemNote, Landmark } from "../_components/ItemNote";
@@ -86,7 +87,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <div className="split3">
           <div>
             <span className="eyebrow">{m.payment}</span>
-            <p className="bold mb-4">{m.cod}</p>
+            <p className="bold mb-[14px]">{m.cod}</p>
             <p className="hint tabular-nums">{money(o.codMinor)}</p>
           </div>
           <div>
@@ -144,7 +145,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               <>
                 <p className="hint">{m.nextHint}</p>
                 {can(actor.role, "order.transition") && o.status !== "OUT_FOR_DELIVERY" && (
-                  <StatusActions orderId={o.id} allowedNext={o.allowedNext} hasCourier={!!o.courierId} m={m} t={t} />
+                  <StatusActions
+                    order={o}
+                    allowedNext={o.allowedNext}
+                    assign={canCourier ? { couriers: couriers.map((c) => ({ id: c.id, name: c.name })), canAddCourier: can(actor.role, "courier.write") } : null}
+                    m={m}
+                    t={t}
+                  />
                 )}
                 {o.status === "OUT_FOR_DELIVERY" && (
                   <>
@@ -159,8 +166,9 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             )}
           </div>
 
-          {(canCourier || o.status === "DELIVERED" || o.status === "RETURNED") && (
-            <div id="courier" className="card scroll-mt-20">
+          {/* Before this the courier is chosen in the Assign courier dialog. Out for delivery it can still change, say after a breakdown. */}
+          {((canCourier && o.status === "OUT_FOR_DELIVERY") || o.status === "DELIVERED" || o.status === "RETURNED") && (
+            <div className="card">
               <h2>{m.courierCash}</h2>
               {canCourier &&
                 (isFinal(o.status) ? (
@@ -191,7 +199,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   <div className="line-item">
                     <span className="hint">{o.remittanceLine ? m.cashSettled : m.cashNotSettled}</span>
                     {o.remittanceLine && can(actor.role, "reconciliation.read") && (
-                      <Link href={`/dashboard/cash#rem-${o.remittanceLine.remittanceId}`} className="btn tiny">
+                      <Link href={remittanceHref(o.remittanceLine.remittanceId)} className="btn tiny">
                         {m.viewRemittance}
                       </Link>
                     )}
@@ -256,22 +264,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                       <DashIcon name="check" size="sm" /> {eventText(e, m, t)}
                     </span>
                     {e.note && <p className="mt-1 break-words">{e.note}</p>}
-                    <p className="hint mt-0.5 mb-0">
-                      <bdi>{e.actorName ?? (e.type === "STATUS" && e.toValue === "NEW" && o.source === "CATALOGUE" ? m.byCustomer : m.bySystem)}</bdi>
-                    </p>
                   </div>
                   <time dateTime={e.at} className="hint shrink-0 text-end">
-                    {formatDateTime(e.at, locale)}
+                    {dayMonthYear(e.at, locale)}
                   </time>
                 </div>
               ))}
             </div>
-            {o.source === "MANUAL" && (
-              <p className="hint mt-3 mb-0">
-                <span className="mini-badge gray me-2">{m.manualBadge}</span>
-                {m.firstContact}: {formatDateTime(o.firstContactAt, locale)}
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -295,6 +294,5 @@ function eventText(e: { type: "STATUS" | "COURIER"; fromValue: string | null; to
     // The service records an unassignment as "Unassigned".
     return e.toValue === "Unassigned" ? m.eventCourierRemoved : fill(m.eventCourier, { name: e.toValue });
   }
-  if (!e.fromValue) return m.eventPlaced;
-  return fill(m.eventStatus, { from: statusLabel(t, e.fromValue), to: statusLabel(t, e.toValue) });
+  return e.fromValue ? statusLabel(t, e.toValue) : m.eventPlaced;
 }

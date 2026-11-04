@@ -43,13 +43,21 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
   const range = DeliveryOrdersQuery.safeParse({ view, from: sp.from || undefined, to: sp.to || undefined });
   const from = range.success ? range.data.from : undefined;
   const to = range.success ? range.data.to : undefined;
-  const [orders, couriers] = await Promise.all([
-    orderService.deliveryList(actor, { view, courierId, from, to }).then(plain),
+  const today = isoDay(Date.now());
+  const monthAgo = isoDay(Date.now() - 29 * DAY_MS);
+  const dated = Boolean(from || to);
+  // To deliver stays complete without dates: an old order still waiting must not drop off a courier's list.
+  const dates = view === "done" && !dated ? { from: monthAgo, to: today } : { from, to };
+  const [all, couriers] = await Promise.all([
+    orderService.deliveryList(actor, { view, courierId, ...dates }).then(plain),
     desk && can(actor.role, "courier.read") ? courierService.list(actor, {}) : [],
   ]);
+  // Returned orders live under Orders for desk roles; a courier has only this list to see them in.
+  const orders = view === "done" && desk ? all.filter((o) => o.status === "DELIVERED") : all;
+  // The boxes show what the list really covers, so the range reaches back to the oldest undelivered order.
+  const defaultFrom = view === "active" && !dated ? orders.reduce((d, o) => (o.createdAt.slice(0, 10) < d ? o.createdAt.slice(0, 10) : d), monthAgo) : monthAgo;
   const canComplete = can(actor.role, "order.markDelivered");
   const tabHref = (v: string) => `?${new URLSearchParams({ view: v, ...(courierId ? { courierId } : {}), ...(from ? { from } : {}), ...(to ? { to } : {}) })}`;
-  const today = isoDay(Date.now());
   const courierOptions = [...couriers]
     .sort((a, b) => Number(b.active) - Number(a.active))
     .map((c) => ({ id: c.id, label: c.active ? c.name : fill(m.courierInactive, { name: c.name }) }));
@@ -69,7 +77,7 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
         ))}
       </nav>
 
-      <DeliveryFilters key={view} view={view} from={from} to={to} defaultFrom={isoDay(Date.now() - 6 * DAY_MS)} defaultTo={today} courierId={courierId} couriers={courierOptions} m={m} />
+      <DeliveryFilters key={view} view={view} from={from} to={to} defaultFrom={defaultFrom} defaultTo={today} courierId={courierId} couriers={courierOptions} m={m} />
 
       {orders.length ? (
         <DeliveryList
@@ -78,7 +86,7 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
           m={m}
           title={
             <>
-              {view === "active" ? m.viewActive : m.deliveredAndReturned}{" "}
+              {view === "active" ? m.viewActive : desk ? m.viewDone : m.deliveredAndReturned}{" "}
               <span className="muted">· {orders.length === 1 ? m.oneOrder : fill(m.nOrders, { n: orders.length })}</span>
             </>
           }
@@ -88,12 +96,13 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
           ))}
         </DeliveryList>
       ) : (
-        <div className="empty mt-5">{view === "done" || courierId ? m.noFilterMatch : m.noDeliveries}</div>
+        <div className="empty mt-5">{view === "done" || courierId || dated ? m.noFilterMatch : m.noDeliveries}</div>
       )}
-      {orders.length >= ROW_CAP && <div className="callout">{m.deliveriesCap}</div>}
+      {all.length >= ROW_CAP && <div className="callout">{m.deliveriesCap}</div>}
 
       <div className="info-inline mt-5">
-        <DashIcon name="info" size="sm" /> {m.cashNotHandedOver}
+        <DashIcon name="info" size="sm" />
+        {!desk && <> {m.cashNotHandedOver}</>}
         {desk && (
           <>
             {" "}
@@ -143,41 +152,60 @@ function DeliveryCard({ o, desk, canComplete, locale }: { o: ReturnType<typeof p
       <p className="delivery-name">
         <bdi>{o.customerName}</bdi>
       </p>
-      <p className="hint mb-0">
-        <bdi>{o.addressLine}</bdi>
-        <br />
-        <bdi>
-          {o.area}, {o.district}
-        </bdi>
-        , {govLabel(m, o.governorate)}
-      </p>
-      {o.landmark && <Landmark label={m.landmark} text={o.landmark} />}
-      {o.notes && <p className="hint mt-2 mb-0 whitespace-pre-line">{o.notes}</p>}
-      <ul className="hint mt-0.5 mb-3">
-        {o.items.map((i, idx) => (
-          <li key={idx}>
-            <bdi>{i.nameSnapshot}</bdi> × {i.qty}
-            {i.note && <ItemNote label={m.itemNote} note={i.note} />}
-          </li>
-        ))}
-      </ul>
+      {desk ? (
+        <p className="hint mb-3">
+          <bdi>
+            {o.area}, {o.district}
+          </bdi>
+          {o.items.map((i, idx) => (
+            <span key={idx} className="block">
+              <bdi>{i.nameSnapshot}</bdi> × {i.qty}
+            </span>
+          ))}
+        </p>
+      ) : (
+        <>
+          {/* The courier has no order page: everything needed at the door is on this card. */}
+          <p className="hint mb-0">
+            <bdi>{o.addressLine}</bdi>
+            <br />
+            <bdi>
+              {o.area}, {o.district}
+            </bdi>
+            , {govLabel(m, o.governorate)}
+          </p>
+          {o.landmark && <Landmark label={m.landmark} text={o.landmark} />}
+          {o.notes && <p className="hint mt-2 mb-0 whitespace-pre-line">{o.notes}</p>}
+          <ul className="hint mt-0.5 mb-3">
+            {o.items.map((i, idx) => (
+              <li key={idx}>
+                <bdi>{i.nameSnapshot}</bdi> × {i.qty}
+                {i.note && <ItemNote label={m.itemNote} note={i.note} />}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <ContactButtons phone={o.customerPhone} call={t.call} whatsapp={t.whatsapp} />
       <div className="cash-box">
         <div className="eyebrow">{delivered || returned ? m.codFromOrder : m.cashToCollect}</div>
+        {/* Wraps only when the amount and courier name can't share a row in a narrow card. */}
         <div className="between wrap">
           <strong className="tabular-nums">{formatMoney(o.codMinor, o.currency, locale)}</strong>
           {desk && <span className="small">{o.courier?.name ?? m.notAssigned}</span>}
         </div>
-        {other && <p className="hint mb-0 tabular-nums">≈ {formatMoney(other.minor, other.currency, locale)}</p>}
+        {!desk && other && <p className="hint mb-0 tabular-nums">≈ {formatMoney(other.minor, other.currency, locale)}</p>}
       </div>
-      {o.canComplete && canComplete ? (
+      {o.canComplete && canComplete && !desk ? (
         <>
           <p className="hint mt-2.5 mb-0">{m.stageOut}</p>
           <DeliverForm orderId={o.id} currency={o.currency} codMinor={o.codMinor} m={m} t={t} />
         </>
       ) : (
         <p className="hint mt-2.5 mb-0">
-          {delivered ? (
+          {delivered && desk ? (
+            m.stageDeliveredDesk
+          ) : delivered ? (
             <>
               {m.stageDelivered} · {m.reportedCash}: <span className="tabular-nums">{reportedCash(o.reportedUsdCents, o.reportedLbp, locale)}</span>
               {o.deliveredAt && (
