@@ -7,7 +7,7 @@ import { Alert, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { OrderMessages } from "@/i18n/messages/orders";
-import { api, errorMessage } from "@/lib/api";
+import { ApiError, api, errorMessage } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 import { appendOrders, mergeOrders, PAGE_SIZE } from "../orders/_components/boardPages";
 import { dayMonthYear, nextActionLabel } from "../orders/_components/labels";
@@ -96,7 +96,7 @@ export function BoardClient({ view, pages, counts, selected, q, elsewhere, assig
       dropLoaded(order);
       router.refresh();
     } catch (e) {
-      setError(errorMessage(e, m.moveFailed));
+      setError(e instanceof ApiError && e.code === "COURIER_REQUIRED" ? m.courierRequired : errorMessage(e, m.moveFailed));
     } finally {
       setBusy(null);
     }
