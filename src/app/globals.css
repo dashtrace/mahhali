@@ -106,6 +106,10 @@
 .sl-shop header[data-top="true"] nav a[aria-current="page"]:not(dialog *) {
   color: var(--sl-over-ink);
 }
+/* Darkens rather than lightens, so white labels still read on a white photo. */
+.sl-shop header[data-top="true"][data-over="photo"] :is(a, button):not(dialog *) {
+  --sl-panel: #00000033;
+}
 .sl-shop header[data-top="true"][data-over="photo"]::before {
   content: "";
   position: absolute;

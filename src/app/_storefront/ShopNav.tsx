@@ -58,7 +58,7 @@ export function OverlayHeader({ tone, children }: { tone: "photo" | "band"; chil
     <header
       data-over={tone}
       data-top={top}
-      className="group fixed inset-x-0 top-0 z-30 border-b border-sl-border bg-sl-bg/85 backdrop-blur transition-colors duration-300 data-[top=true]:border-transparent data-[top=true]:bg-transparent data-[top=true]:backdrop-blur-none"
+      className="group fixed inset-x-0 top-0 z-30 border-b border-sl-border bg-sl-bg/95 backdrop-blur transition-colors duration-300 data-[top=true]:border-transparent data-[top=true]:bg-transparent data-[top=true]:backdrop-blur-none"
     >
       {children}
     </header>
