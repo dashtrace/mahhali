@@ -117,6 +117,56 @@
   background: linear-gradient(#000000bf, #0000);
 }
 
+/* Reveal.tsx sets the attribute, so content stays visible without it. */
+.sl-shop [data-reveal="hidden"] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.sl-shop [data-reveal="shown"] {
+  transition:
+    opacity 600ms ease,
+    transform 600ms ease;
+}
+
+/*
+ * The testimonial marquee: two identical lists side by side, moved by one list's
+ * width. Each list ends in its own gap, so the seam matches. Under reduced motion
+ * the first list stays a plain sl-scroll-row and the copy is gone.
+ */
+@keyframes sl-marquee {
+  to {
+    transform: translateX(var(--sl-marquee-to));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sl-shop .sl-marquee-track > [aria-hidden] {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sl-shop .sl-marquee {
+    overflow: hidden;
+    mask-image: linear-gradient(to right, #0000, #000 4%, #000 96%, #0000);
+  }
+  .sl-shop .sl-marquee-track {
+    --sl-marquee-to: -50%;
+    display: flex;
+    width: max-content;
+    animation: sl-marquee calc(var(--sl-marquee-cards) * 7s) linear infinite;
+  }
+  .sl-shop[dir="rtl"] .sl-marquee-track {
+    --sl-marquee-to: 50%;
+  }
+  .sl-shop .sl-marquee-track > ul {
+    overflow: visible;
+    padding-inline: 0 0.625rem;
+  }
+  .sl-shop .sl-marquee:hover .sl-marquee-track,
+  .sl-shop .sl-marquee:focus-within .sl-marquee-track {
+    animation-play-state: paused;
+  }
+}
+
 @theme inline {
   --color-sl-bg: var(--sl-bg);
   --color-sl-panel: var(--sl-panel);
