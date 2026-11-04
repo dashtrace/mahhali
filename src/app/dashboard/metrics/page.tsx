@@ -51,12 +51,12 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
         <div className="stat">
           <div className="eyebrow">{m.confirmTime}</div>
           <div className="number">{median === null ? "–" : duration(median, m, locale)}</div>
-          <div className="sub">{fill(m.confirmHint, { n: created })}</div>
+          <div className="sub">{m.confirmHint}</div>
         </div>
         <div className="stat">
           <div className="eyebrow">{m.perDay}</div>
           <div className="number">{perDay}</div>
-          <div className="sub">{fill(m.perDayHint, { n: created })}</div>
+          <div className="sub">{m.perDayHint}</div>
         </div>
         <div className="stat">
           <div className="eyebrow">{m.codGaps}</div>
@@ -64,11 +64,11 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
             <bdi>{formatMoney(data.codGaps.sumMinor, me.shop.currency, locale)}</bdi>
           </div>
           <div className="sub">
-            {fill(m.codGapsHint, { n: formatNumber(data.codGaps.count, locale) })}
+            {data.codGaps.count === 1 ? m.codGapsHintOne : fill(m.codGapsHint, { n: formatNumber(data.codGaps.count, locale) })}
             {can(actor.role, "reconciliation.read") && (
               <>
                 {" · "}
-                <Link href="/dashboard/cash" className="font-extrabold underline">
+                <Link href="/dashboard/cash" className="underline">
                   {m.seeCash}
                 </Link>
               </>
@@ -99,7 +99,7 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
         </div>
         <div className="card">
           <h2>{m.byStatus}</h2>
-          <p className="hint">{fill(m.byStatusHint, { n: created })}</p>
+          <p className="hint">{m.byStatusHint}</p>
           {ORDER_STATUSES.map((s) => {
             const n = data.ordersByStatus[s] ?? 0;
             return (

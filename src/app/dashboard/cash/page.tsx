@@ -3,7 +3,7 @@ import { fill } from "@/i18n/locale";
 import { common, type CommonMessages } from "@/i18n/messages/common";
 import { cashMessages } from "@/i18n/messages/money";
 import { getLocale } from "@/i18n/server";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { can } from "@/server/domain/policy";
 import { courierService } from "@/server/services/courierService";
 import { remittanceService } from "@/server/services/remittanceService";
@@ -11,20 +11,16 @@ import { reportingService } from "@/server/services/reportingService";
 import { PageHeader } from "@/components/ui";
 import { pageActor } from "../../_server/session";
 import { DashIcon } from "../_components/DashIcon";
+import { dayMonthYear } from "../orders/_components/labels";
 import { openIssues } from "./openIssues";
 import { readPeriod } from "./period";
 import { PeriodForm } from "./PeriodForm";
+import { cash, remittanceHref, remittanceRef, reportedOf } from "./remittance";
 import { RemittanceForm } from "./RemittanceForm";
 
 export const metadata = { title: "Cash" };
 
 const abs = (v: bigint) => (v < 0n ? -v : v);
-
-/** Dollars and pounds as handed over, e.g. "$40.00 + LBP 900,000". */
-function cash(r: { usdCents: bigint; lbp: bigint }, locale: "en" | "ar") {
-  const parts = [r.usdCents ? formatMoney(r.usdCents, "USD", locale) : null, r.lbp ? formatMoney(r.lbp, "LBP", locale) : null].filter(Boolean);
-  return parts.join(" + ");
-}
 
 export default async function CashPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; courierId?: string }> }) {
   const actor = await pageActor("reconciliation.read", "/dashboard/cash");
@@ -41,7 +37,6 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
 
   const money = (v: bigint) => formatMoney(v, rec.currency, locale);
   const courierName = (id: string) => couriers.find((c) => c.id === id)?.name ?? m.noCourierName;
-  const period = fill(m.period, { from: formatDate(rec.from, locale), to: formatDate(rec.to, locale) });
 
   const issues = openIssues(rec.couriers);
   const unpaid = rec.couriers.reduce((sum, c) => sum + c.unpaid.reduce((s, r) => s + r.dueMinor, 0n), 0n);
@@ -85,8 +80,6 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
                   <bdi>{tile.extra}</bdi>
                 </>
               )}
-              <br />
-              {period}
             </div>
           </div>
         ))}
@@ -94,7 +87,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
 
       {issues.count > 0 && (
         <div className="callout">
-          <DashIcon name="warning" size="sm" /> <b>{m.whyTitle}</b> {fill(m.whyFigures, { unpaid: money(unpaid), n: issues.count })} {fill(m.whyBefore, { zero: money(0n) })} <b>{m.whyNot}</b> {m.whyAfter}
+          <DashIcon name="warning" size="sm" /> <b>{m.whyTitle}</b> {fill(issues.count === 1 ? m.whyFiguresOne : m.whyFigures, { unpaid: money(unpaid), n: issues.count })} {fill(m.whyBefore, { zero: money(0n) })} <b>{m.whyNot}</b> {m.whyAfter}
         </div>
       )}
 
@@ -110,7 +103,6 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
           <>
             {issues.orders.map((o) => {
               const remittance = remittanceOfOrder.get(o.orderId);
-              const date = remittance?.receivedAt ?? o.unpaid?.deliveredAt;
               const so = o.shortOrOver;
               const texts = [
                 so && fill(so.diffMinor < 0n ? m.shortBy : m.overBy, { amount: money(abs(so.diffMinor)), due: money(so.dueMinor), paid: money(so.paidMinor) }),
@@ -122,12 +114,6 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
                   }),
                 o.doorstep && fill(m.doorstep, { reported: money(o.doorstep.reportedMinor), due: money(o.doorstep.dueMinor) }),
               ];
-              const figures = [
-                date && formatDate(date, locale),
-                o.reportedMinor !== null && fill(m.figReported, { amount: money(o.reportedMinor) }),
-                o.paidMinor !== null && fill(m.figHanded, { amount: money(o.paidMinor) }),
-                o.remainingMinor !== null && fill(o.remainingMinor < 0n ? m.figOver : m.figRemaining, { amount: money(abs(o.remainingMinor)) }),
-              ];
               return (
                 <div key={o.orderId} className="line-item">
                   <div className="min-w-0">
@@ -136,48 +122,40 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
                       {o.mismatch && <span className="mini-badge red">{m.kindMismatch}</span>}
                       {o.unpaid && <span className="mini-badge amber">{fill(m.badgeUnpaid, { amount: money(o.unpaid.dueMinor) })}</span>}
                       {o.doorstep && <span className="mini-badge amber">{m.kindDoorstep}</span>}
-                      <b>{courierName(o.courierId)}</b>
+                      <b>{remittance ? remittanceRef(remittance.id, remittance.reference) : courierName(o.courierId)}</b>
                       <Link href={`/dashboard/orders/${o.orderId}`} className="text-xs font-extrabold text-(--blue) hover:underline">
                         {fill(m.orderLink, { n: o.number })}
                       </Link>
                     </div>
                     <p className="hint mt-1.5 mb-0">{texts.filter(Boolean).join(" · ")}</p>
-                    <p className="hint mb-0">{figures.filter(Boolean).join(" · ")}</p>
                   </div>
                   {remittance && (
-                    <a href={`#rem-${remittance.id}`} className="btn tiny">
+                    <Link href={remittanceHref(remittance.id)} className="btn tiny">
                       {m.viewRemittance} <DashIcon name="arrow" size="tiny" />
-                    </a>
+                    </Link>
                   )}
                 </div>
               );
             })}
             {issues.remittances.map((r) => {
               const row = remittances.find((x) => x.id === r.remittanceId);
-              const date = [formatDate(r.receivedAt, locale), r.reference].filter(Boolean).join(" · ");
-              const held = row ? cash({ usdCents: row.amountUsdCents, lbp: row.amountLbp }, locale) : "";
               return (
                 <div key={r.remittanceId} className="line-item">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-[9px]">
                       <span className="mini-badge red">{fill(r.diffMinor < 0n ? m.badgeShort : m.badgeOver, { amount: money(abs(r.diffMinor)) })}</span>
-                      <b>{courierName(r.courierId)}</b>
+                      <b>{remittanceRef(r.remittanceId, r.reference)}</b>
+                      {row?.lines.map((l) => (
+                        <Link key={l.id} href={`/dashboard/orders/${l.orderId}`} className="text-xs font-extrabold text-(--blue) hover:underline">
+                          {fill(m.orderLink, { n: l.order.number })}
+                        </Link>
+                      ))}
                     </div>
-                    <p className="hint mt-1.5 mb-0">{fill(r.diffMinor < 0n ? m.remittanceShort : m.remittanceGap, { diff: money(abs(r.diffMinor)), date })}</p>
-                    <p className="hint mb-0">
-                      {[
-                        held && fill(m.figHanded, { amount: held }),
-                        fill(r.diffMinor < 0n ? m.figRemaining : m.figOver, { amount: money(abs(r.diffMinor)) }),
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
+                    <p className="hint mt-1.5 mb-0">{fill(r.diffMinor < 0n ? m.remittanceShort : m.remittanceGap, { diff: money(abs(r.diffMinor)) })}</p>
                   </div>
-                  {row && (
-                    <a href={`#rem-${row.id}`} className="btn tiny">
-                      {m.viewRemittance} <DashIcon name="arrow" size="tiny" />
-                    </a>
-                  )}
+                  <Link href={remittanceHref(r.remittanceId)} className="btn tiny">
+                    {m.viewRemittance} <DashIcon name="arrow" size="tiny" />
+                  </Link>
                 </div>
               );
             })}
@@ -202,27 +180,21 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
                   <th>{m.thReported}</th>
                   <th>{m.thReceived}</th>
                   <th>{m.thDifference}</th>
-                  <th>{m.orders}</th>
+                  <th aria-label={m.details} />
                 </tr>
               </thead>
               <tbody>
                 {remittances.map((r) => {
                   const gap = gapOfRemittance.get(r.id);
-                  // What its orders add up to after fees. A fee is in the order's currency; like reconcile(), this takes that to be the shop's.
-                  const fees = r.lines.reduce((sum, l) => sum + l.feeMinor, 0n);
-                  const reported = {
-                    usdCents: r.lines.reduce((sum, l) => sum + l.collectedUsdCents, 0n) - (rec.currency === "USD" ? fees : 0n),
-                    lbp: r.lines.reduce((sum, l) => sum + l.collectedLbp, 0n) - (rec.currency === "LBP" ? fees : 0n),
-                  };
                   return (
-                    <tr key={r.id} id={`rem-${r.id}`} className="scroll-mt-20 target:bg-[#fffbf2]">
+                    <tr key={r.id}>
                       <td>
-                        <b className="whitespace-nowrap">{formatDate(r.receivedAt, locale)}</b>
-                        {r.reference && <div className="hint">{r.reference}</div>}
+                        <b className="whitespace-nowrap">{remittanceRef(r.id, r.reference)}</b>
+                        <div className="hint whitespace-nowrap">{dayMonthYear(r.receivedAt.toISOString(), locale)}</div>
                       </td>
                       <td>{courierName(r.courierId)}</td>
                       <td>
-                        <bdi>{cash(reported, locale) || money(0n)}</bdi>
+                        <bdi>{cash(reportedOf(r, rec.currency), locale) || money(0n)}</bdi>
                       </td>
                       <td>
                         <bdi>{cash({ usdCents: r.amountUsdCents, lbp: r.amountLbp }, locale) || money(0n)}</bdi>
@@ -235,13 +207,9 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
                         )}
                       </td>
                       <td>
-                        <div className="flex gap-1.5">
-                          {r.lines.map((l) => (
-                            <Link key={l.id} href={`/dashboard/orders/${l.orderId}`} className="btn tiny">
-                              {fill(m.orderNo, { n: l.order.number })}
-                            </Link>
-                          ))}
-                        </div>
+                        <Link href={remittanceHref(r.id)} className="btn tiny">
+                          {m.details}
+                        </Link>
                       </td>
                     </tr>
                   );
@@ -249,57 +217,6 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
               </tbody>
             </table>
           </div>
-        )}
-      </section>
-
-      <section className="card">
-        <h2>{m.byCourier}</h2>
-        {rec.couriers.length === 0 ? (
-          <div className="empty">{m.noActivity}</div>
-        ) : (
-          <>
-            <p className="hint">{fill(m.byCourierHint, { zero: money(0n) })}</p>
-            <div className="table-scroll">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{m.courier}</th>
-                    <th>{m.due}</th>
-                    <th>{m.reported}</th>
-                    <th>{m.remitted}</th>
-                    <th>{m.gap}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rec.couriers.map((c) => {
-                    const open = openIssues([c]).count;
-                    // shortcut: reconcile() returns no per-courier reported total, so orders without a doorstep gap count as reported = due; add reportedMinor to reconcile() for the exact figure.
-                    const reported = c.expectedMinor + c.doorstepGaps.reduce((sum, r) => sum + r.diffMinor, 0n);
-                    return (
-                      <tr key={c.courierId}>
-                        <td>
-                          <b className="mb-1 block">{c.courierName ?? m.noCourierName}</b>
-                          <span className={`mini-badge ${open ? "red" : "green"}`}>{open ? fill(m.openCount, { n: open }) : m.clear}</span>
-                        </td>
-                        <td>
-                          <bdi>{money(c.expectedMinor)}</bdi>
-                        </td>
-                        <td>
-                          <bdi>{money(reported)}</bdi>
-                        </td>
-                        <td>
-                          <bdi>{money(c.receivedMinor)}</bdi>
-                        </td>
-                        <td>
-                          <bdi>{money(c.gaps.sumMinor)}</bdi>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
         )}
       </section>
     </>
