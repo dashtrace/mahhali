@@ -43,6 +43,25 @@ Every merge to `main` then runs the tests and deploys. The **Scheduled jobs** wo
 `/api/cron/expire-reservations` and `/api/cron/review-emails` every 10 minutes; run it by hand from
 the Actions tab to test it.
 
+## Sandbox
+
+A second Railway environment for demos and testing, with its own app, database, uploads volume and
+domain. Pushes to the `sandbox` branch deploy there after the tests pass; `main` still deploys to
+production. To try a change: `git checkout sandbox`, `git merge <branch>`, `git push`.
+
+1. In Railway: environment drop-down → **+ New Environment** → **Duplicate Environment**, named
+   `sandbox`, then approve the staged changes.
+2. Check that its `DATABASE_URL` is the `${{Postgres.DATABASE_URL}}` reference, so it uses the
+   sandbox database, and that the volume is mounted at `/app/uploads`.
+3. Give it its own domain, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` and `CRON_SECRET`. Remove
+   `RESEND_API_KEY` so test orders never email real people.
+4. Create a project token for the `sandbox` environment.
+5. In GitHub, create an environment `sandbox` with the secret `SANDBOXRAILWAYTOKEN` (that token) and
+   the variable `APP_URL` = `https://<sandbox domain>`.
+
+The **Scheduled jobs** workflow only calls production. Seed demo data here, never on production: its
+accounts share a password that is in this repo.
+
 ## Email and billing
 
 - Email: create a Resend account, verify the sending domain (DNS records; allow a day), and set
