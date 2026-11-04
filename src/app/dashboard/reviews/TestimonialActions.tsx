@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button } from "@/components/ui";
+import { Alert } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAction } from "../products/_components/useAction";
 
@@ -10,16 +10,16 @@ export function TestimonialActions({ id, status, labels }: { id: string; status:
   const set = (next: "APPROVED" | "REJECTED") => action.run(() => api(`/api/testimonials/${id}`, { method: "PATCH", body: { status: next } }));
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
+      <div className="actions">
         {status !== "APPROVED" && (
-          <Button disabled={action.busy} onClick={() => set("APPROVED")}>
+          <button type="button" className="btn tiny primary" disabled={action.busy} onClick={() => set("APPROVED")}>
             {labels.approve}
-          </Button>
+          </button>
         )}
         {status !== "REJECTED" && (
-          <Button tone="secondary" disabled={action.busy} onClick={() => set("REJECTED")}>
+          <button type="button" className="btn tiny" disabled={action.busy} onClick={() => set("REJECTED")}>
             {labels.reject}
-          </Button>
+          </button>
         )}
       </div>
       {action.error && <Alert tone="error">{action.error}</Alert>}
