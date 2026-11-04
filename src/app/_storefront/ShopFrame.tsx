@@ -39,7 +39,7 @@ const INFO_LABEL = { about: "infoAbout", shipping: "infoShipping", contact: "inf
  * `wish` swaps the header wishlist link (product page: a WishButton variant="icon").
  * `overlay` (home page) floats the header over a full-width hero: "photo" for a
  * slide, "band" for the themed hero of a shop without slides. Children then lay out
- * their own width. `page` uses the approved design's inner-page shell.
+ * their own width. `page` uses the approved design's inner-page shell; a string adds that class to it.
  */
 export function ShopFrame({
   shop,
@@ -53,7 +53,7 @@ export function ShopFrame({
   locale: Locale;
   wish?: ReactNode;
   overlay?: "photo" | "band";
-  page?: boolean;
+  page?: boolean | string;
   children: ReactNode;
 }) {
   const t = common[locale];
@@ -101,7 +101,7 @@ export function ShopFrame({
         <header className="sl-header sticky top-0 z-30">{headerRow}</header>
       )}
 
-      <main className={overlay ? "flex-1" : page ? "sl-page flex-1" : "mx-auto w-full max-w-6xl flex-1 px-4 py-4"}>{children}</main>
+      <main className={overlay ? "flex-1" : page ? cx("sl-page flex-1", typeof page === "string" && page) : "mx-auto w-full max-w-6xl flex-1 px-4 py-4"}>{children}</main>
 
       <footer className="sl-footer sl-on-surface">
         <p className="sl-footer-name">{shop.name}</p>

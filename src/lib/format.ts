@@ -33,8 +33,8 @@ export function toAmountText(minor: Minor, currency: Currency): string {
   return currency === "USD" ? (Number(minor) / 100).toFixed(2) : String(minor);
 }
 
-export function formatDateTime(value: string | Date, locale: Locale = "en"): string {
-  return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+export function formatDateTime(value: string | Date, locale: Locale = "en", timeZone?: string): string {
+  return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(value));
 }
 
 export function formatDate(value: string | Date, locale: Locale = "en"): string {
