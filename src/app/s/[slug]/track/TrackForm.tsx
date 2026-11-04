@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Icon } from "@/components/Icon";
+import { ArrowOut } from "@/components/Icon";
 import { Button } from "@/components/ui";
 import type { CheckoutMessages } from "@/i18n/messages/checkout";
 import { ApiError, api, errorMessage } from "@/lib/api";
@@ -62,7 +62,7 @@ export function TrackForm({ slug, number, m }: { slug: string; number?: number; 
       </label>
       <Button type="submit" block className="sl-action sl-track-submit" disabled={busy}>
         {busy ? m.searching : m.findOrder}
-        {!busy && <Icon name="arrowOut" className="sl-arrow-out" />}
+        {!busy && <ArrowOut />}
       </Button>
       <p className="sl-track-hint">{m.trackHint}</p>
       {error && (

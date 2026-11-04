@@ -37,8 +37,8 @@ export function formatDateTime(value: string | Date, locale: Locale = "en", time
   return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(value));
 }
 
-export function formatDate(value: string | Date, locale: Locale = "en"): string {
-  return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium" }).format(new Date(value));
+export function formatDate(value: string | Date, locale: Locale = "en", timeZone?: string): string {
+  return new Intl.DateTimeFormat(intl(locale), { dateStyle: "medium", timeZone }).format(new Date(value));
 }
 
 export function formatMonth(value: string | Date, locale: Locale = "en"): string {

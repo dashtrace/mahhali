@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useWishlist } from "@/app/_storefront/wishlist";
-import { Icon } from "@/components/Icon";
+import { ArrowOut } from "@/components/Icon";
 import type { Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
 import { PageEmpty, ProductTile, type TileProduct } from "../_components/tiles";
@@ -22,7 +22,7 @@ export function WishlistGrid({ slug, products, currency, locale }: { slug: strin
         action={
           <Link href={`/s/${slug}/shop`} className="sl-text-cta">
             {m.browseShop}
-            <Icon name="arrowOut" className="sl-arrow-out" />
+            <ArrowOut />
           </Link>
         }
       />

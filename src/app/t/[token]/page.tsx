@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cache, type ReactNode } from "react";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { Icon } from "@/components/Icon";
+import { ArrowOut, Icon } from "@/components/Icon";
 import { ProductPhoto, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { checkoutMessages } from "@/i18n/messages/checkout";
 import { common } from "@/i18n/messages/common";
 import { getLocale } from "@/i18n/server";
-import { formatDateTime, formatMoney, formatNumber, whatsappLink } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney, formatNumber, whatsappLink } from "@/lib/format";
 import { appUrl } from "@/server/mail/mailer";
 import { plain } from "@/server/http/json";
 import { trackingService } from "@/server/services/trackingService";
@@ -83,7 +83,13 @@ export default async function TrackingPage({ params, searchParams }: Props) {
   const current = keys.indexOf(status);
   const steps = keys.map((key, i) => {
     const when = at(key);
-    return { key, label: m[`step${key}`], time: when ? dateTime(when) : i > current ? m.pending : null, state: i < current ? "done" : i === current ? "current" : "upcoming" };
+    return {
+      key,
+      label: m[`step${key}`],
+      time: when ? dateTime(when) : i > current ? m.pending : null,
+      date: when ? formatDate(when, locale, SHOP_TIME_ZONE) : i > current ? m.pending : null,
+      state: i < current ? "done" : i === current ? "current" : "upcoming",
+    };
   });
   const lastUpdate = order.timeline.at(-1)?.at ?? order.placedAt;
   const units = order.items.reduce((n, i) => n + i.qty, 0);
@@ -128,7 +134,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
       </div>
       <Link href={`/r/${token}`} className="sl-review-cta">
         {m.rateOrder}
-        <Icon name="arrowOut" className="sl-arrow-out" />
+        <ArrowOut />
       </Link>
     </div>
   );
@@ -188,7 +194,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
   const whatsapp = (label: string) =>
     shop.whatsappPhone && (
       <a href={whatsappLink(shop.whatsappPhone, fill(m.waText, { n: order.number }))} target="_blank" rel="noopener noreferrer" className="sl-order-whatsapp">
-        <Icon name="whatsapp" className="size-[17px] shrink-0" />
+        <Icon name="whatsapp" className="size-3 shrink-0" />
         {label}
         <span className="sr-only">({common[locale].opensNewTab})</span>
       </a>
@@ -224,7 +230,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
               <li key={s.key} data-state={s.state} aria-current={s.state === "current" ? "step" : undefined}>
                 <span aria-hidden>{stepGlyph(s.state, i)}</span>
                 <b>{s.label}</b>
-                {s.time && <small>{s.time}</small>}
+                {s.date && <small>{s.date}</small>}
               </li>
             ))}
           </ol>
@@ -242,7 +248,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
         <div className="sl-order-actions">
           <Link href={`/t/${token}`} className="sl-order-primary">
             {m.trackTitle}
-            <Icon name="arrowOut" className="sl-arrow-out" />
+            <ArrowOut />
           </Link>
           <CopyNumber value={String(order.number)} copy={m.copyOrderNumber} copied={m.copied} />
           <Link href={`/s/${shop.slug}`}>{m.backToShop}</Link>
@@ -311,7 +317,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
           {refresh && <span>{m.liveNote}</span>}
           <Link href={`/s/${shop.slug}`}>
             {m.backToShop}
-            <Icon name="arrowOut" className="sl-arrow-out" />
+            <ArrowOut />
           </Link>
         </div>
 
@@ -320,7 +326,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
             {delivered && (
               <Link href={`/t/${token}?placed=1`} className="sl-order-primary">
                 {m.viewConfirmation}
-                <Icon name="arrowOut" className="sl-arrow-out" />
+                <ArrowOut />
               </Link>
             )}
             {whatsapp(m.messageShop)}
