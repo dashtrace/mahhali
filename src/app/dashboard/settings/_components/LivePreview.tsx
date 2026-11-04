@@ -10,11 +10,22 @@ import { DashIcon } from "../../_components/DashIcon";
 const PHONE = "(max-width: 780px)";
 const VIEWS = ["home", "shop", "product"] as const;
 
-type Preview = { draft: (draft: PreviewDraft) => void; reload: () => void };
-const PreviewContext = createContext<Preview>({ draft() {}, reload() {} });
+type Preview = { draft: (draft: PreviewDraft) => void; reload: () => void; open: () => void };
+const PreviewContext = createContext<Preview>({ draft() {}, reload() {}, open() {} });
 
 /** For a settings form: `draft` shows its current values, unsaved; `reload` after a save or an upload. */
 export const useLivePreview = () => useContext(PreviewContext);
+
+/** The page header's button: the frame in a side panel on desktop, a bottom sheet on phones. */
+export function PreviewButton({ label }: { label: string }) {
+  const { open } = useLivePreview();
+  return (
+    <button type="button" className="btn soft" onClick={open}>
+      <DashIcon name="eye" size="sm" />
+      {label}
+    </button>
+  );
+}
 
 function subscribePhone(onChange: () => void) {
   const query = matchMedia(PHONE);
@@ -27,7 +38,7 @@ function subscribePhone(onChange: () => void) {
  * desktop, in a sheet on phones. The page keys this by tab, so a draft ends with its tab.
  * shortcut: leaving a tab with unsaved changes gives no warning, add one with a dirty flag from the forms if owners lose work.
  */
-export function LivePreview({ locale, m, children }: { locale: Locale; m: ShopMessages; children: ReactNode }) {
+export function LivePreview({ locale, m, head, children }: { locale: Locale; m: ShopMessages; head: ReactNode; children: ReactNode }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const latest = useRef<PreviewDraft>({});
   const [view, setView] = useState<(typeof VIEWS)[number]>("home");
@@ -54,6 +65,7 @@ export function LivePreview({ locale, m, children }: { locale: Locale; m: ShopMe
         send();
       },
       reload: () => setLoads((n) => n + 1),
+      open: () => setOpen(true),
     }),
     [],
   );
@@ -79,23 +91,19 @@ export function LivePreview({ locale, m, children }: { locale: Locale; m: ShopMe
 
   return (
     <PreviewContext.Provider value={preview}>
+      {head}
       <div className="brand-layout">
-        <div className="brand-controls">
-          <button type="button" className="btn soft preview-open" onClick={() => setOpen(true)}>
-            <DashIcon name="eye" size="sm" />
-            {m.previewChanges}
-          </button>
-          {children}
-        </div>
+        <div className="brand-controls">{children}</div>
         {phone === false && (
           <section aria-labelledby="live-preview-title" className="preview-holder">
             <b id="live-preview-title">{m.previewTitle}</b>
             <p className="hint">{m.previewBuilt}</p>
-            {panel}
+            {/* One frame at a time: the frame ref and the draft messages follow whichever is showing. */}
+            {!open && panel}
           </section>
         )}
-        {phone && (
-          <Sheet open={open} onClose={() => setOpen(false)} title={m.previewChanges} locale={locale} side="bottom">
+        {phone !== null && (
+          <Sheet open={open} onClose={() => setOpen(false)} title={m.previewChanges} locale={locale} side={phone ? "bottom" : "end"}>
             {open && panel}
           </Sheet>
         )}
