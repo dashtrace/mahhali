@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import { DashIcon } from "../../_components/DashIcon";
@@ -91,7 +92,14 @@ export function ExtrasFields({ value: x, onChange, categories, visibility, m }: 
   return (
     <>
       <h2>{m.displayTitle}</h2>
-      <Field label={m.category}>
+      <Field
+        label={m.category}
+        hint={
+          <Link href="/dashboard/products/categories" className="underline">
+            {m.categoriesTitle}
+          </Link>
+        }
+      >
         <select className="control" value={x.categoryId} onChange={(e) => set({ categoryId: e.target.value })}>
           <option value="">{m.noCategory}</option>
           {categories.map((c) => (
