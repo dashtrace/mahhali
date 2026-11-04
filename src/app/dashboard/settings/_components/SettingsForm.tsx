@@ -10,7 +10,7 @@ import { toAmountText } from "@/lib/format";
 import { DashIcon } from "../../_components/DashIcon";
 import { submitWith, useSave } from "../../products/_components/useAction";
 import { SaveBtn, SettingField } from "./fields";
-import { useLivePreview } from "./LivePreview";
+import { useLivePreview, useUnsaved } from "./LivePreview";
 
 type Settings = {
   name: string;
@@ -59,6 +59,7 @@ function CopyLink({ url, m }: { url: string; m: ShopMessages }) {
 function IdentityForm({ settings: s, catalogueUrl, m, t }: { settings: Settings; catalogueUrl: string } & Msgs) {
   const save = useSave(t.error);
   const preview = useLivePreview();
+  useUnsaved(save.dirty);
 
   async function submit(f: FormData) {
     const body = { name: text(f, "name"), language: text(f, "language") };
@@ -113,6 +114,7 @@ function IdentityForm({ settings: s, catalogueUrl, m, t }: { settings: Settings;
 function DeliveryForm({ settings: s, m, t }: { settings: Settings } & Msgs) {
   const save = useSave(t.error);
   const preview = useLivePreview();
+  useUnsaved(save.dirty);
   const amountPattern = s.currency === "USD" ? "\\d+(\\.\\d{1,2})?" : "\\d+";
 
   async function submit(f: FormData) {
@@ -122,7 +124,7 @@ function DeliveryForm({ settings: s, m, t }: { settings: Settings } & Msgs) {
       deliveryFee: text(f, "deliveryFee") || "0",
       codTolerance: text(f, "codTolerance") || "0",
       autoCancelHours: hours ? Number(hours) : null,
-      // The rate cannot be cleared once set, so an empty box leaves it as it is.
+      // The API can't clear a rate, so the box is required once one is set. A shop without one may stay without.
       ...(rate ? { usdLbpRate: rate } : {}),
     };
     if (await save.save(() => api("/api/shop/settings", { method: "PATCH", body }))) preview.reload();
@@ -142,7 +144,7 @@ function DeliveryForm({ settings: s, m, t }: { settings: Settings } & Msgs) {
           <input name="deliveryFee" className="control" defaultValue={toAmountText(s.deliveryFeeMinor, s.currency)} dir="ltr" inputMode="decimal" pattern={amountPattern} />
         </SettingField>
         <SettingField label={m.rate} hint={m.rateHint}>
-          <input name="usdLbpRate" className="control" defaultValue={s.usdLbpRate ?? ""} dir="ltr" inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="89500" />
+          <input name="usdLbpRate" className="control" defaultValue={s.usdLbpRate ?? ""} dir="ltr" inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="89500" required={s.usdLbpRate !== null} />
         </SettingField>
         <SettingField label={fill(m.codTolerance, { currency: s.currency })} hint={m.codToleranceHint}>
           <input name="codTolerance" className="control" defaultValue={toAmountText(s.codToleranceMinor, s.currency)} dir="ltr" inputMode="decimal" pattern={amountPattern} />

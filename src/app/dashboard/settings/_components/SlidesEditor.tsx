@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui";
 import { fill } from "@/i18n/locale";
@@ -10,7 +11,7 @@ import { NEW_SLIDE } from "../../../preview/storefront/draft";
 import { DashIcon } from "../../_components/DashIcon";
 import { submitWith, useAction, useSave } from "../../products/_components/useAction";
 import { SaveBtn, SettingField } from "./fields";
-import { useLivePreview } from "./LivePreview";
+import { useLivePreview, useUnsaved } from "./LivePreview";
 
 type Slide = { id: string; imageUrl: string; kicker: string | null; title: string; body: string | null };
 type Text = { kicker: string; title: string; body: string };
@@ -76,6 +77,7 @@ function SlideCard({ slide: s, index, last, m, t }: { slide: Slide; index: numbe
   const [image, setImage] = useState(s.imageUrl);
   const action = useSave(t.error, text);
   const preview = useLivePreview();
+  useUnsaved(action.dirty);
   const name = fill(m.slideN, { n: index + 1 });
   const reloadIf = (ok: boolean) => {
     if (ok) preview.reload();
@@ -152,14 +154,18 @@ function AddSlide({ index, max, m, t }: { index: number; max: number } & Msgs) {
   const input = useRef<HTMLInputElement>(null);
   const add = useAction(t.error);
   const preview = useLivePreview();
+  const router = useRouter();
   const url = pick?.url;
   const { kicker, title, body } = text;
+  useUnsaved(!!(url || kicker || title || body));
 
   // The frame shares this origin, so it can show the picked file before it is uploaded.
   useEffect(() => {
     if (url) preview.draft({ focus: index, slides: { [NEW_SLIDE]: { imageUrl: url, kicker, title: title || m.slideTitlePlaceholder, body } } });
     else preview.draft({ slides: { [NEW_SLIDE]: null } });
   }, [preview, url, kicker, title, body, index, m.slideTitlePlaceholder]);
+  // A refresh at the limit removes this form without close().
+  useEffect(() => () => preview.draft({ slides: { [NEW_SLIDE]: null } }), [preview]);
 
   function clearPick() {
     if (pick) URL.revokeObjectURL(pick.url);
@@ -180,10 +186,10 @@ function AddSlide({ index, max, m, t }: { index: number; max: number } & Msgs) {
     form.set("title", text.title);
     form.set("kicker", text.kicker);
     form.set("body", text.body);
-    if (await add.run(() => api("/api/shop/slides", { body: form }))) {
-      close();
-      preview.reload();
-    }
+    // Refused because the slides filled up elsewhere: the refresh shows the real count, and at the limit replaces this form.
+    if (await add.run(() => api("/api/shop/slides", { body: form }))) close();
+    else router.refresh();
+    preview.reload();
   }
 
   if (!open) {

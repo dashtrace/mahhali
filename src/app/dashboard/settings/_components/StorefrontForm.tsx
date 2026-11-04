@@ -4,10 +4,11 @@ import { Alert } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
+import { isAllowedSocialUrl } from "@/server/domain/storefront";
 import { submitWith, useSave } from "../../products/_components/useAction";
 import { SaveBtn, SettingField } from "./fields";
-import { useLivePreview } from "./LivePreview";
+import { useLivePreview, useUnsaved } from "./LivePreview";
 
 type Storefront = {
   tagline: string | null;
@@ -57,6 +58,7 @@ export function StorefrontForm({ storefront, categories, whatsappPhone, m, t }: 
 function ContentForm({ storefront: s, categories, m, t }: Pick<Props, "storefront" | "categories"> & Msgs) {
   const save = useSave(t.error);
   const preview = useLivePreview();
+  useUnsaved(save.dirty);
 
   async function submit(f: FormData) {
     if (await save.save(() => api("/api/shop/storefront", { method: "PATCH", body: contentOf(f) }))) preview.reload();
@@ -132,14 +134,24 @@ function ContentForm({ storefront: s, categories, m, t }: Pick<Props, "storefron
 function ContactForm({ storefront: s, whatsappPhone, m, t }: Pick<Props, "storefront" | "whatsappPhone"> & Msgs) {
   const save = useSave(t.error);
   const preview = useLivePreview();
+  useUnsaved(save.dirty);
+  /** An error useSave shows as it is, in the owner's language. */
+  const refuse = (message: string) => new ApiError(422, "VALIDATION", message);
 
   async function submit(f: FormData) {
     const phone = text(f, "whatsappPhone") || null;
     const links = { instagramUrl: text(f, "instagramUrl"), facebookUrl: text(f, "facebookUrl") };
     // Two endpoints: the number belongs to the shop settings (it also feeds the order board).
+    // So nothing saves unless all of it can: links are checked here, then the number, which only the server can judge, goes first.
     const saved = await save.save(async () => {
+      if (links.instagramUrl && !isAllowedSocialUrl("instagram", links.instagramUrl)) throw refuse(m.instagramInvalid);
+      if (links.facebookUrl && !isAllowedSocialUrl("facebook", links.facebookUrl)) throw refuse(m.facebookInvalid);
+      if (phone !== whatsappPhone) {
+        await api("/api/shop/settings", { method: "PATCH", body: { whatsappPhone: phone } }).catch((e) => {
+          throw e instanceof ApiError && e.status === 400 ? refuse(m.whatsappInvalid) : e;
+        });
+      }
       await api("/api/shop/storefront", { method: "PATCH", body: links });
-      if (phone !== whatsappPhone) await api("/api/shop/settings", { method: "PATCH", body: { whatsappPhone: phone } });
     });
     if (saved) preview.reload();
   }

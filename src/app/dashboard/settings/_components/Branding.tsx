@@ -7,14 +7,14 @@ import { fill } from "@/i18n/locale";
 import type { CommonMessages } from "@/i18n/messages/common";
 import type { ShopMessages } from "@/i18n/messages/shop";
 import { api } from "@/lib/api";
-import { FONTS, PALETTES, RADII, inkFor, validateTheme, type PaletteName, type Theme } from "@/server/domain/theme";
+import { FONTS, PALETTES, RADII, contrastRatio, inkFor, validateTheme, type PaletteName, type Theme } from "@/server/domain/theme";
 import { storefrontTokens } from "../../../_server/theme";
 import { DashIcon } from "../../_components/DashIcon";
 import { FilePicker } from "../../products/_components/FilePicker";
 import { useAction } from "../../products/_components/useAction";
 import { SaveBtn, SettingField } from "./fields";
-import { useLivePreview } from "./LivePreview";
-import { COLOUR_ROLES, PAIR_MESSAGES, REQUIRED_ROLES, STORE_PALETTES, type StorePaletteName } from "./palettes";
+import { useLivePreview, useUnsaved } from "./LivePreview";
+import { COLOUR_ROLES, PAIR_MESSAGES, REQUIRED_ROLES, STORE_LOOK, STORE_PALETTES, type StorePaletteName } from "./palettes";
 
 type Props = { theme: Theme; logo: string | null; m: ShopMessages; t: CommonMessages };
 type Role = (typeof COLOUR_ROLES)[number];
@@ -49,6 +49,7 @@ export function Branding({ theme: saved, logo: savedLogo, m, t }: Props) {
   const preview = useLivePreview();
   const failures = validateTheme(theme);
   const dirty = !same(theme, saved);
+  useUnsaved(dirty);
   const drawn = drawnColours(theme);
   const change = (next: Theme) => {
     setDone(false);
@@ -63,27 +64,12 @@ export function Branding({ theme: saved, logo: savedLogo, m, t }: Props) {
   };
   useEffect(() => preview.draft({ theme }), [preview, theme]);
   const palettes: { name: StorePaletteName | PaletteName; value: Theme }[] = [
-    ...(Object.keys(STORE_PALETTES) as StorePaletteName[]).map((name) => ({ name, value: { ...STORE_PALETTES[name], radius: theme.radius, font: theme.font } })),
+    ...(Object.keys(STORE_PALETTES) as StorePaletteName[]).map((name) => ({ name, value: { ...STORE_PALETTES[name], ...STORE_LOOK } })),
     ...(Object.keys(PALETTES) as PaletteName[]).map((name) => ({ name, value: { ...PALETTES[name] } })),
   ];
-  const selected = palettes.find((p) => same(theme, p.value));
-
-  const saveButton = (
-    <SaveBtn
-      type="button"
-      state={{ busy: save.busy, dirty, saved: done }}
-      labels={t}
-      disabled={failures.length > 0}
-      onClick={async () => {
-        const ok = await save.run(() => api("/api/shop/branding", { method: "PATCH", body: theme }));
-        setDone(ok);
-        if (ok) preview.reload();
-      }}
-    >
-      {m.saveBranding}
-    </SaveBtn>
-  );
-  const saveError = save.error && <Alert tone="error" className="mb-3">{save.error}</Alert>;
+  // By colours only: choosing another font afterwards doesn't make it a different palette.
+  const selected = palettes.find((p) => COLOUR_ROLES.every((k) => theme[k] === (p.value as Theme)[k]));
+  const [contrastStart, contrastMiddle, contrastEnd] = m.contrastOk.split(/\{\w+\}/);
 
   return (
     <>
@@ -145,16 +131,32 @@ export function Branding({ theme: saved, logo: savedLogo, m, t }: Props) {
           ))}
         </div>
 
-        <div className="mt-4">{saveError}</div>
+        <div className="mt-4">{save.error && <Alert tone="error" className="mb-3">{save.error}</Alert>}</div>
         <div className="actions">
-          {saveButton}
+          <SaveBtn
+            type="button"
+            state={{ busy: save.busy, dirty, saved: done }}
+            labels={t}
+            disabled={failures.length > 0}
+            onClick={async () => {
+              const ok = await save.run(() => api("/api/shop/branding", { method: "PATCH", body: theme }));
+              setDone(ok);
+              if (ok) preview.reload();
+            }}
+          >
+            {m.saveBranding}
+          </SaveBtn>
           <button type="button" className="btn" disabled={!dirty || save.busy} onClick={() => change(saved)}>
             {m.restoreColours}
           </button>
         </div>
         {failures.length === 0 ? (
           <div role="status" className="info-inline mt-[15px]">
-            <DashIcon name="info" size="sm" /> {m.contrastOk}
+            <DashIcon name="info" size="sm" /> {contrastStart}
+            <b dir="ltr">{contrastRatio(drawn.buttonText, theme.primary).toFixed(1)}:1</b>
+            {contrastMiddle}
+            <b dir="ltr">{contrastRatio(drawn.text, theme.background).toFixed(1)}:1</b>
+            {contrastEnd}
           </div>
         ) : (
           <div role="status" className="callout mb-0">
@@ -191,8 +193,6 @@ export function Branding({ theme: saved, logo: savedLogo, m, t }: Props) {
             </select>
           </SettingField>
         </div>
-        {saveError}
-        {saveButton}
       </div>
 
       <Logo

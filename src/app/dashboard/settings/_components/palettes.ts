@@ -1,6 +1,9 @@
 import type { Theme } from "@/server/domain/theme";
 
-/** Full colour sets for the Brand colours tab. Radius and font stay as the owner set them. */
+/** The approved storefront's corners and text face. Picking a store palette brings them along, as the older presets do, and the owner can change them after. */
+export const STORE_LOOK = { radius: "sm", font: "inter" } as const satisfies Pick<Theme, "radius" | "font">;
+
+/** Full colour sets for the Brand colours tab. */
 export const STORE_PALETTES = {
   rosewood: { primary: "#874258", accent: "#b99b7b", background: "#faf5f1", surface: "#f1e8e1", text: "#30282b", muted: "#756b68", dark: "#714558", darkText: "#fffaf5", border: "#e4d7d1", buttonText: "#ffffff" },
   blush: { primary: "#9e5268", accent: "#caa99d", background: "#fff9f7", surface: "#f4e5e4", text: "#342930", muted: "#7f6f72", dark: "#7b4457", darkText: "#fffaf7", border: "#e9d5d7", buttonText: "#fffdfc" },

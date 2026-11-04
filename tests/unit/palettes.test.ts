@@ -1,7 +1,9 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import type { CSSProperties } from "react";
 import { describe, expect, it } from "vitest";
-import { COLOUR_ROLES, PAIR_MESSAGES, STORE_PALETTES } from "@/app/dashboard/settings/_components/palettes";
+import { themeVars } from "@/app/_server/theme";
+import { COLOUR_ROLES, PAIR_MESSAGES, STORE_LOOK, STORE_PALETTES } from "@/app/dashboard/settings/_components/palettes";
 import { shopMessages } from "@/i18n/messages/shop";
 import { validateTheme } from "@/server/domain/theme";
 
@@ -22,6 +24,13 @@ describe("brand colours tab", () => {
     const c = "#808080";
     const failures = validateTheme({ primary: c, accent: c, background: c, text: c, surface: c, muted: c, dark: c, darkText: c, buttonText: c });
     expect(failures.map((f) => f.pair).sort()).toEqual(Object.keys(PAIR_MESSAGES).sort());
+  });
+
+  it("gives the store palettes the approved storefront's look", () => {
+    expect(STORE_LOOK.radius).toBe("sm");
+    // The label an owner sees has to name the face themeVars draws for this value.
+    expect(themeVars({ font: STORE_LOOK.font })["--font-shop" as keyof CSSProperties]).toContain("--font-dm-sans");
+    expect(shopMessages.en[`font${STORE_LOOK.font}`]).toBe("DM Sans");
   });
 });
 
