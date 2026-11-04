@@ -7,6 +7,7 @@ export const checkoutMessages = defineMessages({
     optional: "optional",
     error: "Something went wrong. Please try again.",
     errRateLimited: "Too many attempts. Wait a minute and try again.",
+    errDetails: "Please fill in your name and delivery address.",
     backToShop: "Back to shop",
     // Cart
     cartEyebrow: "Your selection",
@@ -192,6 +193,7 @@ export const checkoutMessages = defineMessages({
     optional: "اختياري",
     error: "حدث خطأ ما. حاول مرة أخرى.",
     errRateLimited: "محاولات كثيرة. انتظر دقيقة ثم حاول مجدداً.",
+    errDetails: "يرجى إدخال اسمك وعنوان التوصيل.",
     backToShop: "العودة إلى المتجر",
     cartEyebrow: "اختياراتك",
     cartTitle: "سلتك",

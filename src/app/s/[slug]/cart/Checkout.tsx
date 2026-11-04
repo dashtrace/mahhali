@@ -135,6 +135,9 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
       } else if (Array.isArray(details) && details.some((d) => d.path === "customer.email")) {
         // The field checks itself first; this catches what only the server knows.
         setError(common[locale].emailInvalid);
+      } else if (Array.isArray(details) && details.some((d) => d.path?.startsWith("customer.") || d.path?.startsWith("address."))) {
+        // A required field holding only spaces passes the browser's check and is empty once trimmed.
+        setError(m.errDetails);
       } else if (err instanceof ApiError && err.status === 429) {
         setError(m.errRateLimited);
       } else {
