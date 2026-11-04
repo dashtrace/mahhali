@@ -937,6 +937,151 @@
   }
 }
 
+/* Products and categories. */
+@layer components {
+  .sl-dash .product-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 13px;
+  }
+  .sl-dash .product-manage {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    overflow: hidden;
+  }
+  .sl-dash .product-manage > img,
+  .sl-dash .product-manage > .no-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    background: #eae3da;
+  }
+  .sl-dash .product-manage > .no-photo {
+    display: grid;
+    place-items: center;
+    background: #e9f0f0;
+    color: #779098;
+  }
+  .sl-dash .product-manage .prod-body {
+    padding: 13px;
+  }
+  .sl-dash .product-manage .prod-body .btn {
+    width: 100%;
+    margin-top: 10px;
+  }
+  .sl-dash .stock-action {
+    border: 1px solid #cfe1d8;
+    background: #edf8f1;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 17px;
+  }
+  .sl-dash .stock-action .number {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0c7954;
+  }
+  .sl-dash .stock-action h2 {
+    color: #15573b;
+    margin: 0 0 5px;
+  }
+  .sl-dash .steps {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 22px;
+    overflow: auto;
+    scroll-margin-top: 80px;
+  }
+  .sl-dash .steps button {
+    border: 0;
+    background: #eaf1f2;
+    color: #53717a;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 50px;
+    padding: 10px 13px;
+    white-space: nowrap;
+  }
+  .sl-dash .steps button.active {
+    background: #1d6278;
+    color: #fff;
+  }
+  .sl-dash .category-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    gap: 13px;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    padding: 15px 3px;
+  }
+  .sl-dash .category-row.dragging {
+    background: #e8f5f7;
+  }
+  .sl-dash .grip {
+    color: #779098;
+  }
+  .sl-dash .category-row .buttons {
+    display: flex;
+    gap: 5px;
+  }
+  .sl-dash .category-row .buttons button {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 11px;
+  }
+  .sl-dash .category-row .buttons button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  .sl-dash .field-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sl-dash .field-inline .control {
+    flex: 1;
+  }
+  .sl-dash .thumb {
+    position: relative;
+    width: 120px;
+    height: 130px;
+    border-radius: 9px;
+    background: #e9e0dc;
+    overflow: hidden;
+    flex: none;
+  }
+  .sl-dash .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .sl-dash .dialog {
+    margin: auto;
+    background: #fff;
+    color: var(--ink);
+    border-radius: 19px;
+    max-width: min(570px, calc(100vw - 36px));
+    width: 100%;
+    max-height: 90dvh;
+    overflow: auto;
+  }
+  .sl-dash .dialog::backdrop {
+    background: #10252ba8;
+  }
+  .sl-dash .dialog > div {
+    padding: 24px;
+  }
+  @media (max-width: 780px) {
+    .sl-dash .steps {
+      gap: 5px;
+    }
+  }
+}
+
 /* Plan & billing. */
 @layer components {
   .sl-dash .plan-hero {
