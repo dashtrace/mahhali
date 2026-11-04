@@ -184,8 +184,9 @@ export function ContactList({ shop, locale, omitUnset }: { shop: Pick<StoreShop,
 function SocialCard({ href, label, icon, title, sub }: { href?: string; label: string; icon: IconName; title: string; sub: string }) {
   const inner = (
     <>
+      {/* Text glyphs as in the approved design; WhatsApp keeps its own mark. */}
       <span aria-hidden className="sl-contact-icon">
-        <Icon name={icon} />
+        {icon === "instagram" ? "◎" : icon === "facebook" ? "f" : <Icon name={icon} />}
       </span>
       <span className="min-w-0">
         <b>{title}</b>

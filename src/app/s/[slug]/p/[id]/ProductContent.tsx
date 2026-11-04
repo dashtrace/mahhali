@@ -66,7 +66,7 @@ export function ProductContent({
   const m = storeMessages[locale];
   const t = common[locale];
   const average = formatNumber(reviews.average, locale, 1);
-  // Each only when the shop filled it in; the first one starts open.
+  // Each only when the shop filled it in; the first one starts open. Products have no data for the design's "What makes it special" and "How to use it" rows.
   const sections = [
     product.description && {
       title: m.detailAbout,
