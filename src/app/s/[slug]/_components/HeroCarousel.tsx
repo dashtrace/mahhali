@@ -22,8 +22,8 @@ const control = "rounded-full border-white/60 bg-white/10 text-white";
  * The home page hero under the overlaid header: full-width photos with their text
  * on a fixed scrim, so white text holds on any image. 1 slide is static; 2+ crossfade
  * every 5 s with markers, arrows, swipe and a pause button. Auto-advance stops for
- * reduced motion, a hidden tab, hover or keyboard focus inside, and for a while after
- * a manual change. The controls keep to the start side, clear of the WhatsApp button.
+ * reduced motion, a hidden tab, a mouse over the controls or keyboard focus inside,
+ * and for a while after a manual change. The controls keep to the start side, clear of the WhatsApp button.
  */
 export function HeroCarousel({
   slides,
@@ -79,8 +79,6 @@ export function HeroCarousel({
       className="relative flex h-[min(960px,100svh)] min-h-[630px] touch-pan-y flex-col justify-end overflow-hidden bg-sl-band text-white [&_:focus-visible]:outline-white"
       onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
       onTouchEnd={onTouchEnd}
-      onMouseEnter={() => (paused.current = true)}
-      onMouseLeave={() => (paused.current = false)}
       // Keyboard only: a tap also focuses the button, and would stop the rotation until the next tap elsewhere.
       onFocus={(e) => {
         if (e.target.matches(":focus-visible")) paused.current = true;
@@ -98,8 +96,8 @@ export function HeroCarousel({
           className="sl-fade pointer-events-none absolute inset-0 size-full object-cover"
         />
       ))}
-      {/* In px from the bottom, like the text: the block reaches about 370px at most, on any hero height. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,#000000d1,#0000008c_400px,#0000_640px)]" />
+      {/* In px from the bottom, like the text: the block reaches about 505px at most, on any hero height. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,#000000d1,#0000008c_520px,#0000_760px)]" />
       <div className="relative mx-auto w-full max-w-6xl px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:px-4">
         {/* Stacked in one grid cell: the tallest slide sets the height, so nothing jumps as they fade. */}
         <div className="grid">
@@ -116,7 +114,16 @@ export function HeroCarousel({
           <Icon name="arrow" className="size-3.5" />
         </ButtonLink>
         {count > 1 && (
-          <div className="mt-5 flex flex-col gap-2">
+          // Only over the controls and only for a mouse: the hero fills the screen, and a tap fires mouse events with no leave.
+          <div
+            className="mt-5 flex w-fit flex-col gap-2"
+            onPointerEnter={(e) => {
+              if (e.pointerType === "mouse") paused.current = true;
+            }}
+            onPointerLeave={(e) => {
+              if (e.pointerType === "mouse") paused.current = false;
+            }}
+          >
             <div role="group" aria-label={m.heroDots} className="flex max-w-xs gap-1.5">
               {slides.map((s, i) => (
                 <button key={s.id} type="button" aria-label={fill(m.heroDot, { n: i + 1 })} aria-current={i === index} onClick={() => go(i)} className="group h-7 flex-1">
