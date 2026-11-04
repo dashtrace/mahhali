@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { useCancelOnLeave } from "@/components/useCancelOnLeave";
 import { Field } from "../products/_components/kit";
 
 /**
@@ -26,8 +27,7 @@ export function PeriodForm({
   const pathname = usePathname();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [badRange, setBadRange] = useState(false);
-  // Leaving the page must not apply a pending change and bring the person back.
-  useEffect(() => () => clearTimeout(timer.current), []);
+  useCancelOnLeave(timer);
 
   function apply(form: HTMLFormElement) {
     const params = new URLSearchParams();

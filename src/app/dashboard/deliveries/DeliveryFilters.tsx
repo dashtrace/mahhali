@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type ReactNode } from "react";
+import { useCancelOnLeave } from "@/components/useCancelOnLeave";
 import { fill } from "@/i18n/locale";
 import type { OrderMessages } from "@/i18n/messages/orders";
 import { Field } from "../orders/_components/Field";
@@ -33,6 +34,7 @@ export function DeliveryFilters({
 }) {
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useCancelOnLeave(timer);
   const [dates, setDates] = useState({ from: from ?? defaultFrom, to: to ?? defaultTo });
   const invalid = dates.from !== "" && dates.to !== "" && dates.from > dates.to;
 

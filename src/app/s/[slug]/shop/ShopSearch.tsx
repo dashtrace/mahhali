@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 import { Icon } from "@/components/Icon";
+import { useCancelOnLeave } from "@/components/useCancelOnLeave";
 import { filterHref, type BrowseFilters } from "../_components/browse";
 
 const TYPING_PAUSE_MS = 300;
@@ -11,6 +12,7 @@ const TYPING_PAUSE_MS = 300;
 export function ShopSearch({ slug, filters, label, placeholder }: { slug: string; filters: BrowseFilters; label: string; placeholder: string }) {
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useCancelOnLeave(timer);
   return (
     <form action={`/s/${slug}/shop`} role="search" className="sl-search">
       <Icon name="search" />
