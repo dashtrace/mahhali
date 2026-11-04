@@ -113,7 +113,7 @@ export const DeliveryOrdersQuery = z
     view: z.enum(["active", "done"]).default("active"),
     /** Desk roles only: one courier's run. */
     courierId: z.string().min(1).max(64).optional(),
-    /** view=done only. YYYY-MM-DD, inclusive, in UTC; recent activity from the last 7 days when both are absent. */
+    /** YYYY-MM-DD, inclusive, in UTC. When both are absent, view=done shows the last 7 days of activity and view=active shows everything. */
     ...range,
   })
   .refine(fromNotAfterTo, rangeMessage);

@@ -94,7 +94,7 @@ export function registerOrders(r: OpenAPIRegistry, { secured, cronSecured, ok, e
     path: "/api/delivery/orders",
     summary: "A courier's run: delivery users see only their courier's orders",
     description:
-      "from and to apply to view=done: delivered orders by delivery day, returned orders by last update. A lone to covers the 7 days ending that day; a lone from runs to today.",
+      "from and to filter delivered orders by delivery day, returned orders by last update, and orders still to deliver by the day they were placed. A lone to covers the 7 days ending that day; a lone from runs to today.",
     tags: ["Delivery"],
     security: secured,
     request: { query: DeliveryOrdersQuery },

@@ -166,9 +166,12 @@ describe("the delivered list's date range", () => {
     expect(await ids(driver.cookie, "view=done")).toEqual(sorted(lateOnTheTenth, onTheEleventh, onTheTwentieth));
   });
 
-  it("leaves the to-deliver view alone", async () => {
+  it("filters the to-deliver view by the day an order was placed, and shows all of it without dates", async () => {
     const { driver, active } = await setup();
-    expect(await ids(driver.cookie, "view=active&from=2025-01-10&to=2025-01-10")).toEqual(sorted(active));
+    const today = new Date().toISOString().slice(0, 10);
+    expect(await ids(driver.cookie, "view=active")).toEqual(sorted(active));
+    expect(await ids(driver.cookie, `view=active&from=${today}&to=${today}`)).toEqual(sorted(active));
+    expect(await ids(driver.cookie, "view=active&from=2025-01-10&to=2025-01-10")).toEqual([]);
   });
 
   it("refuses from after to, and a lone from in the future", async () => {

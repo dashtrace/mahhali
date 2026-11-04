@@ -199,8 +199,16 @@ export const orderRepo = {
         status: { in: f.statuses },
         ...(f.courierId ? { courierId: f.courierId } : {}),
         ...(f.since ? { updatedAt: { gte: f.since } } : {}),
-        // A returned order never reached the door, so it has no deliveredAt.
-        ...(within ? { OR: [{ status: "DELIVERED" as const, deliveredAt: within }, { status: "RETURNED" as const, updatedAt: within }] } : {}),
+        // A returned order never reached the door, so it has no deliveredAt; one still on its way goes by the day it was placed.
+        ...(within
+          ? {
+              OR: [
+                { status: "DELIVERED" as const, deliveredAt: within },
+                { status: "RETURNED" as const, updatedAt: within },
+                { status: { in: ["PACKED", "OUT_FOR_DELIVERY"] as OrderStatus[] }, createdAt: within },
+              ],
+            }
+          : {}),
       },
       include: {
         items: { select: { nameSnapshot: true, qty: true, note: true } },

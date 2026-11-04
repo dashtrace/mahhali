@@ -421,7 +421,7 @@ export const orderService = {
     const scope = courierScope(actor);
     if (scope === null) return [];
     const done = q.view === "done";
-    const period = done && (q.from || q.to) ? periodOf(q.from, q.to, new Date(), 7) : undefined;
+    const period = q.from || q.to ? periodOf(q.from, q.to, new Date(), 7) : undefined;
     const orders = await orderRepo.forCourier(actor.shopId, {
       courierId: scope ?? q.courierId,
       statuses: done ? ["DELIVERED", "RETURNED"] : ["PACKED", "OUT_FOR_DELIVERY"],
@@ -448,6 +448,7 @@ export const orderService = {
       reportedUsdCents: o.reportedUsdCents,
       reportedLbp: o.reportedLbp,
       failureReason: o.failureReason,
+      createdAt: o.createdAt,
       deliveredAt: o.deliveredAt,
       canComplete: o.status === "OUT_FOR_DELIVERY",
     }));
