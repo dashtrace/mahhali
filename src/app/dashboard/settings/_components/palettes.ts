@@ -10,3 +10,17 @@ export const STORE_PALETTES = {
 } as const satisfies Record<string, Omit<Theme, "radius" | "font">>;
 
 export type StorePaletteName = keyof typeof STORE_PALETTES;
+
+/** The Brand colours grid, in the demo's order. All but the first three can be left Automatic. */
+export const COLOUR_ROLES = ["primary", "accent", "background", "surface", "text", "muted", "dark", "darkText", "border", "buttonText"] as const;
+export const REQUIRED_ROLES: readonly string[] = ["primary", "accent", "background"];
+
+/** validateTheme's pair names to their messages, for the contrast feedback. */
+export const PAIR_MESSAGES = {
+  "text on primary": "pairPrimary",
+  "body text on background": "pairBackground",
+  "links on background": "pairLinks",
+  "muted text on background": "pairMuted",
+  "body text on surface": "pairSurface",
+  "text on dark band": "pairBand",
+} as const;
