@@ -2,52 +2,59 @@
 
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { Icon } from "@/components/Icon";
-import { ButtonLink } from "@/components/ui";
+import { ButtonLink, IconButton, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
 
 type Slide = { id: string; imageUrl: string; kicker: string | null; title: string; body: string | null };
 
 const AUTO_MS = 5000;
-const HOLD_MS = 8500; // after a dot or a swipe, the visitor is in control for a while
+const HOLD_MS = 8500; // after a marker, an arrow or a swipe, the visitor is in control for a while
 const SWIPE_PX = 40;
 
+const kickerText = "mb-2 text-[11px] font-bold uppercase tracking-[0.15em] rtl:tracking-normal";
+const titleText = "sl-heading mb-3 line-clamp-3 break-words text-4xl leading-[1.1] md:text-6xl";
+const bodyText = "line-clamp-3 max-w-xl text-sm leading-relaxed md:text-base";
+const cta = "mt-5 min-h-12 px-6";
+const control = "rounded-full border-white/60 bg-white/10 text-white";
+
 /**
- * The home page promo carousel: 1 slide is static, 2+ crossfade every 5 s with
- * dots and swipe. Auto-advance stops for reduced motion, a hidden tab, hover or
- * keyboard focus inside, and for a while after a manual change.
+ * The home page hero under the overlaid header: full-width photos with their text
+ * on a fixed scrim, so white text holds on any image. 1 slide is static; 2+ crossfade
+ * every 5 s with markers, arrows, swipe and a pause button. Auto-advance stops for
+ * reduced motion, a hidden tab, hover or keyboard focus inside, and for a while after
+ * a manual change. The controls keep to the start side, clear of the WhatsApp button.
  */
 export function HeroCarousel({
   slides,
   shopHref,
   shopName,
   tagline,
-  logo,
   locale,
 }: {
   slides: Slide[];
   shopHref: string;
   shopName: string;
   tagline?: string | null;
-  logo?: string | null;
   locale: Locale;
 }) {
   const m = storeMessages[locale];
   const [index, setIndex] = useState(0);
+  const [stopped, setStopped] = useState(false);
   const holdUntil = useRef(0);
   const paused = useRef(false);
   const touchX = useRef<number | null>(null);
   const count = slides.length;
 
   useEffect(() => {
-    if (count < 2) return;
+    if (count < 2 || stopped) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
     const id = setInterval(() => {
       if (reduced.matches || document.hidden || paused.current || Date.now() < holdUntil.current) return;
       setIndex((i) => (i + 1) % count);
     }, AUTO_MS);
     return () => clearInterval(id);
-  }, [count]);
+  }, [count, stopped]);
 
   function go(to: number) {
     setIndex((to + count) % count);
@@ -64,18 +71,20 @@ export function HeroCarousel({
     go(index + (forward ? 1 : -1));
   }
 
-  if (count === 0) return <BrandHero shopHref={shopHref} shopName={shopName} tagline={tagline} logo={logo} locale={locale} />;
-  const slide = slides[index] ?? slides[0];
+  if (count === 0) return <BrandHero shopHref={shopHref} shopName={shopName} tagline={tagline} locale={locale} />;
   return (
     <section
       aria-roledescription="carousel"
       aria-label={fill(m.heroRegion, { name: shopName })}
-      className="relative mb-4 h-[196px] touch-pan-y overflow-hidden rounded-[21px] bg-sl-hero text-sl-hero-ink sm:h-72"
+      className="relative flex h-[min(960px,100svh)] min-h-[630px] touch-pan-y flex-col justify-end overflow-hidden bg-sl-band text-white [&_:focus-visible]:outline-white"
       onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
       onTouchEnd={onTouchEnd}
       onMouseEnter={() => (paused.current = true)}
       onMouseLeave={() => (paused.current = false)}
-      onFocus={() => (paused.current = true)}
+      // Keyboard only: a tap also focuses the button, and would stop the rotation until the next tap elsewhere.
+      onFocus={(e) => {
+        if (e.target.matches(":focus-visible")) paused.current = true;
+      }}
       onBlur={() => (paused.current = false)}
     >
       {slides.map((s, i) => (
@@ -86,62 +95,69 @@ export function HeroCarousel({
           alt=""
           data-active={i === index}
           loading={i === 0 ? "eager" : "lazy"}
-          className="sl-fade pointer-events-none absolute inset-y-0 end-0 h-full w-[56%] object-cover [mask-image:linear-gradient(to_left,black_67%,transparent)] rtl:[mask-image:linear-gradient(to_right,black_67%,transparent)]"
+          className="sl-fade pointer-events-none absolute inset-0 size-full object-cover"
         />
       ))}
-      <div className="relative z-[1] flex h-full w-[65%] flex-col justify-center py-4 pe-3 ps-5 sm:w-1/2 sm:ps-8">
-        {slide.kicker && <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.15em] rtl:tracking-normal sm:mb-2.5">{slide.kicker}</p>}
-        <h2 className="sl-heading mb-2 line-clamp-2 text-[22px] leading-[1.05] sm:text-4xl">{slide.title}</h2>
-        {slide.body && <p className="mb-3 line-clamp-2 max-w-[240px] text-[13px] leading-snug sm:max-w-sm sm:text-sm">{slide.body}</p>}
-        <ButtonLink href={shopHref} className="self-start text-[13px]">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(#0003,#0000_20%,#0000008c_50%,#000000d1)]" />
+      <div className="relative mx-auto w-full max-w-6xl px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:px-4">
+        {/* Stacked in one grid cell: the tallest slide sets the height, so nothing jumps as they fade. */}
+        <div className="grid">
+          {slides.map((s, i) => (
+            <div key={s.id} data-active={i === index} aria-hidden={i !== index} className="sl-fade self-end [grid-area:1/1]">
+              {s.kicker && <p className={kickerText}>{s.kicker}</p>}
+              <h2 className={titleText}>{s.title}</h2>
+              {s.body && <p className={bodyText}>{s.body}</p>}
+            </div>
+          ))}
+        </div>
+        <ButtonLink href={shopHref} className={cta}>
           {m.shopNow}
           <Icon name="arrow" className="size-3.5" />
         </ButtonLink>
+        {count > 1 && (
+          <div className="mt-5 flex flex-col gap-2">
+            <div role="group" aria-label={m.heroDots} className="flex max-w-xs gap-1.5">
+              {slides.map((s, i) => (
+                <button key={s.id} type="button" aria-label={fill(m.heroDot, { n: i + 1 })} aria-current={i === index} onClick={() => go(i)} className="group h-7 flex-1">
+                  <span className="block h-[3px] rounded-full bg-white/40 transition-colors group-aria-[current=true]:bg-white" />
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <IconButton label={m.heroPrev} icon="back" onClick={() => go(index - 1)} className={control} />
+              <IconButton label={m.heroNext} icon="next" onClick={() => go(index + 1)} className={control} />
+              {/* Nothing rotates under reduced motion, so there is nothing to pause. */}
+              <IconButton
+                label={stopped ? m.heroPlay : m.heroPause}
+                icon={stopped ? "play" : "pause"}
+                onClick={() => {
+                  paused.current = false;
+                  setStopped(!stopped);
+                }}
+                className={cx(control, "motion-reduce:hidden")}
+              />
+            </div>
+          </div>
+        )}
       </div>
-      {count > 1 && (
-        // On the photo side, clear of the copy; each dot keeps a 44px hit area.
-        <div role="group" aria-label={m.heroDots} className="absolute bottom-0 end-2 z-[4] flex">
-          {slides.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              aria-label={fill(m.heroDot, { n: i + 1 })}
-              aria-current={i === index}
-              onClick={() => go(i)}
-              className="group grid size-11 place-items-center"
-            >
-              <span className="h-[7px] w-[7px] rounded-full bg-white/60 shadow-[0_1px_5px_#0004] transition-[width,background-color] duration-200 group-aria-[current=true]:w-[21px] group-aria-[current=true]:bg-sl-accent" />
-            </button>
-          ))}
-        </div>
-      )}
     </section>
   );
 }
 
-/** The hero for a shop with no slides yet: its name and tagline on a themed backdrop, so the home page still leads with one. */
-function BrandHero({ shopHref, shopName, tagline, logo, locale }: { shopHref: string; shopName: string; tagline?: string | null; logo?: string | null; locale: Locale }) {
+/** The hero for a shop with no slides yet: its name and tagline on the themed band, so the home page still leads with one. */
+function BrandHero({ shopHref, shopName, tagline, locale }: { shopHref: string; shopName: string; tagline?: string | null; locale: Locale }) {
   const m = storeMessages[locale];
   return (
     <section
       aria-label={fill(m.heroRegion, { name: shopName })}
-      className="relative mb-4 h-[196px] overflow-hidden rounded-[21px] bg-[linear-gradient(135deg,var(--sl-hero),color-mix(in_srgb,var(--sl-accent)_30%,var(--sl-bg)))] text-sl-hero-ink sm:h-72"
+      className="flex min-h-[440px] flex-col justify-end bg-sl-band text-sl-band-ink [&_:focus-visible]:outline-sl-band-ink md:min-h-[520px]"
     >
-      <span aria-hidden className="absolute -end-12 -top-14 size-56 rounded-full bg-sl-accent opacity-15" />
-      <span aria-hidden className="absolute -bottom-20 end-20 size-44 rounded-full border-[18px] border-sl-accent opacity-10" />
-      <span aria-hidden className="absolute end-5 top-1/2 grid size-20 -translate-y-1/2 place-items-center overflow-hidden rounded-full bg-sl-panel/75 text-sl-accent shadow-[0_8px_30px_#0000001a] sm:end-12 sm:size-40">
-        {logo ? (
-          // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
-          <img src={logo} alt="" className="size-[70%] object-contain" />
-        ) : (
-          <Icon name="bag" className="size-9 sm:size-16" />
-        )}
-      </span>
-      <div className="relative z-[1] flex h-full w-[62%] flex-col justify-center py-4 pe-2 ps-5 sm:w-1/2 sm:ps-8">
-        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-sl-accent rtl:tracking-normal sm:mb-2.5">{m.heroWelcome}</p>
-        <h2 className="sl-heading mb-2 line-clamp-2 break-words text-[22px] leading-[1.05] sm:text-4xl">{shopName}</h2>
-        <p className="mb-3 line-clamp-2 text-[13px] leading-snug sm:max-w-sm sm:text-sm">{tagline || m.heroFallbackBody}</p>
-        <ButtonLink href={shopHref} className="self-start text-[13px]">
+      <div className="mx-auto w-full max-w-6xl px-5 pb-10 pt-24 md:px-4">
+        <p className={kickerText}>{m.heroWelcome}</p>
+        <h2 className={titleText}>{shopName}</h2>
+        <p className={bodyText}>{tagline || m.heroFallbackBody}</p>
+        {/* The band's own pair: a primary button has no contrast guarantee against the band. */}
+        <ButtonLink href={shopHref} className={cx(cta, "bg-sl-band-ink text-sl-band")}>
           {m.shopNow}
           <Icon name="arrow" className="size-3.5" />
         </ButtonLink>

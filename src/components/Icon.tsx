@@ -29,6 +29,8 @@ const PATHS = {
   arrow: "M4 12h16M14 6l6 6-6 6",
   back: "M15 18l-6-6 6-6",
   next: "M9 18l6-6-6-6",
+  pause: "M9 5v14M15 5v14",
+  play: "M8 5l11 7-11 7z",
   chevron: "M6 9l6 6 6-6",
   sliders: "M4 7h16M4 17h16M8 4v6M16 14v6M6 7a2 2 0 1 0 4 0 2 2 0 1 0-4 0M14 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0",
   calendar: "M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM7 3v4M17 3v4M3 10h18",
