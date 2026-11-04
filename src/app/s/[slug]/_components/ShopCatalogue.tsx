@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Icon } from "@/components/Icon";
 import { Pagination } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
 import { formatMoney } from "@/lib/format";
 import { PriceFilter } from "../shop/PriceFilter";
+import { ShopSearch } from "../shop/ShopSearch";
 import { filterHref, parsePriceRange, shopHref, type BrowseFilters } from "./browse";
 import { PageEmpty, PageHead, ProductTile, type TileProduct } from "./tiles";
 
@@ -21,7 +21,7 @@ export function ShopCatalogue({
   locale,
   filters,
   listing,
-  shopHasProducts,
+  productCount,
   collections,
 }: {
   slug: string;
@@ -32,7 +32,8 @@ export function ShopCatalogue({
   /** Only filters that were valid in the URL. */
   filters: BrowseFilters;
   listing: { items: (TileProduct & { matchPriceMinor?: number | null })[]; total: number; page: number; pageCount: number; pageSize: number };
-  shopHasProducts: boolean;
+  /** All the shop's products, whatever the filters. */
+  productCount: number;
   /** Which collection chips to offer: an empty collection isn't shown to a new shop. */
   collections: { bestsellers: boolean; featured: boolean };
 }) {
@@ -62,22 +63,7 @@ export function ShopCatalogue({
       <PageHead eyebrow={fill(m.shopEyebrow, { shop: shopName })} title={title} lead={m.shopLead} />
 
       <div className="sl-shop-tools">
-        <form action={`/s/${slug}/shop`} role="search" className="sl-search">
-          <Icon name="search" />
-          <input type="search" name="q" defaultValue={q} maxLength={100} aria-label={m.searchLabel} placeholder={m.searchPlaceholder} enterKeyHint="search" />
-          {/* A new search keeps the category, collection and price range. */}
-          {(["cat", "sort", "min", "max"] as const).map((k) => filters[k] && <input key={k} type="hidden" name={k} value={filters[k]} />)}
-        </form>
-
-        {q && (
-          <p className="sl-filter-note">
-            <bdi className="font-bold">{fill(m.resultsFor, { q })}</bdi>
-            <Link href={filterHref(slug, filters, { q: undefined })}>
-              {m.clearSearch}
-              <Icon name="x" className="size-3.5" />
-            </Link>
-          </p>
-        )}
+        <ShopSearch slug={slug} filters={filters} label={m.searchLabel} placeholder={m.searchPlaceholder} />
 
         <nav aria-label={m.filtersLabel}>
           <ul className="sl-filter-row">
@@ -102,10 +88,10 @@ export function ShopCatalogue({
         <PriceFilter key={`${min}|${max}`} slug={slug} currency={currency} locale={locale} filters={filters} min={min} max={max} summary={summary} />
 
         {/* A shop with no products gets only the "coming soon" message below. */}
-        {shopHasProducts && (
+        {productCount > 0 && (
           <p aria-live="polite" className="sl-result-label">
             <span>
-              {total > 0 ? fill(m.showing, { a: first, b: first + items.length - 1, n: total }) : m.noMatches}
+              {total === 0 ? m.noMatches : pageCount > 1 ? fill(m.showing, { a: first, b: first + items.length - 1, n: total }) : fill(m.showingAll, { n: items.length, total: productCount })}
               {priced && <bdi>{` · ${summary}`}</bdi>}
             </span>
             {filtered && (
@@ -127,7 +113,7 @@ export function ShopCatalogue({
         </ul>
       ) : (
         <div className="sl-shop-tools">
-          {shopHasProducts ? (
+          {productCount > 0 ? (
             <PageEmpty
               title={m.emptyFilters}
               body={m.emptyFiltersBody}

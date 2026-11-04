@@ -74,7 +74,7 @@ export function PreviewFrame({ data, view, listing, detail }: Props) {
           locale={locale}
           filters={{}}
           listing={listing}
-          shopHasProducts={data.products.length > 0}
+          productCount={data.products.length}
           collections={{ bestsellers: data.products.some((p) => p.soldCount > 0), featured: data.products.some((p) => p.featured) }}
         />
       </ShopFrame>

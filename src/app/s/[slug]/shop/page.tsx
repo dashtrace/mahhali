@@ -63,7 +63,7 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
           max: priced ? one(sp.max).trim() || undefined : undefined,
         }}
         listing={{ items, total, page, pageCount, pageSize: PAGE_SIZE }}
-        shopHasProducts={products.length > 0}
+        productCount={products.length}
         collections={{ bestsellers: products.some((p) => p.soldCount > 0), featured: products.some((p) => p.featured) }}
       />
     </ShopFrame>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, type FormEvent } from "react";
 import { Icon } from "@/components/Icon";
-import { Button, Field, Input, cx } from "@/components/ui";
+import { Button, Field, Input } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
 import { filterHref, parsePriceRange, type BrowseFilters } from "../_components/browse";
@@ -67,9 +67,11 @@ export function PriceFilter({
     <div className="sl-price">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button type="button" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(!open)} data-active={active || undefined} className="sl-price-trigger">
-          <Icon name="sliders" />
+          <span aria-hidden>☷</span>
           <bdi>{fill(m.priceToggle, { summary })}</bdi>
-          <Icon name="chevron" className={cx("transition-transform", open && "rotate-180")} />
+          <span aria-hidden className="sl-price-chevron">
+            ⌄
+          </span>
         </button>
         {active && (
           <span className="inline-flex flex-wrap items-center gap-2 text-xs text-sl-muted">
