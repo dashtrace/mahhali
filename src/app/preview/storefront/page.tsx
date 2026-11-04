@@ -25,20 +25,11 @@ export default async function StorefrontPreviewPage({ searchParams }: { searchPa
   const data = await loadStore(slug);
   // The public load skips these while the toggle is off, but a draft can turn it on.
   const testimonials = data.shop.showTestimonials ? data.testimonials : plain(await testimonialService.list(actor, "APPROVED")).slice(0, TESTIMONIALS);
-  const frame = { data: { ...data, testimonials }, view };
+  const frame = { data: { ...data, testimonials }, view, fontClass: `${playfair.variable} ${dmSans.variable}` };
   const product = view === "product" ? data.products[0] : undefined;
   const listing = view === "shop" ? plain(await catalogueService.browse(slug, { sort: "all", pageSize: PAGE_SIZE })) : undefined;
 
-  return (
-    // Also set here: if next dev fails to fetch a font for the client bundle, ShopFrame's own class has no CSS behind it.
-    <div className={`${playfair.variable} ${dmSans.variable}`}>
-      {listing ? (
-        <PreviewFrame {...frame} listing={{ items: listing.items, total: listing.total, page: listing.page, pageCount: listing.pageCount, pageSize: PAGE_SIZE }} />
-      ) : product ? (
-        <PreviewFrame {...frame} detail={{ product, reviews: plain(await reviewService.forProduct(slug, product.id)), related: relatedTo(data.products, product) }} />
-      ) : (
-        <PreviewFrame {...frame} />
-      )}
-    </div>
-  );
+  if (listing) return <PreviewFrame {...frame} listing={{ items: listing.items, total: listing.total, page: listing.page, pageCount: listing.pageCount, pageSize: PAGE_SIZE }} />;
+  if (product) return <PreviewFrame {...frame} detail={{ product, reviews: plain(await reviewService.forProduct(slug, product.id)), related: relatedTo(data.products, product) }} />;
+  return <PreviewFrame {...frame} />;
 }

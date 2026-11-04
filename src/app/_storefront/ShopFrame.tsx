@@ -4,7 +4,7 @@ import { cx } from "@/components/ui";
 import { dirOf, fill, type Locale } from "@/i18n/locale";
 import { common, type CommonMessages } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
-import { httpsLink, whatsappLink } from "@/lib/format";
+import { httpsLink, nameUnits, whatsappLink } from "@/lib/format";
 import { themeTone, themeVars } from "../_server/theme";
 import { CartLink } from "./cart";
 import { dmSans, playfair } from "./fonts";
@@ -42,6 +42,7 @@ const INFO_LABEL = { about: "infoAbout", shipping: "infoShipping", contact: "inf
  * `overlay` (home page) floats the header over a full-width hero: "photo" for a
  * slide, "band" for the themed hero of a shop without slides. Children then lay out
  * their own width. `page` uses the approved design's inner-page shell; a string adds that class to it.
+ * `fontClass` is for a client parent (the settings preview): next/font names a font differently in each bundle, so the class must come from the server to hydrate.
  */
 export function ShopFrame({
   shop,
@@ -49,6 +50,7 @@ export function ShopFrame({
   wish,
   overlay,
   page,
+  fontClass,
   children,
 }: {
   shop: FrameShop;
@@ -56,6 +58,7 @@ export function ShopFrame({
   wish?: ReactNode;
   overlay?: "photo" | "band";
   page?: boolean | string;
+  fontClass?: string;
   children: ReactNode;
 }) {
   const t = common[locale];
@@ -95,7 +98,7 @@ export function ShopFrame({
       dir={dirOf(locale)}
       data-tone={themeTone(shop.theme)}
       style={{ ...themeVars(shop.theme), fontFamily: "var(--font-shop)" }}
-      className={cx(playfair.variable, dmSans.variable, "sl-shop flex min-h-dvh flex-col bg-sl-bg text-sl-fg")}
+      className={cx(fontClass ?? `${playfair.variable} ${dmSans.variable}`, "sl-shop flex min-h-dvh flex-col bg-sl-bg text-sl-fg")}
     >
       {overlay ? (
         <OverlayHeader tone={overlay}>{headerRow}</OverlayHeader>
@@ -139,7 +142,7 @@ function ShopLogo({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
   const showImage = !!shop.logo && mode !== "name-only";
   const showName = !shop.logo || mode !== "image-only";
   // The phone header leaves about 100vw - 208px beside its buttons: globals.css fits the name to it from its length.
-  const chars = [...shop.name].length + (showImage ? 3 : 0);
+  const chars = nameUnits(shop.name) + (showImage ? 3 : 0);
   return (
     <span className="flex min-w-0 items-center justify-center gap-1.5">
       {showImage && (

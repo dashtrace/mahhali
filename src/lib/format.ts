@@ -52,6 +52,21 @@ export function formatNumber(value: number, locale: Locale = "en", digits = 0): 
 /** Defence in depth for owner links: the API only stores https links on allowlisted hosts. */
 export const httpsLink = (url: string | null | undefined) => (url?.startsWith("https://") ? url : null);
 
+/** "https://www.instagram.com/yourshop/" -> "@yourshop". Null for a link that isn't one plain handle, like facebook.com/profile.php. */
+export function socialHandle(url: string): string | null {
+  const handle = /^\/([\w.-]+)\/?$/.exec(new URL(url).pathname)?.[1];
+  return handle && !handle.endsWith(".php") ? `@${handle}` : null;
+}
+
+/**
+ * How much room a shop name takes, in average letters, for fitting it in the phone header.
+ * At least its length, so a name of average letters keeps its size; wide letters count for more, or they'd be cut.
+ */
+export function nameUnits(name: string): number {
+  const letters = [...name];
+  return Math.max(letters.length, letters.reduce((sum, c) => sum + (/[A-Zmw]/.test(c) ? 1.5 : /[iljtfr ]/.test(c) ? 0.6 : 1), 0));
+}
+
 /** "+96171123456" -> https://wa.me/96171123456 for the one-tap WhatsApp button. */
 export function whatsappLink(e164: string, text?: string): string {
   const base = `https://wa.me/${e164.replace(/\D/g, "")}`;
