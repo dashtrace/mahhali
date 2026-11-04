@@ -109,7 +109,7 @@ export function ProductContent({
             <p className="sl-detail-rating">
               <StarRow rating={reviews.average} label={fill(t.ratingLabel, { n: average })} />
               <span aria-hidden>{average} ·</span>
-              <a href="#reviews">{fill(m.reviewCount, { n: reviews.count })}</a>
+              <a href="#reviews">{reviews.count === 1 ? m.reviewCountOne : fill(m.reviewCount, { n: reviews.count })}</a>
             </p>
           )}
           <ProductPrice currency={shop.currency} />

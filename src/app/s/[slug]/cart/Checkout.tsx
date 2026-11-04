@@ -187,7 +187,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
   if (step === "cart") {
     return (
       <>
-        <PageHead eyebrow={m.cartEyebrow} title={m.cartTitle} lead={fill(m.cartItems, { n: count })} />
+        <PageHead eyebrow={m.cartEyebrow} title={m.cartTitle} lead={count === 1 ? m.cartItemsOne : fill(m.cartItems, { n: count })} />
         <div className="sl-cart-layout">
           <ul>
             {rows.map((r) => (
