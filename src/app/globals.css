@@ -61,7 +61,8 @@
   --sl-hero-ink: var(--sl-fg);
   --sl-soft: color-mix(in srgb, var(--sl-accent) 13%, var(--sl-panel));
   --sl-soft-ink: color-mix(in srgb, var(--sl-accent) 65%, var(--sl-fg));
-  --sl-heading-font: Georgia, "Times New Roman", var(--font-cairo), serif;
+  /* The fallback inside var(): dashboard previews are .sl-shop without the font, and an undefined var() would void the whole list. */
+  --sl-heading-font: var(--font-playfair, Georgia), Georgia, "Times New Roman", var(--font-cairo), serif;
   --sl-heading-weight: 600;
   --sl-heading-tracking: -0.025em;
 }

@@ -7,6 +7,7 @@ import { common, type CommonMessages } from "@/i18n/messages/common";
 import { whatsappLink } from "@/lib/format";
 import { themeTone, themeVars } from "../_server/theme";
 import { CartLink } from "./cart";
+import { playfair } from "./fonts";
 import { ShopMenu, ShopTabBar, ShopTopNav, WhatsAppFab } from "./ShopNav";
 import { WishLink } from "./wishlist";
 
@@ -67,6 +68,7 @@ export function ShopFrame({
       data-tone={themeTone(shop.theme)}
       style={{ ...themeVars(shop.theme), fontFamily: "var(--font-shop)" }}
       className={cx(
+        playfair.variable,
         "sl-shop flex min-h-dvh flex-col bg-sl-bg text-sl-fg",
         bar ? "pb-[calc(76px+env(safe-area-inset-bottom))]" : "pb-[calc(61px+env(safe-area-inset-bottom))] md:pb-0",
       )}
