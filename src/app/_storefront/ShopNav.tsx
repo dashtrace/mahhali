@@ -14,14 +14,6 @@ import { common } from "@/i18n/messages/common";
 
 type Tab = "home" | "shop" | "track";
 
-const TABS: { key: Tab; path: string }[] = [
-  { key: "home", path: "" },
-  { key: "shop", path: "/shop" },
-  { key: "track", path: "/track" },
-];
-
-const LABEL = { home: "navHome", shop: "navShop", track: "navTrack" } as const;
-
 function activeTab(pathname: string, slug: string): Tab | null {
   const base = `/s/${slug}`;
   const under = (p: string) => pathname === `${base}${p}` || pathname.startsWith(`${base}${p}/`);
@@ -36,7 +28,7 @@ export function ShopMenu({ title, locale, children }: { title: string; locale: L
   const [open, setOpen] = useState(false);
   return (
     <>
-      <IconButton label={common[locale].menuOpen} icon="menu" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} />
+      <IconButton label={common[locale].menuOpen} icon="menu" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className="sl-nav-btn" />
       <Sheet open={open} onClose={() => setOpen(false)} title={title} locale={locale}>
         {children}
       </Sheet>
@@ -51,37 +43,37 @@ function subscribeScroll(onChange: () => void) {
   return () => removeEventListener("scroll", onChange);
 }
 
-/** Over the hero at the top of the page (colours in globals.css), a slim translucent bar once scrolled. */
+/** Over the hero at the top of the page (colours in globals.css), a slim glass bar once scrolled. */
 export function OverlayHeader({ tone, children }: { tone: "photo" | "band"; children: ReactNode }) {
   const top = useSyncExternalStore(subscribeScroll, () => scrollY < TOP_PX, () => true);
   return (
-    <header
-      data-over={tone}
-      data-top={top}
-      className="group fixed inset-x-0 top-0 z-30 border-b border-sl-border bg-sl-bg/95 backdrop-blur transition-colors duration-300 data-[top=true]:border-transparent data-[top=true]:bg-transparent data-[top=true]:backdrop-blur-none"
-    >
+    <header data-over={tone} data-top={top} className="sl-header fixed inset-x-0 top-0 z-30">
       {children}
     </header>
   );
 }
 
-/** Desktop: Home / Shop / Track links in the header. */
-export function ShopTopNav({ slug, locale }: { slug: string; locale: Locale }) {
-  const t = common[locale];
+/** Desktop: a group of text links in the header, either side of the brand. */
+export function ShopTopNav({ slug, label, links }: { slug: string; label: string; links: { href: string; label: string; tab?: Tab }[] }) {
   const active = activeTab(usePathname(), slug);
   return (
-    <nav aria-label={t.storeNav} className="hidden items-center gap-1 md:flex">
-      {TABS.map((tab) => (
-        <Link
-          key={tab.key}
-          href={`/s/${slug}${tab.path}`}
-          aria-current={active === tab.key ? "page" : undefined}
-          className="inline-flex min-h-11 items-center rounded-sl px-3 text-sm font-semibold text-sl-muted hover:text-sl-fg aria-[current=page]:font-extrabold aria-[current=page]:text-sl-accent"
-        >
-          {t[LABEL[tab.key]]}
+    <nav aria-label={label} className="sl-nav-links">
+      {links.map((l) => (
+        <Link key={l.href} href={l.href} aria-current={l.tab && active === l.tab ? "page" : undefined}>
+          {l.label}
         </Link>
       ))}
     </nav>
+  );
+}
+
+/** Phones: the Track shortcut beside the menu. */
+export function TrackPill({ slug, locale }: { slug: string; locale: Locale }) {
+  const t = common[locale];
+  return (
+    <Link href={`/s/${slug}/track`} aria-label={t.trackOrder} aria-current={activeTab(usePathname(), slug) === "track" ? "page" : undefined} className="sl-track">
+      {t.navTrack}
+    </Link>
   );
 }
 

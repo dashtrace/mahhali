@@ -1,14 +1,15 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
 import { IconButtonLink, cx } from "@/components/ui";
 import { dirOf, fill, type Locale } from "@/i18n/locale";
 import { common, type CommonMessages } from "@/i18n/messages/common";
+import { storeMessages } from "@/i18n/messages/store";
 import { httpsLink, whatsappLink } from "@/lib/format";
 import { themeTone, themeVars } from "../_server/theme";
 import { CartLink } from "./cart";
-import { playfair } from "./fonts";
-import { OverlayHeader, ShopMenu, ShopTopNav, WhatsAppFab } from "./ShopNav";
+import { dmSans, playfair } from "./fonts";
+import { OverlayHeader, ShopMenu, ShopTopNav, TrackPill, WhatsAppFab } from "./ShopNav";
 import { WishLink } from "./wishlist";
 
 export { Stars } from "@/components/ui";
@@ -20,6 +21,7 @@ export type FrameShop = {
   logo: string | null;
   theme: unknown;
   tagline?: string | null;
+  about?: string | null;
   logoMode?: string | null;
   whatsappPhone?: string | null;
   instagramUrl?: string | null;
@@ -32,7 +34,7 @@ const INFO_LABEL = { about: "infoAbout", shipping: "infoShipping", contact: "inf
 
 /**
  * The shop's own look and language around every public shop page: header with
- * menu drawer, logo, wishlist / cart; a Track shortcut on phones and a top nav
+ * menu drawer, brand, wishlist / bag; a Track shortcut on phones and text links
  * on desktop; footer; WhatsApp button on the home page.
  * `bar` adds a sticky action bar at the bottom (product page: Add to cart / Buy
  * now). `back` swaps the menu button for a back link; `wish` swaps the header
@@ -60,32 +62,35 @@ export function ShopFrame({
   const t = common[locale];
   const base = `/s/${shop.slug}`;
   const whatsapp = shop.whatsappPhone ? whatsappLink(shop.whatsappPhone, t.whatsappGreeting) : null;
+  const startLinks = [
+    ...(shop.categories?.length ? [{ href: `${base}#home-categories`, label: t.categories }] : []),
+    { href: `${base}/shop`, label: t.navShop, tab: "shop" as const },
+  ];
+  const endLinks = [
+    { href: shop.about?.trim() ? `${base}#home-story` : `${base}/info/about`, label: storeMessages[locale].storyEyebrow },
+    { href: `${base}/track`, label: t.trackOrder, tab: "track" as const },
+  ];
   const headerRow = (
-    // The middle column takes what the buttons leave, so a long name truncates instead of overlapping them.
-    <div className="mx-auto grid h-[60px] max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 px-3 transition-[height] group-data-[top=false]:h-[52px] md:flex md:gap-4 md:px-4">
-      <div className="flex items-center">
+    // The middle column takes what the sides leave, so a long name truncates instead of overlapping them.
+    <div className="sl-nav">
+      <div className="sl-nav-edge">
         {back ? (
-          <IconButtonLink href={back.href} label={back.label} icon="back" />
+          <IconButtonLink href={back.href} label={back.label} icon="back" className="sl-nav-btn" />
         ) : (
           <ShopMenu title={shop.name} locale={locale}>
             <DrawerLinks shop={shop} t={t} />
           </ShopMenu>
         )}
+        <TrackPill slug={shop.slug} locale={locale} />
+        <ShopTopNav slug={shop.slug} label={t.storeNav} links={startLinks} />
       </div>
-      <Link href={base} className="flex min-h-11 min-w-0 items-center justify-center">
+      <Link href={base} className="sl-brand">
         <ShopLogo shop={shop} t={t} />
       </Link>
-      <ShopTopNav slug={shop.slug} locale={locale} />
-      <div className="flex items-center justify-end gap-1 md:ms-auto md:gap-2">
-        <Link
-          href={`${base}/track`}
-          aria-label={t.trackOrder}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sl border border-sl-border bg-sl-panel px-1.5 text-xs font-bold text-sl-fg md:hidden"
-        >
-          {t.navTrack}
-        </Link>
-        {wish ?? <WishLink slug={shop.slug} locale={locale} />}
-        <CartLink slug={shop.slug} label={t.navCart} countLabel={t.cartCount} />
+      <div className="sl-nav-edge justify-end">
+        <ShopTopNav slug={shop.slug} label={t.shopInfo} links={endLinks} />
+        {wish ?? <WishLink slug={shop.slug} locale={locale} className="sl-nav-btn" />}
+        <CartLink slug={shop.slug} label={t.navCart} countLabel={t.cartCount} className="sl-nav-btn" />
       </div>
     </div>
   );
@@ -97,6 +102,7 @@ export function ShopFrame({
       style={{ ...themeVars(shop.theme), fontFamily: "var(--font-shop)" }}
       className={cx(
         playfair.variable,
+        dmSans.variable,
         "sl-shop flex min-h-dvh flex-col bg-sl-bg text-sl-fg",
         !!bar && "pb-[calc(76px+env(safe-area-inset-bottom))]",
       )}
@@ -104,31 +110,30 @@ export function ShopFrame({
       {overlay ? (
         <OverlayHeader tone={overlay}>{headerRow}</OverlayHeader>
       ) : (
-        <header className="sticky top-0 z-30 border-b border-sl-border bg-sl-bg/95 backdrop-blur">{headerRow}</header>
+        <header className="sl-header sticky top-0 z-30">{headerRow}</header>
       )}
 
       <main className={overlay ? "flex-1" : "mx-auto w-full max-w-6xl flex-1 px-4 py-4"}>{children}</main>
 
-      <footer className="border-t border-sl-border bg-sl-nav">
-        {/* On the home page the end of the footer scrolls clear of the floating WhatsApp button. */}
-        <div className={cx("mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm", overlay && whatsapp && "pb-24 md:pb-6")}>
-          <div>
-            <p className="sl-heading text-lg">{shop.name}</p>
-            {shop.tagline && <p className="text-sl-muted">{shop.tagline}</p>}
-          </div>
-          <ul className="flex flex-wrap gap-x-4">
+      <footer className="sl-footer sl-on-surface">
+        <p className="sl-footer-name">{shop.name}</p>
+        {shop.tagline && <p className="sl-footer-tag">{shop.tagline}</p>}
+        <nav aria-label={t.shopInfo}>
+          <ul className="sl-footer-links">
             {INFO_SECTIONS.map((s) => (
               <li key={s}>
-                <Link href={`${base}/info/${s}`} className="inline-flex min-h-11 items-center text-sl-fg hover:text-sl-accent hover:underline">
-                  {t[INFO_LABEL[s]]}
-                </Link>
+                <Link href={`${base}/info/${s}`}>{t[INFO_LABEL[s]]}</Link>
               </li>
             ))}
+            <li>
+              <Link href={`${base}/track`}>{t.trackOrder}</Link>
+            </li>
           </ul>
-          <Socials shop={shop} t={t} whatsapp={whatsapp} />
-          <Link href="/" className="inline-flex min-h-11 items-center self-start text-xs text-sl-muted hover:underline">
-            {t.poweredBy}
-          </Link>
+        </nav>
+        {/* On the home page the centred line stays clear of the floating WhatsApp button. */}
+        <div className={cx("sl-legal", overlay && whatsapp && "max-[700px]:px-[66px]")}>
+          <span>{shop.name}</span>
+          <Link href="/">{t.poweredBy}</Link>
         </div>
       </footer>
 
@@ -147,12 +152,10 @@ function ShopLogo({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
   const mode = shop.logoMode ?? "image-and-name";
   const showImage = !!shop.logo && mode !== "name-only";
   const showName = !shop.logo || mode !== "image-only";
-  // The phone header leaves ~150px beside its buttons: long names step down in size and spacing, then truncate.
-  const length = [...shop.name].length;
-  // Letter-spacing only in Latin script: it breaks Arabic joining.
-  const wordmark = length <= 10 ? "text-lg sm:text-xl ltr:tracking-[0.1em]" : length <= 14 ? "text-base ltr:tracking-[0.04em]" : "text-sm";
+  // The phone header leaves about 100vw - 208px beside its buttons: globals.css fits the name to it from its length.
+  const chars = [...shop.name].length + (showImage ? 3 : 0);
   return (
-    <span className="flex min-w-0 items-center gap-1.5">
+    <span className="flex min-w-0 items-center justify-center gap-1.5">
       {showImage && (
         // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
         <img
@@ -163,25 +166,13 @@ function ShopLogo({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
       )}
       {showName && (
         // Beside a logo the name lines up against it; alone it centres over the tagline.
-        <span className={cx("flex min-w-0 flex-col leading-none", showImage ? "items-start" : "items-center")}>
-          <span
-            className={cx(
-              "max-w-full truncate [font-family:var(--sl-heading-font)] [font-weight:var(--sl-heading-weight)] md:max-w-xs md:text-xl md:ltr:tracking-[0.1em]",
-              wordmark,
-            )}
-          >
+        <span className={cx("flex min-w-0 flex-col", showImage ? "items-start" : "items-center")}>
+          <span className="sl-brand-name" style={{ "--sl-brand-chars": chars } as CSSProperties}>
             {shop.name}
           </span>
           {shop.tagline && (
             // A long tagline only fits on desktop; phones show it in the hero and footer.
-            <span
-              className={cx(
-                "mt-1 max-w-full truncate text-[10px] font-bold uppercase tracking-[0.15em] text-sl-muted rtl:tracking-normal md:block md:max-w-xs",
-                [...shop.tagline].length > 22 && "hidden",
-              )}
-            >
-              {shop.tagline}
-            </span>
+            <span className={cx("sl-brand-tag", [...shop.tagline].length > 28 && "max-[700px]:hidden")}>{shop.tagline}</span>
           )}
         </span>
       )}
@@ -197,7 +188,7 @@ function DrawerLinks({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
   const main: { href: string; label: string; icon: IconName }[] = [
     { href: base, label: t.navHome, icon: "home" },
     { href: `${base}/shop`, label: t.navShop, icon: "grid" },
-    { href: `${base}/cart`, label: t.navCart, icon: "cart" },
+    { href: `${base}/cart`, label: t.navCart, icon: "bag" },
     { href: `${base}/wishlist`, label: t.navWishlist, icon: "heart" },
     { href: `${base}/track`, label: t.trackOrder, icon: "box" },
   ];
@@ -246,18 +237,17 @@ function DrawerLinks({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
           </li>
         ))}
       </ul>
-      <Socials shop={shop} t={t} whatsapp={null} className="mt-5" />
+      <Socials shop={shop} t={t} className="mt-5" />
     </nav>
   );
 }
 
-/** Instagram / Facebook / WhatsApp icon links, only those the shop set. */
-function Socials({ shop, t, whatsapp, className }: { shop: FrameShop; t: CommonMessages; whatsapp: string | null; className?: string }) {
+/** Instagram / Facebook icon links, only those the shop set. */
+function Socials({ shop, t, className }: { shop: FrameShop; t: CommonMessages; className?: string }) {
   const links = [
     { href: httpsLink(shop.instagramUrl), label: t.instagram, icon: "instagram" as const },
     { href: httpsLink(shop.facebookUrl), label: t.facebook, icon: "facebook" as const },
-    { href: whatsapp, label: t.whatsapp, icon: "whatsapp" as const },
-  ].filter((l): l is { href: string; label: string; icon: "instagram" | "facebook" | "whatsapp" } => !!l.href);
+  ].filter((l): l is { href: string; label: string; icon: "instagram" | "facebook" } => !!l.href);
   if (!links.length) return null;
   return (
     <ul aria-label={t.followUs} className={cx("flex gap-2", className)}>
