@@ -4,7 +4,8 @@ import { DEFAULT_THEME, FONTS, MIN_CONTRAST, RADII, contrastRatio, inkFor, type 
 const RADIUS: Record<Theme["radius"], string> = { none: "0", sm: "0.375rem", md: "0.75rem", lg: "1rem", full: "1.5rem" };
 const FONT: Record<Theme["font"], string> = {
   system: "ui-sans-serif, system-ui, sans-serif",
-  inter: "var(--font-inter), var(--font-cairo), sans-serif",
+  // The approved storefront's text face. The fallback is for previews outside ShopFrame, which don't load it.
+  inter: "var(--font-dm-sans, var(--font-inter)), var(--font-cairo), sans-serif",
   cairo: "var(--font-cairo), sans-serif",
   tajawal: "var(--font-tajawal), var(--font-cairo), sans-serif",
 };
@@ -51,7 +52,8 @@ function derivedMuted(ink: string, background: string): string {
 /**
  * The storefront colour roles: the saved value when set, otherwise derived, so
  * shops saved before the roles existed keep working. --sl-ornament is decoration,
- * never text. Muted text is only guaranteed on the page; use --sl-fg on --sl-surface.
+ * never text. Accent and muted are only guaranteed on the page, so --sl-surface-*
+ * are what text uses on --sl-surface (.sl-on-surface in globals.css).
  * Derived colours can pair with a saved one validateTheme never saw, so they check themselves.
  */
 export function storefrontTokens(t: Theme) {
@@ -59,12 +61,16 @@ export function storefrontTokens(t: Theme) {
   const band = t.dark ?? mix(t.primary, ink, 80);
   const reads = (fg: string, bg: string) => contrastRatio(fg, bg) >= MIN_CONTRAST;
   const tint = mix(t.primary, t.background, 8);
+  const surface = t.surface ?? (reads(ink, tint) ? tint : t.background);
+  const muted = t.muted ?? derivedMuted(ink, t.background);
   return {
     "--sl-accent": t.primary,
     "--sl-accent-ink": t.buttonText ?? t.background,
     "--sl-ornament": t.accent,
-    "--sl-surface": t.surface ?? (reads(ink, tint) ? tint : t.background),
-    "--sl-muted": t.muted ?? derivedMuted(ink, t.background),
+    "--sl-surface": surface,
+    "--sl-surface-accent": reads(t.primary, surface) ? t.primary : ink,
+    "--sl-surface-muted": reads(muted, surface) ? muted : derivedMuted(ink, surface),
+    "--sl-muted": muted,
     "--sl-band": band,
     "--sl-band-ink": [t.darkText, t.background].find((c) => c && reads(c, band)) ?? inkFor(band),
     "--sl-line": t.border ?? mix(ink, t.background, 11),

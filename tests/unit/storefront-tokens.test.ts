@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readTheme, storefrontTokens, themeVars } from "@/app/_server/theme";
-import { contrastRatio, PALETTES, validateTheme } from "@/server/domain/theme";
+import { contrastRatio, MIN_CONTRAST, PALETTES, validateTheme } from "@/server/domain/theme";
 
 const ROSEWOOD = {
   primary: "#874258",
@@ -73,11 +73,19 @@ describe("storefrontTokens", () => {
       "--sl-accent-ink": "#ffffff",
       "--sl-ornament": "#b99b7b",
       "--sl-surface": "#f1e8e1",
+      "--sl-surface-accent": "#874258",
+      "--sl-surface-muted": "#706767",
       "--sl-muted": "#756b68",
       "--sl-band": "#714558",
       "--sl-band-ink": "#fffaf5",
       "--sl-line": "#e4d7d1",
     });
+  });
+
+  it("keeps accent and muted readable on a surface they weren't checked against", () => {
+    const tokens = storefrontTokens(readTheme({ ...ROSEWOOD, surface: "#c9a0ae" }));
+    expect(tokens["--sl-surface-accent"]).toBe(ROSEWOOD.text);
+    expect(contrastRatio(tokens["--sl-surface-muted"], "#c9a0ae")).toBeGreaterThanOrEqual(MIN_CONTRAST);
   });
 });
 
