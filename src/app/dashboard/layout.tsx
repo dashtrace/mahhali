@@ -53,11 +53,13 @@ const GROUPS: { title: Key; sections: Section[] }[] = [
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  // Signed out: every page's own pageActor redirects to login with that page as `next`.
+  const user = await signedInUser();
+  if (!user) return children;
   const actor = await pageActor("order.readAssigned", "/dashboard");
-  const [me, locale, user, reconciliation] = await Promise.all([
+  const [me, locale, reconciliation] = await Promise.all([
     accountService.me(actor),
     getLocale(),
-    signedInUser(),
     // The Cash page's default period, so the chip and the page's first view agree.
     can(actor.role, "reconciliation.read") ? reportingService.reconciliation(actor, {}) : null,
   ]);
