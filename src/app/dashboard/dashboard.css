@@ -1,0 +1,947 @@
+/*
+ * The owner dashboard's design base, ported from new_ui/references/owner-dashboard-settings-v2.html
+ * with its sizes and its 1150px, 780px and 420px breakpoints, and with logical properties for Arabic.
+ * Everything is scoped to .sl-dash, so no other area changes. The demo's variable names are kept,
+ * so its rules can be copied as they are.
+ */
+@layer theme, base, components, utilities;
+
+.sl-dash {
+  --blue: #245c77;
+  --blue2: #dfeef2;
+  --ink: #1e2c30;
+  --muted: #667880;
+  --bg: #f5f7f7;
+  --paper: #ffffff;
+  --line: #dbe4e5;
+  --green: #167965;
+  --amber: #93641b;
+  --red: #bb4c4c;
+  --shadow: 0 8px 30px rgba(16, 47, 53, 0.04);
+  --rad: 15px;
+
+  /* What the shared components in ui.tsx read. */
+  --sl-bg: var(--bg);
+  --sl-panel: var(--paper);
+  --sl-fg: var(--ink);
+  --sl-muted: var(--muted);
+  --sl-accent: var(--blue);
+  --sl-accent-ink: #ffffff;
+  --sl-cat: #e9f0f0;
+  --sl-border: var(--line);
+  --sl-control: #cfdcde;
+  --sl-nav: #fffffffa;
+  --sl-hero: var(--blue2);
+  --sl-hero-ink: #145b70;
+  --sl-soft: #dfedf0;
+  --sl-soft-ink: #145b70;
+  --sl-r: 10px;
+  --sl-r-sm: 9px;
+  --sl-r-lg: var(--rad);
+  --sl-danger: var(--red);
+  --sl-ok: var(--green);
+  --sl-warn: var(--amber);
+  --sl-heading-font: inherit;
+  --sl-heading-weight: 700;
+  --sl-heading-tracking: -0.02em;
+
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-dm-sans), var(--font-cairo), Arial, sans-serif;
+  font-size: 14px;
+  line-height: normal;
+  -webkit-font-smoothing: antialiased;
+}
+/* Cairo's "normal" line height is nearly double its size. */
+.sl-dash:lang(ar) {
+  --sl-heading-tracking: 0;
+  font-family: var(--font-cairo), Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.sl-dash svg.icon {
+  display: inline-block;
+  width: 19px;
+  height: 19px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.sl-dash svg.smicon {
+  width: 16px;
+  height: 16px;
+}
+.sl-dash svg.tinyicon {
+  width: 13px;
+  height: 13px;
+}
+.sl-dash svg.mirror:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+/*
+ * The frame: top bar, sidebar, phone tabs, drawer and page head. Unlayered on purpose: these
+ * restyle shared components (Sheet, PageHeader, LanguageToggle, SignOutButton), and only an
+ * unlayered rule beats their utility classes.
+ */
+.sl-dash .topbar {
+  height: 68px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 max(24px, calc((100vw - 1510px) / 2));
+  gap: 16px;
+}
+.sl-dash .brand-left,
+.sl-dash .brand-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.sl-dash .merchant-logo {
+  width: 37px;
+  height: 37px;
+  border-radius: 11px;
+  background: #f5ece9;
+  border: 1px solid #eadbd6;
+  display: grid;
+  place-items: center;
+  font: 700 24px Georgia;
+  color: #8e6470;
+  flex: none;
+  overflow: hidden;
+}
+.sl-dash .merchant-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.sl-dash .shopname {
+  font-weight: 800;
+  font-size: 16px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sl-dash .toprole {
+  padding: 5px 9px;
+  border-radius: 50px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sl-dash .topright {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: none;
+}
+/* The text stays the demo's size; the 44px is an invisible tap target. */
+.sl-dash .topright > button,
+.sl-dash .topright > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sl-dash .topright > .storefront-link {
+  padding: 0 15px;
+}
+.sl-dash .allpages-trigger {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  padding: 10px;
+  color: var(--ink);
+  flex: none;
+}
+
+.sl-dash .app {
+  max-width: 1510px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 225px minmax(0, 1fr);
+  gap: 30px;
+  padding: 25px 28px 90px;
+}
+.sl-dash .sidebar {
+  position: sticky;
+  top: 93px;
+  align-self: start;
+  max-height: calc(100vh - 114px);
+  overflow: auto;
+  padding: 10px 9px 22px;
+}
+.sl-dash .nav-group {
+  margin: 0 0 22px;
+}
+.sl-dash .nav-group-title {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #829398;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin: 0 12px 9px;
+}
+.sl-dash .navlink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 11px;
+  color: #52656b;
+  font-weight: 700;
+  font-size: 13px;
+  margin: 2px 0;
+  transition: background 0.2s;
+}
+.sl-dash .navlink:hover {
+  background: #e9f0f0;
+  color: var(--ink);
+}
+.sl-dash .navlink[aria-current="page"] {
+  background: #dfedf0;
+  color: #145b70;
+}
+.sl-dash .main {
+  min-width: 0;
+  padding: 14px 0 40px;
+  max-width: 1200px;
+}
+
+/* PageHeader in ui.tsx carries these classes: the demo's head(). */
+.sl-dash .page-head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 24px;
+}
+.sl-dash .page-head h1 {
+  font-size: 27px;
+  letter-spacing: -0.04em;
+  margin: 0 0 6px;
+  overflow: visible;
+  white-space: normal;
+}
+.sl-dash .page-head .hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.sl-dash .page-head .back {
+  margin-bottom: 18px;
+  min-height: 32px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  gap: 8px;
+}
+.sl-dash .page-head .back svg {
+  width: 16px;
+  height: 16px;
+}
+.sl-dash .page-head .back:hover {
+  background: #f4f7f7;
+  text-decoration: none;
+}
+.sl-dash .page-head .actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sl-dash .sl-drawer {
+  width: min(88vw, 390px);
+  max-width: none;
+  background: #f7faf9;
+  box-shadow: -12px 0 60px #051d2720;
+}
+.sl-dash .sl-drawer:dir(rtl) {
+  box-shadow: 12px 0 60px #051d2720;
+}
+.sl-dash .sl-drawer::backdrop {
+  background: #09262e85;
+}
+.sl-dash .sl-drawer > div {
+  padding: 22px 20px calc(35px + env(safe-area-inset-bottom));
+}
+.sl-dash .sl-drawer > div > div:first-child {
+  margin: 0;
+}
+.sl-dash .sl-drawer h2 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0;
+  white-space: normal;
+}
+.sl-dash .sl-drawer h2 .hint {
+  display: block;
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.sl-dash .sl-drawer h2 + button {
+  position: relative;
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  min-height: 32px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+/* The close button keeps a 44px tap target around the demo's smaller box. */
+.sl-dash .sl-drawer h2 + button::after {
+  content: "";
+  position: absolute;
+  inset: -6px -2px;
+}
+.sl-dash .sl-drawer h2 + button svg {
+  width: 19px;
+  height: 19px;
+}
+.sl-dash .drawer-group {
+  font-size: 10px;
+  font-weight: 800;
+  color: #6d8a91;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 20px 0 9px;
+}
+.sl-dash .drawer-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+  padding: 14px 10px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+.sl-dash .drawer-nav[aria-current="page"] {
+  color: #126a83;
+}
+
+.sl-dash .mobile-bottom {
+  display: none;
+}
+
+@media (max-width: 1150px) {
+  .sl-dash .app {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 18px;
+    padding: 20px 17px 85px;
+  }
+  .sl-dash .sidebar {
+    padding: 10px 0;
+  }
+  .sl-dash .page-head h1 {
+    font-size: 24px;
+  }
+}
+@media (max-width: 780px) {
+  .sl-dash .topbar {
+    height: 59px;
+    padding: 0 15px;
+  }
+  .sl-dash .toprole,
+  .sl-dash .topright > .lang,
+  .sl-dash .topright > .storefront-link,
+  .sl-dash .sidebar {
+    display: none;
+  }
+  .sl-dash .allpages-trigger {
+    display: inline-flex;
+  }
+  .sl-dash .topright {
+    gap: 6px;
+  }
+  /* clip: rows that still bleed by -mx-4 are wider than these gutters. */
+  .sl-dash .app {
+    display: block;
+    padding: 18px 15px 95px;
+    overflow-x: clip;
+  }
+  .sl-dash .main {
+    padding: 8px 0;
+  }
+  .sl-dash .page-head {
+    margin-bottom: 19px;
+  }
+  .sl-dash .page-head h1 {
+    font-size: 25px;
+  }
+  .sl-dash .mobile-bottom {
+    display: grid;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 71px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 40;
+    background: #fffffffa;
+    border-top: 1px solid #dbe5e6;
+    box-shadow: 0 -5px 30px #08263113;
+  }
+  .sl-dash .mobile-bottom a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: #627980;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .sl-dash .mobile-bottom a[aria-current="page"] {
+    color: #176e89;
+  }
+  .sl-dash .mobile-bottom svg.icon {
+    width: 21px;
+    height: 21px;
+  }
+}
+@media (max-width: 420px) {
+  .sl-dash .app {
+    padding: 14px 11px 95px;
+  }
+  .sl-dash .page-head h1 {
+    font-size: 24px;
+  }
+}
+
+/*
+ * The shared kit, under the demo's class names. In the components layer, so a Tailwind utility
+ * beside one of these wins (className="card mb-0"). Use them on plain elements: the utilities
+ * inside ui.tsx's Button, Card or Input would beat them.
+ */
+@layer components {
+  .sl-dash :focus-visible {
+    outline: 3px solid #7fb7bb;
+    outline-offset: 3px;
+  }
+  .sl-dash button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Bare headings; a shared component's or a storefront preview's own styles win. */
+  .sl-dash h1:not(.sl-shop *) {
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    margin: 0 0 6px;
+  }
+  .sl-dash h2:not(.sl-shop *) {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .sl-dash h3:not(.sl-shop *) {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .sl-dash .hint {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .sl-dash p.hint {
+    margin: 0 0 1em;
+  }
+  .sl-dash .small {
+    font-size: 12px;
+  }
+  .sl-dash .muted {
+    color: var(--muted);
+  }
+  .sl-dash .bold {
+    font-weight: 800;
+  }
+  .sl-dash .eyebrow {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 800;
+    color: var(--muted);
+  }
+  .sl-dash .between {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+  .sl-dash .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .sl-dash .btn {
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+    border-radius: 10px;
+    padding: 11px 15px;
+    min-height: 41px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .sl-dash .btn:hover {
+    background: #f4f7f7;
+  }
+  .sl-dash .btn.primary {
+    color: #fff;
+    background: var(--blue);
+    border-color: var(--blue);
+  }
+  .sl-dash .btn.primary:hover {
+    background: #174b63;
+  }
+  .sl-dash .btn.soft {
+    color: #155e74;
+    background: #e7f1f4;
+    border-color: #d2e8ee;
+  }
+  .sl-dash .btn.warn {
+    color: #a73838;
+    border-color: #f0d0d0;
+    background: #fff7f5;
+  }
+  .sl-dash .btn.tiny {
+    padding: 7px 10px;
+    min-height: 32px;
+    font-size: 11px;
+  }
+  .sl-dash .btn.full {
+    width: 100%;
+  }
+  .sl-dash .btn.linklike {
+    border: 0;
+    background: none;
+    color: var(--blue);
+    padding: 7px;
+  }
+  .sl-dash .btn:disabled,
+  .sl-dash .btn[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .sl-dash .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--rad);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 15px;
+  }
+  .sl-dash .card.flat {
+    box-shadow: none;
+  }
+  .sl-dash .card h2 {
+    margin: 0 0 9px;
+  }
+  .sl-dash .card h3 {
+    margin: 0 0 8px;
+  }
+  .sl-dash .inner-card {
+    background: #f7f9f9;
+    border: 1px solid #e6eded;
+    border-radius: 12px;
+    padding: 15px;
+  }
+
+  .sl-dash .field {
+    margin: 0 0 17px;
+  }
+  .sl-dash .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    margin: 0 0 7px;
+  }
+  .sl-dash .field p {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 5px 0 0;
+  }
+  .sl-dash .control {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    border: 1px solid #cfdcde;
+    background: #fff;
+    color: var(--ink);
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .sl-dash .control:focus {
+    border-color: #36839b;
+    outline: 2px solid #8bc2cc70;
+  }
+  .sl-dash .control[readonly] {
+    background: #f2f5f5;
+    color: #6f7d81;
+  }
+  .sl-dash .control.area {
+    min-height: 100px;
+    height: auto;
+    resize: vertical;
+  }
+  .sl-dash .split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 15px;
+  }
+  .sl-dash .split3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 13px;
+  }
+  .sl-dash .split4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 13px;
+  }
+  .sl-dash .separator {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 17px 0;
+  }
+  .sl-dash .toolbar {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .sl-dash .toolbar .search {
+    max-width: 350px;
+    flex: 1;
+    min-width: 170px;
+  }
+  .sl-dash .toolbar .control {
+    width: auto;
+  }
+
+  /* Tabs. Selected: .selected / .active as in the demo, or aria-current / aria-pressed on links and buttons. */
+  .sl-dash .segbar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--line);
+    background: #f0f5f5;
+    border-radius: 11px;
+    padding: 4px;
+    width: max-content;
+    max-width: 100%;
+    overflow: auto;
+    margin-bottom: 19px;
+  }
+  .sl-dash .segbar > :is(button, a) {
+    background: none;
+    border: 0;
+    color: #677e83;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 10px 17px;
+    white-space: nowrap;
+    border-radius: 8px;
+  }
+  .sl-dash .segbar > :is(.selected, [aria-current="page"], [aria-pressed="true"]) {
+    background: white;
+    color: #145d73;
+    box-shadow: 0 1px 6px #0d313d0b;
+  }
+  .sl-dash .pills {
+    display: flex;
+    gap: 7px;
+    overflow: auto;
+    scrollbar-width: none;
+    padding: 2px 0 7px;
+  }
+  .sl-dash .pill {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 60px;
+    color: #4c6267;
+    padding: 10px 14px;
+    font-weight: 800;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .sl-dash .pill:is(.active, [aria-current="page"], [aria-pressed="true"]) {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .sl-dash .pill b {
+    font-size: 10px;
+    opacity: 0.8;
+    margin-inline-start: 5px;
+  }
+
+  .sl-dash .mini-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 50px;
+    background: #e5f0f4;
+    color: #286982;
+    padding: 5px 9px;
+    white-space: nowrap;
+  }
+  .sl-dash .mini-badge.green {
+    background: #e1f4eb;
+    color: #127153;
+  }
+  .sl-dash .mini-badge.amber {
+    background: #fcf0d8;
+    color: #93601a;
+  }
+  .sl-dash .mini-badge.red {
+    background: #fff0ed;
+    color: #ad4037;
+  }
+  .sl-dash .mini-badge.gray {
+    background: #eff2f3;
+    color: #68777b;
+  }
+
+  .sl-dash .stat {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    min-width: 0;
+  }
+  .sl-dash .stat .number {
+    font-size: 29px;
+    letter-spacing: -0.05em;
+    font-weight: 800;
+    margin: 8px 0 3px;
+  }
+  .sl-dash .stat .sub {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .sl-dash .stat .number.red {
+    color: #a84543;
+  }
+  .sl-dash .stat .number.blue {
+    color: #176d87;
+  }
+  .sl-dash .stat .number.green {
+    color: #127153;
+  }
+
+  .sl-dash .callout {
+    border: 1px solid #e6dac7;
+    border-inline-start: 3px solid #d4a457;
+    background: #fffbf2;
+    color: #634f2f;
+    padding: 12px 15px;
+    font-size: 12px;
+    line-height: 1.65;
+    border-radius: 9px;
+    margin: 15px 0;
+  }
+  .sl-dash .info-inline {
+    background: #edf5f5;
+    border: 1px solid #d8e9e8;
+    color: #476568;
+    padding: 12px 14px;
+    border-radius: 9px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .sl-dash .empty {
+    border: 1px dashed #cbd9da;
+    text-align: center;
+    background: #f9fbfb;
+    border-radius: 12px;
+    padding: 35px 18px;
+    color: var(--muted);
+  }
+  .sl-dash .empty strong {
+    color: var(--ink);
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .sl-dash .line-list > * + * {
+    border-top: 1px solid var(--line);
+  }
+  .sl-dash .line-item {
+    padding: 14px 0;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sl-dash .line-item:first-child {
+    padding-top: 0;
+  }
+  .sl-dash .bar {
+    width: 100%;
+    height: 9px;
+    border-radius: 50px;
+    background: #e7eded;
+    overflow: hidden;
+  }
+  .sl-dash .bar > span {
+    display: block;
+    height: 100%;
+    background: #4c93a3;
+    border-radius: 50px;
+  }
+  .sl-dash .table-scroll {
+    overflow: auto;
+  }
+  .sl-dash table.table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: start;
+    font-size: 12px;
+  }
+  .sl-dash .table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b8589;
+    background: #f5f9f9;
+    text-align: start;
+  }
+  .sl-dash .table td,
+  .sl-dash .table th {
+    padding: 13px 12px;
+    border-bottom: 1px solid #e7eeee;
+  }
+  .sl-dash .section-title {
+    font-size: 16px;
+    margin: 18px 0 14px;
+  }
+  .sl-dash .summary-count {
+    margin: 10px 0 18px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .sl-dash .sectionbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .sl-dash .sticky-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 7;
+    background: linear-gradient(transparent, #f5f7f7 15%);
+    padding: 20px 0 8px;
+  }
+  .sl-dash .load-note {
+    font-size: 11px;
+    text-align: center;
+    color: var(--muted);
+    padding: 8px;
+  }
+
+  @media (max-width: 780px) {
+    .sl-dash .card {
+      padding: 17px;
+      margin-bottom: 12px;
+    }
+    .sl-dash .split {
+      grid-template-columns: 1fr;
+    }
+    .sl-dash .split3,
+    .sl-dash .split4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sl-dash .page-head .actions .btn {
+      font-size: 11px;
+      padding: 10px 11px;
+    }
+    .sl-dash .sectionbar {
+      align-items: flex-start;
+    }
+    .sl-dash .table td,
+    .sl-dash .table th {
+      padding: 10px 8px;
+    }
+  }
+  @media (max-width: 420px) {
+    .sl-dash .card {
+      padding: 14px;
+    }
+    .sl-dash .stat {
+      padding: 13px;
+    }
+    .sl-dash .stat .number {
+      font-size: 24px;
+    }
+  }
+}
+
+/* Letter-spacing breaks Arabic joining, and the script is unreadable at the tiny Latin caption sizes. */
+.sl-dash:lang(ar) :is(h1, h2, .stat .number, .eyebrow, .nav-group-title, .drawer-group, .table th):not(.sl-shop *),
+.sl-dash:lang(ar) .page-head h1 {
+  letter-spacing: 0;
+}
+.sl-dash:lang(ar) :is(.eyebrow, .nav-group-title, .drawer-group, .mini-badge, .mobile-bottom a) {
+  font-size: 12px;
+}
