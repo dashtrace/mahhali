@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type TouchEvent } from "react";
-import { Icon } from "@/components/Icon";
+import { ArrowOut, Icon } from "@/components/Icon";
 import { IconButton } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
@@ -106,7 +106,7 @@ export function HeroCarousel({
         </div>
         <Link href={shopHref} className="sl-hero-cta">
           {m.shopNow}
-          <Icon name="arrowOut" className="sl-arrow-out" />
+          <ArrowOut />
         </Link>
       </div>
       <div aria-hidden className="sl-scroll-note">
@@ -161,7 +161,7 @@ function BrandHero({ shopHref, shopName, tagline, locale }: { shopHref: string; 
         <p className="sl-hero-body">{tagline || m.heroFallbackBody}</p>
         <Link href={shopHref} className="sl-hero-cta">
           {m.shopNow}
-          <Icon name="arrowOut" className="sl-arrow-out" />
+          <ArrowOut />
         </Link>
       </div>
     </section>

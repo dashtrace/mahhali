@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Icon } from "@/components/Icon";
+import { ArrowOut } from "@/components/Icon";
 import { EmptyState, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
@@ -69,7 +69,7 @@ export default async function InfoPage({ params }: Params) {
         )}
         <Link href={`${base}/info/feedback`} className="sl-text-cta mt-4">
           {m.shareFeedback}
-          <Icon name="arrowOut" className="sl-arrow-out" />
+          <ArrowOut />
         </Link>
       </>
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Icon } from "@/components/Icon";
+import { ArrowOut } from "@/components/Icon";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
@@ -65,7 +65,7 @@ export function FeedbackForm({ slug, locale }: { slug: string; locale: Locale })
       {error && <Alert tone="error">{error}</Alert>}
       <Button type="submit" disabled={busy} className="sl-submit">
         {busy ? m.sending : m.sendFeedback}
-        <Icon name="arrowOut" className="sl-arrow-out" />
+        <ArrowOut />
       </Button>
     </form>
   );

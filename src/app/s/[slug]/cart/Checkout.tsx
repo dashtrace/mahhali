@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { EmailField } from "@/components/EmailField";
-import { Icon } from "@/components/Icon";
+import { ArrowOut, Icon } from "@/components/Icon";
 import { Alert, Button, ButtonLink, Field, Input, ProductPhoto, QtyStepper, Select, Textarea } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import type { CheckoutMessages } from "@/i18n/messages/checkout";
@@ -162,7 +162,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
           action={
             <Link href={`/s/${slug}/shop`} className="sl-text-cta">
               {m.browseShop}
-              <Icon name="arrowOut" className="sl-arrow-out" />
+              <ArrowOut />
             </Link>
           }
         />
@@ -242,7 +242,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
               tabIndex={blocked ? -1 : undefined}
             >
               {m.toCheckout}
-              <Icon name="arrowOut" className="sl-arrow-out" />
+              <ArrowOut />
             </ButtonLink>
             <p className="sl-summary-note">{m.cartNote}</p>
           </aside>
@@ -329,7 +329,7 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
           {error && <Alert tone="error" className="mb-3.5">{error}</Alert>}
           <Button type="submit" block className="sl-action sl-action-text" disabled={busy || blocked}>
             {busy ? m.placing : m.placeOrder}
-            <Icon name="arrowOut" className="sl-arrow-out" />
+            <ArrowOut />
           </Button>
         </div>
 

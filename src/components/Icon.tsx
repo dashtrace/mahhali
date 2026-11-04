@@ -50,6 +50,15 @@ export type IconName = keyof typeof PATHS;
 // Icons that point along the reading direction flip in Arabic.
 const MIRRORED: ReadonlySet<IconName> = new Set(["arrow", "arrowBack", "arrowOut", "back", "next"]);
 
+/** The storefront's outward arrow, a text glyph as in the approved design (.sl-arrow-out in globals.css). */
+export function ArrowOut() {
+  return (
+    <span aria-hidden className="sl-arrow-out">
+      ↗
+    </span>
+  );
+}
+
 /** `solid` fills the shape (active tab, saved heart). Decorative: label the control around it. */
 export function Icon({ name, className = "size-5", solid }: { name: IconName; className?: string; solid?: boolean }) {
   return (

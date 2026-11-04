@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { Icon, type IconName } from "@/components/Icon";
+import { ArrowOut, Icon, type IconName } from "@/components/Icon";
 import { fill } from "@/i18n/locale";
 import type { CheckoutMessages } from "@/i18n/messages/checkout";
 import { ApiError, api, errorMessage } from "@/lib/api";
@@ -56,7 +56,7 @@ export function ReviewForm({ token, slug, items, expires, m }: { token: string; 
         <p>{done.body}</p>
         <Link href={`/s/${slug}`} className="sl-text-cta">
           {m.backToShop}
-          <Icon name="arrowOut" className="sl-arrow-out" />
+          <ArrowOut />
         </Link>
       </section>
     );
@@ -126,7 +126,7 @@ export function ReviewForm({ token, slug, items, expires, m }: { token: string; 
       </p>
       <button type="submit" className="sl-review-submit" disabled={busy}>
         {busy ? m.sending : m.sendReviews}
-        {!busy && <Icon name="arrowOut" className="sl-arrow-out" />}
+        {!busy && <ArrowOut />}
       </button>
     </form>
   );

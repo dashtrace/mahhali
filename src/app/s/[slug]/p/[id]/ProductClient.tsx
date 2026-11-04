@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
 import { MAX_QTY, addToCart, leftAfterCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
-import { Icon } from "@/components/Icon";
+import { ArrowOut, Icon } from "@/components/Icon";
 import { Button, ProductPhoto, QtyStepper, Textarea, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages, type StoreMessages } from "@/i18n/messages/store";
@@ -282,7 +282,7 @@ export function ProductActions() {
         </Button>
         <Button className="sl-action" disabled={!variant?.inStock} onClick={() => add("buy") && router.push(`/s/${slug}/cart`)}>
           {m.buyNow}
-          <Icon name="arrowOut" className="sl-arrow-out" />
+          <ArrowOut />
         </Button>
       </div>
     </>

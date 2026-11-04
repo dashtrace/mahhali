@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Reveal } from "@/app/_storefront/Reveal";
-import { Icon, type IconName } from "@/components/Icon";
+import { ArrowOut, Icon, type IconName } from "@/components/Icon";
 import { EmptyState, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
@@ -118,7 +118,7 @@ export function StoreHome({ shop, products, testimonials }: StoreData) {
             {about && (
               <a href="#home-story" className="sl-catalog-link">
                 {m.discoverStory}
-                <Icon name="arrowOut" className="sl-arrow-out" />
+                <ArrowOut />
               </a>
             )}
           </Reveal>
@@ -141,7 +141,7 @@ export function StoreHome({ shop, products, testimonials }: StoreData) {
             {showTestimonials && (
               <a href="#home-testimonials" className="sl-outline-link">
                 {m.readStories}
-                <Icon name="arrowOut" className="sl-arrow-out" />
+                <ArrowOut />
               </a>
             )}
           </Reveal>
@@ -168,7 +168,7 @@ export function StoreHome({ shop, products, testimonials }: StoreData) {
               <span>{m.shippingQuestion}</span>
               <a href={hasContact ? "#home-contact" : `${base}/info/contact`} className="sl-text-link">
                 {m.contactHeading}
-                <Icon name="arrowOut" className="sl-arrow-out" />
+                <ArrowOut />
               </a>
             </div>
           </Reveal>
