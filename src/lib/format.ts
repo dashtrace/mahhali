@@ -54,7 +54,14 @@ export const httpsLink = (url: string | null | undefined) => (url?.startsWith("h
 
 /** "https://www.instagram.com/yourshop/" -> "@yourshop". Null for a link that isn't one plain handle, like facebook.com/profile.php. */
 export function socialHandle(url: string): string | null {
-  const handle = /^\/([\w.-]+)\/?$/.exec(new URL(url).pathname)?.[1];
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    // A link still being typed in the live preview ("https://") isn't a URL yet.
+    return null;
+  }
+  const handle = /^\/([\w.-]+)\/?$/.exec(path)?.[1];
   return handle && !handle.endsWith(".php") ? `@${handle}` : null;
 }
 

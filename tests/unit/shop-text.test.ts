@@ -12,6 +12,11 @@ describe("socialHandle", () => {
     expect(socialHandle("https://www.facebook.com/pages/Shop/123")).toBeNull();
     expect(socialHandle("https://www.instagram.com/")).toBeNull();
   });
+
+  it("gives up on a link still being typed instead of throwing", () => {
+    expect(socialHandle("https://")).toBeNull();
+    expect(socialHandle("https://a b")).toBeNull();
+  });
 });
 
 describe("nameUnits", () => {
