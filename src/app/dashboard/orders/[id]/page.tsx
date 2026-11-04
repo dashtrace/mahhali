@@ -264,13 +264,21 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                       <DashIcon name="check" size="sm" /> {eventText(e, m, t)}
                     </span>
                     {e.note && <p className="mt-1 break-words">{e.note}</p>}
+                    <p className="hint mt-1 mb-0">
+                      <bdi>{e.actorName ? fill(m.byName, { name: e.actorName }) : e.type === "STATUS" && e.toValue === "NEW" && o.source === "CATALOGUE" ? m.byCustomer : m.bySystem}</bdi>
+                    </p>
                   </div>
-                  <time dateTime={e.at} className="hint shrink-0 text-end">
-                    {dayMonthYear(e.at, locale)}
+                  <time dateTime={e.at} className="hint w-24 shrink-0 text-end">
+                    {formatDateTime(e.at, locale)}
                   </time>
                 </div>
               ))}
             </div>
+            {o.source === "MANUAL" && (
+              <p className="hint mt-3 mb-0">
+                <span className="mini-badge gray">{m.manualBadge}</span> {m.firstContact}: {formatDateTime(o.firstContactAt, locale)}
+              </p>
+            )}
           </div>
         </div>
       </div>
