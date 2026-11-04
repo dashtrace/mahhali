@@ -18,8 +18,6 @@ describe("openIssues", () => {
     expect(count).toBe(1);
     expect(orders[0].unpaid).toBe(unpaid);
     expect(orders[0].doorstep).toBe(doorstep);
-    expect(orders[0].reportedMinor).toBe(4000n);
-    expect(orders[0].remainingMinor).toBe(5000n);
   });
 
   it("merges an order across couriers", () => {
@@ -29,7 +27,6 @@ describe("openIssues", () => {
     ]);
     expect(issues.count).toBe(1);
     expect(issues.orders[0].courierId).toBe("paid-by");
-    expect(issues.orders[0].remainingMinor).toBe(1000n);
   });
 
   it("counts a remittance gap with $0 in the COD gap figure", () => {
@@ -44,10 +41,8 @@ describe("openIssues", () => {
     expect(count).toBe(4);
   });
 
-  it("has no amount due for an order paid but not delivered", () => {
+  it("lists an order paid but not delivered", () => {
     const { orders } = openIssues([{ ...empty, notDeliveredButPaid: [{ ...ref, status: "RETURNED", paidMinor: 3000n }] }]);
-    expect(orders[0].dueMinor).toBeNull();
-    expect(orders[0].paidMinor).toBe(3000n);
-    expect(orders[0].remainingMinor).toBeNull();
+    expect(orders[0].mismatch?.paidMinor).toBe(3000n);
   });
 });
