@@ -8,7 +8,7 @@ import { Sheet } from "@/components/Sheet";
 import type { Locale } from "@/i18n/locale";
 import { DashIcon, type DashIconName } from "./DashIcon";
 
-export type NavItem = { href: string; label: string; icon: DashIconName };
+export type NavItem = { href: string; label: string; icon: DashIconName; count?: string };
 export type NavGroup = { title: string; items: NavItem[] };
 
 // "/dashboard" (the order board) owns only itself and /dashboard/orders/*.
@@ -34,6 +34,7 @@ export function SideNav({ groups, label }: { groups: NavGroup[]; label: string }
             <Link key={item.href} href={item.href} aria-current={item.href === active ? "page" : undefined} className="navlink">
               <DashIcon name={item.icon} />
               <span>{item.label}</span>
+              {item.count && <span className="count">{item.count}</span>}
             </Link>
           ))}
         </div>
@@ -96,6 +97,7 @@ export function AllPages({
                 <Link key={item.href} href={item.href} aria-current={item.href === active ? "page" : undefined} className="drawer-nav">
                   <DashIcon name={item.icon} />
                   <span>{item.label}</span>
+                  {item.count && <span>{item.count}</span>}
                 </Link>
               ))}
             </div>

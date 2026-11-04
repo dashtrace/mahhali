@@ -6,10 +6,13 @@ import { common } from "@/i18n/messages/common";
 import { getLocale } from "@/i18n/server";
 import { can, type Action } from "@/server/domain/policy";
 import { accountService } from "@/server/services/accountService";
+import { reportingService } from "@/server/services/reportingService";
+import { fill } from "@/i18n/locale";
 import { pageActor, signedInUser } from "../_server/session";
 import { themeVars } from "../_server/theme";
 import { DashIcon, type DashIconName } from "./_components/DashIcon";
 import { AllPages, BottomNav, SideNav, type NavGroup } from "./_components/Nav";
+import { openIssues } from "./cash/openIssues";
 import "./dashboard.css";
 import "./orders/orders.css";
 
@@ -52,12 +55,20 @@ const GROUPS: { title: Key; sections: Section[] }[] = [
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const actor = await pageActor("order.readAssigned", "/dashboard");
-  const [me, locale, user] = await Promise.all([accountService.me(actor), getLocale(), signedInUser()]);
+  const [me, locale, user, reconciliation] = await Promise.all([
+    accountService.me(actor),
+    getLocale(),
+    signedInUser(),
+    // The Cash page's default period, so the chip and the page's first view agree.
+    can(actor.role, "reconciliation.read") ? reportingService.reconciliation(actor, {}) : null,
+  ]);
   const t = common[locale];
   const allowed = (s: Section) => can(actor.role, s.action);
+  const issues = reconciliation ? openIssues(reconciliation.couriers).count : 0;
+  const issuesLabel = issues === 1 ? t.navIssuesOne : issues ? fill(t.navIssues, { n: issues }) : undefined;
   const groups: NavGroup[] = GROUPS.map((g) => ({
     title: t[g.title],
-    items: g.sections.filter(allowed).map((s) => ({ href: s.href, label: t[s.key], icon: s.icon })),
+    items: g.sections.filter(allowed).map((s) => ({ href: s.href, label: t[s.key], icon: s.icon, count: s.href === "/dashboard/cash" ? issuesLabel : undefined })),
   })).filter((g) => g.items.length > 0);
   if (user?.isAdmin) groups.push({ title: t.navGroupPlatform, items: [{ href: "/admin", label: t.navAdmin, icon: "shield" }] });
   const tabs = TODAY.filter(allowed).map((s) => ({ href: s.href, label: t[s.tab ?? s.key], icon: s.icon }));

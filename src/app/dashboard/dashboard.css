@@ -169,12 +169,16 @@
 .sl-dash .topright > .storefront-link {
   padding: 0 15px;
 }
+/* No Cairo here: the demo's "العربية" falls back to the system Arabic face. */
+.sl-dash .topright > .lang {
+  font-family: var(--font-dm-sans), Arial, sans-serif;
+}
 .sl-dash .allpages-trigger {
   display: none;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
   background: #fff;
   padding: 10px;
   color: var(--ink);
@@ -228,6 +232,14 @@
   background: #dfedf0;
   color: #145b70;
 }
+.sl-dash .navlink .count {
+  margin-inline-start: auto;
+  font-size: 10px;
+  color: #b75a3b;
+  background: #fff5ee;
+  border-radius: 30px;
+  padding: 3px 7px;
+}
 .sl-dash .main {
   min-width: 0;
   padding: 14px 0 40px;
@@ -246,6 +258,7 @@
 .sl-dash .page-head h1 {
   font-size: 27px;
   letter-spacing: -0.04em;
+  line-height: inherit;
   margin: 0 0 6px;
   overflow: visible;
   white-space: normal;
@@ -277,7 +290,6 @@
 }
 .sl-dash .page-head .actions {
   display: flex;
-  flex-shrink: 0;
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
@@ -305,6 +317,7 @@
   font-size: 19px;
   font-weight: 700;
   letter-spacing: 0;
+  line-height: inherit;
   white-space: normal;
 }
 .sl-dash .sl-drawer h2 .hint {
@@ -1037,6 +1050,16 @@
     cursor: not-allowed;
     opacity: 0.45;
   }
+  .sl-dash .desktop-only {
+    display: block;
+  }
+  .sl-dash .check-box {
+    width: 16px;
+    height: 16px;
+    margin: 3px;
+    margin-inline-start: 4px;
+    vertical-align: middle;
+  }
   .sl-dash .field-inline {
     display: flex;
     align-items: center;
@@ -1078,6 +1101,12 @@
   @media (max-width: 780px) {
     .sl-dash .steps {
       gap: 5px;
+    }
+    .sl-dash .steps button {
+      padding: 9px 11px;
+    }
+    .sl-dash .desktop-only {
+      display: none;
     }
   }
 }
