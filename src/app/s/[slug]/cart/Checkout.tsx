@@ -353,6 +353,20 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
                     </p>
                   )}
                   {r.problem && <p className="mt-1 text-xs font-semibold text-sl-danger">{r.problem}</p>}
+                  {/* Fixed here, because going back to the bag loses the typed form. */}
+                  {r.problem && (
+                    <button
+                      type="button"
+                      aria-label={fill(m.removeItem, { item: r.name })}
+                      className="mt-1 py-1 text-xs font-bold underline underline-offset-2"
+                      onClick={() => {
+                        removeLine(slug, r.line.variantId, r.line.note);
+                        setError(null);
+                      }}
+                    >
+                      {common[locale].remove}
+                    </button>
+                  )}
                 </div>
                 <strong className="shrink-0 tabular-nums">{r.hit ? money(r.hit.variant.priceMinor * r.line.qty) : null}</strong>
               </li>
