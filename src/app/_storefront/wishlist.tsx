@@ -40,15 +40,11 @@ export function useWishlist(slug: string) {
 export function WishButton({ slug, productId, locale, variant = "card" }: { slug: string; productId: string; locale: Locale; variant?: "card" | "icon" }) {
   const t = common[locale];
   const saved = useWishlist(slug).has(productId);
-  const props = { "aria-pressed": saved, onClick: () => toggleWish(slug, productId) };
-  if (variant === "icon") return <IconButton label={t.wishAdd} icon="heart" solid={saved} className="sl-nav-btn" {...props} />;
+  const label = saved ? t.wishRemove : t.wishAdd;
+  const toggle = () => toggleWish(slug, productId);
+  if (variant === "icon") return <IconButton label={label} icon="heart" solid={saved} className="sl-nav-btn" onClick={toggle} />;
   return (
-    <button
-      type="button"
-      aria-label={t.wishAdd}
-      {...props}
-      className={cx("grid size-11 place-items-center", saved ? "text-sl-heart" : "text-sl-fg")}
-    >
+    <button type="button" aria-label={label} onClick={toggle} className={cx("grid size-11 place-items-center", saved ? "text-sl-accent" : "text-sl-fg")}>
       <span className="grid size-[33px] place-items-center rounded-full bg-[color-mix(in_srgb,var(--sl-panel)_91%,transparent)]">
         <Icon name="heart" solid={saved} className="size-[21px]" />
       </span>

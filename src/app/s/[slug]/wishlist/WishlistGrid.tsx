@@ -1,37 +1,36 @@
 "use client";
 
+import Link from "next/link";
 import { useWishlist } from "@/app/_storefront/wishlist";
-import { ButtonLink, EmptyState } from "@/components/ui";
+import { Icon } from "@/components/Icon";
 import type { Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
-import type { StoreProduct } from "../_components/load";
-import { ProductTile } from "../_components/tiles";
-
-type Tile = Pick<StoreProduct, "id" | "name" | "description" | "images" | "variants" | "rating">;
+import { PageEmpty, ProductTile, type TileProduct } from "../_components/tiles";
 
 /** Saved ids (this device) resolved against the live catalogue; ids no longer for sale drop out. */
-export function WishlistGrid({ slug, products, currency, locale }: { slug: string; products: Tile[]; currency: "USD" | "LBP"; locale: Locale }) {
+export function WishlistGrid({ slug, products, currency, locale }: { slug: string; products: TileProduct[]; currency: "USD" | "LBP"; locale: Locale }) {
   const m = storeMessages[locale];
   const { ids } = useWishlist(slug);
   const byId = new Map(products.map((p) => [p.id, p]));
-  const saved = ids.map((id) => byId.get(id)).filter((p): p is Tile => !!p);
+  const saved = ids.map((id) => byId.get(id)).filter((p): p is TileProduct => !!p);
 
   if (!saved.length)
     return (
-      <EmptyState
+      <PageEmpty
         title={m.wishEmpty}
         body={m.wishEmptyBody}
         action={
-          <ButtonLink href={`/s/${slug}/shop`} tone="secondary">
+          <Link href={`/s/${slug}/shop`} className="sl-text-cta">
             {m.browseShop}
-          </ButtonLink>
+            <Icon name="arrowOut" className="sl-arrow-out" />
+          </Link>
         }
       />
     );
   return (
-    <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+    <ul className="sl-card-grid sl-card-grid-saved">
       {saved.map((p) => (
-        <li key={p.id} className="flex">
+        <li key={p.id}>
           <ProductTile slug={slug} product={p} currency={currency} locale={locale} />
         </li>
       ))}
