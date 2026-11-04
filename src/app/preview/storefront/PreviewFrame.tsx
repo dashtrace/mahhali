@@ -28,6 +28,11 @@ function block(e: Event) {
   e.stopPropagation();
 }
 
+// The search box navigates as you type. React reads both events for a text box; the box itself keeps working.
+function blockSearch(e: Event) {
+  if ((e.target as Element).closest(".sl-search")) e.stopPropagation();
+}
+
 /** The real storefront pages with the owner's unsaved edits on top. Only rendered inside the settings page's frame. */
 export function PreviewFrame({ data, fontClass, view, listing, detail }: Props) {
   const [draft, setDraft] = useState<PreviewDraft>({});
@@ -41,6 +46,8 @@ export function PreviewFrame({ data, fontClass, view, listing, detail }: Props) 
     addEventListener("click", block, true);
     addEventListener("auxclick", block, true);
     addEventListener("submit", block, true);
+    addEventListener("input", blockSearch, true);
+    addEventListener("change", blockSearch, true);
     document.documentElement.style.scrollbarWidth = "thin";
     window.parent.postMessage({ type: PREVIEW_READY }, location.origin);
     return () => {
@@ -48,6 +55,8 @@ export function PreviewFrame({ data, fontClass, view, listing, detail }: Props) 
       removeEventListener("click", block, true);
       removeEventListener("auxclick", block, true);
       removeEventListener("submit", block, true);
+      removeEventListener("input", blockSearch, true);
+      removeEventListener("change", blockSearch, true);
     };
   }, []);
 
