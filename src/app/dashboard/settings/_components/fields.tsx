@@ -2,7 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cx } from "@/components/ui";
 import { DashIcon } from "../../_components/DashIcon";
 
-/** The demo's .field: a label, its control and a hint. settings.css draws it. */
+/** A .field: a label, its control and a hint. settings.css draws it. */
 export function SettingField({ label, hint, className, children }: { label: ReactNode; hint?: ReactNode; className?: string; children: ReactNode }) {
   return (
     <label className={cx("field block", className)}>

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-// The owner demo's icon set, drawn as in its SVG sprite; sized and stroked by `svg.icon` in dashboard.css.
+// The dashboard's icon set; sized and stroked by `svg.icon` in dashboard.css.
 const SHAPES = {
   orders: (
     <>
@@ -110,7 +110,7 @@ const SHAPES = {
   ),
   phone: <path d="M6 2h4l2 5-3 2a16 16 0 0 0 6 6l2-3 5 2v4c-1 5-14 1-18-10C3 5 3 2 6 2" />,
   filter: <path d="M4 5h16M7 12h10M10 19h4" />,
-  // Not in the demo: the platform admin link.
+  // The platform admin link.
   shield: <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" />,
 } satisfies Record<string, ReactNode>;
 
@@ -119,7 +119,7 @@ export type DashIconName = keyof typeof SHAPES;
 const MIRRORED: ReadonlySet<DashIconName> = new Set(["arrow", "left"]);
 const SIZES = { md: "", sm: " smicon", tiny: " tinyicon" };
 
-/** Decorative: label the control around it. md 19px, sm 16px, tiny 13px, as the demo's icon classes. */
+/** Decorative: label the control around it. md 19px, sm 16px, tiny 13px. */
 export function DashIcon({ name, size = "md" }: { name: DashIconName; size?: keyof typeof SIZES }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden className={`icon${SIZES[size]}${MIRRORED.has(name) ? " mirror" : ""}`}>

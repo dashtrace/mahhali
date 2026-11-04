@@ -4,7 +4,7 @@ import Link from "next/link";
 import { cloneElement, useEffect, useId, useRef, type ReactElement, type ReactNode } from "react";
 import { DashIcon } from "../../_components/DashIcon";
 
-/** The demo's "Back to products" button above a page head. */
+/** The "Back to products" button above a page head. */
 export function BackLink({ href, className = "mb-3.5", children }: { href: string; className?: string; children: ReactNode }) {
   return (
     <Link href={href} className={`btn tiny ${className}`}>
@@ -14,7 +14,7 @@ export function BackLink({ href, className = "mb-3.5", children }: { href: strin
   );
 }
 
-/** The demo's .field: label, one control, optional small print. */
+/** A .field: label, one control, optional small print. */
 export function Field({ label, hint, children, className }: { label: ReactNode; hint?: ReactNode; children: ReactElement<{ id?: string }>; className?: string }) {
   const id = useId();
   return (
@@ -26,7 +26,7 @@ export function Field({ label, hint, children, className }: { label: ReactNode; 
   );
 }
 
-/** A checkbox line with its explanation underneath, as on the demo's Display step. */
+/** A checkbox line with its explanation underneath, as on the Display step. */
 export function Check({ label, hint, ...props }: { label: ReactNode; hint?: ReactNode } & Omit<React.ComponentProps<"input">, "type">) {
   return (
     <div className="field">

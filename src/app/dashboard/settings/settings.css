@@ -40,7 +40,7 @@
   .sl-dash .phone-screen {
     display: block;
     width: 100%;
-    /* The demo's 570px, leaving room for the bar above it on a short laptop screen. */
+    /* 570px, leaving room for the bar above it on a short laptop screen. */
     height: min(570px, calc(100dvh - 200px));
     border: 0;
   }
@@ -49,11 +49,11 @@
     text-align: center;
   }
 
-  /* The four tabs, also from the demo. */
+  /* The four tabs. */
   .sl-dash .settings-tabs {
     margin-bottom: 18px;
   }
-  /* The demo's .field label and .field p, for a <label> that wraps its own control. */
+  /* Same as .field label and .field p, for a <label> that wraps its own control. */
   .sl-dash .field-label {
     display: block;
     font-size: 12px;
@@ -68,7 +68,7 @@
     margin: 5px 0 0;
   }
 
-  /* The demo's native look, which the CSS reset removes. */
+  /* The browser's native look, which the CSS reset removes. */
   .sl-dash .control::file-selector-button {
     border: 1px solid #767676;
     border-radius: 3px;

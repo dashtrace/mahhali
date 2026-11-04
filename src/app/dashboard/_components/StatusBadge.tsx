@@ -1,6 +1,6 @@
 import type { OrderStatus } from "@prisma/client";
 
-// The demo's badge(): New is the plain blue pill.
+// New is the plain blue pill.
 const TONES: Record<OrderStatus, string> = {
   NEW: "",
   CONFIRMED: "amber",

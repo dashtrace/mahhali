@@ -14,7 +14,7 @@ export const STORE_PALETTES = {
 
 export type StorePaletteName = keyof typeof STORE_PALETTES;
 
-/** The Brand colours grid, in the demo's order. All but the first three can be left Automatic. */
+/** The Brand colours grid, in display order. All but the first three can be left Automatic. */
 export const COLOUR_ROLES = ["primary", "accent", "background", "surface", "text", "muted", "dark", "darkText", "border", "buttonText"] as const;
 export const REQUIRED_ROLES: readonly string[] = ["primary", "accent", "background"];
 

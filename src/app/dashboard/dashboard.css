@@ -1,7 +1,7 @@
 /*
  * The owner dashboard's design base, ported from new_ui/references/owner-dashboard-settings-v2.html
  * with its sizes and its 1150px, 780px and 420px breakpoints, and with logical properties for Arabic.
- * Everything is scoped to .sl-dash, so no other area changes. The demo's variable names are kept,
+ * Everything is scoped to .sl-dash, so no other area changes. That design's variable names are kept,
  * so its rules can be copied as they are.
  */
 @layer theme, base, components, utilities;
@@ -151,7 +151,7 @@
   gap: 16px;
   flex: none;
 }
-/* The text stays the demo's size; the 44px is an invisible tap target. */
+/* The text stays small; the 44px is an invisible tap target. */
 .sl-dash .topright > button,
 .sl-dash .topright > a {
   display: inline-flex;
@@ -169,7 +169,7 @@
 .sl-dash .topright > .storefront-link {
   padding: 0 15px;
 }
-/* No Cairo here: the demo's "العربية" falls back to the system Arabic face. */
+/* No Cairo here: "العربية" falls back to the system Arabic face. */
 .sl-dash .topright > .lang {
   font-family: var(--font-dm-sans), Arial, sans-serif;
 }
@@ -246,7 +246,7 @@
   max-width: 1200px;
 }
 
-/* PageHeader in ui.tsx carries these classes: the demo's head(). */
+/* PageHeader in ui.tsx carries these classes. */
 .sl-dash .page-head {
   display: flex;
   flex-wrap: nowrap;
@@ -339,7 +339,7 @@
   border-radius: 10px;
   background: #fff;
 }
-/* The close button keeps a 44px tap target around the demo's smaller box. */
+/* The close button keeps a 44px tap target around its smaller box. */
 .sl-dash .sl-drawer h2 + button::after {
   content: "";
   position: absolute;
@@ -465,7 +465,7 @@
 }
 
 /*
- * The shared kit, under the demo's class names. In the components layer, so a Tailwind utility
+ * The shared kit. In the components layer, so a Tailwind utility
  * beside one of these wins (className="card mb-0"). Use them on plain elements: the utilities
  * inside ui.tsx's Button, Card or Input would beat them.
  */
@@ -687,7 +687,7 @@
     width: auto;
   }
 
-  /* Tabs. Selected: .selected / .active as in the demo, or aria-current / aria-pressed on links and buttons. */
+  /* Tabs. Selected: .selected / .active, or aria-current / aria-pressed on links and buttons. */
   .sl-dash .segbar {
     display: flex;
     align-items: center;
