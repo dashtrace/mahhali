@@ -166,10 +166,10 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             )}
           </div>
 
-          {/* Before this the courier is chosen in the Assign courier dialog. Out for delivery it can still change, say after a breakdown. */}
-          {((canCourier && o.status === "OUT_FOR_DELIVERY") || o.status === "DELIVERED" || o.status === "RETURNED") && (
+          {/* Choosing a courier here doesn't send the order out, so it can be set or changed at any active step. */}
+          {(canCourier || o.status === "DELIVERED" || o.status === "RETURNED") && (
             <div className="card">
-              <h2>{m.courierCash}</h2>
+              <h2>{o.status === "OUT_FOR_DELIVERY" || o.status === "DELIVERED" || o.status === "RETURNED" ? m.courierCash : m.courierTitle}</h2>
               {canCourier &&
                 (isFinal(o.status) ? (
                   <p className="hint">
