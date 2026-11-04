@@ -54,7 +54,7 @@ describe("validateTheme", () => {
 
   it("checks the button label against primary, using buttonText when saved", () => {
     const base = { primary: "#777777", accent: "#000000", background: "#ffffff" };
-    expect(validateTheme({ ...base, buttonText: "#000000" })).toEqual([]);
+    expect(validateTheme({ ...base, primary: "#767676", buttonText: "#000000" })).toEqual([]);
     const pale = { ...base, primary: "#1e3a8a", buttonText: "#3f5a9a" };
     expect(validateTheme(pale)).toEqual([expect.objectContaining({ pair: "text on primary", foreground: "#3f5a9a" })]);
   });
@@ -90,6 +90,12 @@ describe("validateTheme", () => {
     const base = { primary: "#1e3a8a", accent: "#b45309", background: "#ffffff" };
     expect(validateTheme({ ...base, text: "#999999" })).toEqual([{ pair: "body text on background", foreground: "#999999", background: "#ffffff", ratio: 2.85 }]);
     expect(validateTheme({ ...base, text: "#333333" })).toEqual([]);
+  });
+
+  it("still checks primary on the page when buttonText carries the button label", () => {
+    const pale = { primary: "#e0a030", accent: "#000000", background: "#ffffff", buttonText: "#000000" };
+    expect(validateTheme(pale).map((f) => f.pair)).toEqual(["links on background"]);
+    expect(validateTheme({ ...pale, primary: "#874258", buttonText: "#ffffff" })).toEqual([]);
   });
 
   it("refuses a pale brand colour on a light page and accepts it on a dark one", () => {

@@ -20,6 +20,7 @@ type Props = { theme: Theme; logo: string | null; shop: PreviewShop; locale: Loc
 const PAIR_KEYS = {
   "text on primary": "pairPrimary",
   "body text on background": "pairBackground",
+  "links on background": "pairLinks",
   "muted text on background": "pairMuted",
   "body text on surface": "pairSurface",
   "text on dark band": "pairBand",

@@ -71,6 +71,8 @@ export function validateTheme(theme: Omit<Theme, "radius" | "font">): ContrastFa
   const pairs = [
     { pair: "text on primary", foreground: theme.buttonText ?? theme.background, background: theme.primary },
     { pair: "body text on background", foreground: body, background: theme.background },
+    // Links and prices draw primary on the page. Without buttonText the first pair already covers this.
+    ...(theme.buttonText ? [{ pair: "links on background", foreground: theme.primary, background: theme.background }] : []),
     ...(theme.muted ? [{ pair: "muted text on background", foreground: theme.muted, background: theme.background }] : []),
     ...(theme.surface ? [{ pair: "body text on surface", foreground: body, background: theme.surface }] : []),
     ...(theme.dark ? [{ pair: "text on dark band", foreground: theme.darkText ?? theme.background, background: theme.dark }] : []),
