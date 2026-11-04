@@ -17,9 +17,15 @@ import { useAction } from "../../products/_components/useAction";
 type PreviewShop = { name: string; currency: "USD" | "LBP"; logoMode: string; tagline: string | null };
 type Props = { theme: Theme; logo: string | null; shop: PreviewShop; locale: Locale; m: ShopMessages; t: CommonMessages };
 
-const PAIR_KEYS = { "text on primary": "pairPrimary", "text on accent": "pairAccent", "body text on background": "pairBackground" } as const;
-// A fixed key list: `text` is optional, so clearing it must still count as a change.
-const KEYS = ["primary", "accent", "background", "text", "radius", "font"] as const;
+const PAIR_KEYS = {
+  "text on primary": "pairPrimary",
+  "body text on background": "pairBackground",
+  "muted text on background": "pairMuted",
+  "body text on surface": "pairSurface",
+  "text on dark band": "pairBand",
+} as const;
+// A fixed key list: optional colours can be cleared, and that must still count as a change.
+const KEYS = ["primary", "accent", "background", "text", "surface", "muted", "dark", "darkText", "border", "buttonText", "radius", "font"] as const;
 const same = (a: Theme, b: Theme) => KEYS.every((k) => a[k] === b[k]);
 
 export function Branding({ theme: saved, logo: savedLogo, shop, locale, m, t }: Props) {
@@ -230,7 +236,8 @@ function MiniShop({ theme, logo, shop, locale, m }: { theme: Theme; logo: string
               <div key={name} className="relative overflow-hidden rounded-sl border border-sl-border bg-sl-panel">
                 <div className="aspect-[4/3] bg-sl-cat" />
                 {i === 0 && (
-                  <span className="absolute start-1.5 top-1.5 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-ink)]">{m.previewBadge}</span>
+                  // Accent has no contrast rule, so the label picks its own ink.
+                  <span style={{ color: inkFor(theme.accent) }} className="absolute start-1.5 top-1.5 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold">{m.previewBadge}</span>
                 )}
                 <div className="flex flex-col gap-0.5 p-2">
                   <span className="truncate text-[11px] font-bold">{name}</span>
