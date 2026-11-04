@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { Icon, type IconName } from "@/components/Icon";
 import { cx } from "@/components/ui";
 import { dirOf, fill, type Locale } from "@/i18n/locale";
 import { common, type CommonMessages } from "@/i18n/messages/common";
@@ -22,6 +21,8 @@ export type FrameShop = {
   theme: unknown;
   tagline?: string | null;
   about?: string | null;
+  shippingInfo?: string | null;
+  showTestimonials?: boolean;
   logoMode?: string | null;
   whatsappPhone?: string | null;
   instagramUrl?: string | null;
@@ -72,7 +73,7 @@ export function ShopFrame({
     <div className="sl-nav">
       <div className="sl-nav-edge">
         <ShopMenu title={shop.name} locale={locale}>
-          <DrawerLinks shop={shop} t={t} />
+          <DrawerLinks shop={shop} locale={locale} />
         </ShopMenu>
         <TrackPill slug={shop.slug} locale={locale} />
         <ShopTopNav slug={shop.slug} label={t.storeNav} links={startLinks} />
@@ -163,91 +164,54 @@ function ShopLogo({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
   );
 }
 
-const drawerItem = "flex min-h-12 w-full items-center gap-3 border-b border-sl-border text-[15px] text-sl-fg hover:text-sl-accent";
-const drawerHeading = "mb-1 mt-5 text-xs font-bold uppercase tracking-wide text-sl-muted rtl:tracking-normal";
-
-function DrawerLinks({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
+/** The two link groups of the approved menu. A home section the shop has no data for falls back to its info page, or is left out. */
+function DrawerLinks({ shop, locale }: { shop: FrameShop; locale: Locale }) {
+  const t = common[locale];
+  const m = storeMessages[locale];
   const base = `/s/${shop.slug}`;
-  const main: { href: string; label: string; icon: IconName }[] = [
-    { href: base, label: t.navHome, icon: "home" },
-    { href: `${base}/shop`, label: t.navShop, icon: "grid" },
-    { href: `${base}/cart`, label: t.navCart, icon: "bag" },
-    { href: `${base}/wishlist`, label: t.navWishlist, icon: "heart" },
-    { href: `${base}/track`, label: t.trackOrder, icon: "box" },
+  const instagram = httpsLink(shop.instagramUrl);
+  const groups = [
+    {
+      title: fill(m.menuExplore, { shop: shop.name }),
+      links: [
+        { href: base, label: t.navHome },
+        !!shop.categories?.length && { href: `${base}#home-categories`, label: t.categories },
+        { href: `${base}/shop?sort=new`, label: m.sectionNew },
+        { href: shop.about?.trim() ? `${base}#home-story` : `${base}/info/about`, label: t.infoAbout },
+        { href: shop.shippingInfo?.trim() ? `${base}#home-shipping` : `${base}/info/shipping`, label: t.infoShipping },
+        !!shop.showTestimonials && { href: `${base}/info/about#testimonials`, label: m.menuReviews },
+        { href: `${base}#home-feedback`, label: m.menuFeedback },
+        !!(shop.whatsappPhone || instagram) && { href: `${base}#home-stay`, label: m.menuStay },
+        { href: shop.whatsappPhone || instagram || httpsLink(shop.facebookUrl) ? `${base}#home-contact` : `${base}/info/contact`, label: t.infoContact },
+      ],
+    },
+    {
+      title: m.menuShopping,
+      links: [
+        { href: `${base}/shop`, label: m.menuShop },
+        { href: `${base}/wishlist`, label: t.navWishlist },
+        { href: `${base}/track`, label: m.menuTrack },
+        { href: `${base}/cart`, label: m.menuBag },
+      ],
+    },
   ];
-  const whatsapp = shop.whatsappPhone ? whatsappLink(shop.whatsappPhone, t.whatsappGreeting) : null;
   return (
     <nav aria-label={t.storeNav}>
-      <ul>
-        {main.map((l) => (
-          <li key={l.href}>
-            <Link href={l.href} className={drawerItem}>
-              <Icon name={l.icon} className="size-5 text-sl-accent" />
-              {l.label}
-            </Link>
-          </li>
-        ))}
-        {whatsapp && (
-          <li>
-            <a href={whatsapp} target="_blank" rel="noopener noreferrer" aria-label={`${t.whatsappChat} (${t.opensNewTab})`} className={drawerItem}>
-              <Icon name="whatsapp" className="size-5 text-sl-accent" />
-              {t.whatsappChat}
-            </a>
-          </li>
-        )}
-      </ul>
-      {!!shop.categories?.length && (
-        <>
-          <h3 className={drawerHeading}>{t.categories}</h3>
+      {groups.map((g) => (
+        <section key={g.title}>
+          <h3 className="sl-drawer-kicker">{g.title}</h3>
           <ul>
-            {shop.categories.map((c) => (
-              <li key={c.id}>
-                <Link href={`${base}/shop?cat=${encodeURIComponent(c.id)}`} className={drawerItem}>
-                  {c.name}
-                </Link>
-              </li>
-            ))}
+            {g.links
+              .filter((l) => !!l)
+              .map((l) => (
+                <li key={l.label}>
+                  <Link href={l.href}>{l.label}</Link>
+                </li>
+              ))}
           </ul>
-        </>
-      )}
-      <h3 className={drawerHeading}>{t.shopInfo}</h3>
-      <ul>
-        {INFO_SECTIONS.map((s) => (
-          <li key={s}>
-            <Link href={`${base}/info/${s}`} className={drawerItem}>
-              {t[INFO_LABEL[s]]}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <Socials shop={shop} t={t} className="mt-5" />
-    </nav>
-  );
-}
-
-/** Instagram / Facebook icon links, only those the shop set. */
-function Socials({ shop, t, className }: { shop: FrameShop; t: CommonMessages; className?: string }) {
-  const links = [
-    { href: httpsLink(shop.instagramUrl), label: t.instagram, icon: "instagram" as const },
-    { href: httpsLink(shop.facebookUrl), label: t.facebook, icon: "facebook" as const },
-  ].filter((l): l is { href: string; label: string; icon: "instagram" | "facebook" } => !!l.href);
-  if (!links.length) return null;
-  return (
-    <ul aria-label={t.followUs} className={cx("flex gap-2", className)}>
-      {links.map((l) => (
-        <li key={l.icon}>
-          <a
-            href={l.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${l.label} (${t.opensNewTab})`}
-            className="grid size-11 place-items-center rounded-sl border border-sl-border bg-sl-panel text-sl-fg transition hover:-translate-y-px hover:border-sl-accent"
-          >
-            <Icon name={l.icon} />
-          </a>
-        </li>
+        </section>
       ))}
-    </ul>
+    </nav>
   );
 }
 

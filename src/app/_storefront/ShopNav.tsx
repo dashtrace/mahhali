@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon } from "@/components/Icon";
-import { Sheet } from "@/components/Sheet";
 import { IconButton, cx } from "@/components/ui";
 import type { Locale } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
@@ -23,15 +22,47 @@ function activeTab(pathname: string, slug: string): Tab | null {
   return null;
 }
 
-/** Hamburger button and the slide-in menu holding `children`. */
+/**
+ * Hamburger button and the slide-in menu holding `children`. A modal <dialog>, so the
+ * browser traps focus, closes on Escape and gives focus back to the button. Tapping
+ * the backdrop or any link inside closes it.
+ */
 export function ShopMenu({ title, locale, children }: { title: string; locale: Locale; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   return (
     <>
-      <IconButton label={common[locale].menuOpen} icon="menu" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className="sl-nav-btn" />
-      <Sheet open={open} onClose={() => setOpen(false)} title={title} locale={locale}>
-        {children}
-      </Sheet>
+      <IconButton
+        label={common[locale].menuOpen}
+        icon="menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => {
+          ref.current?.showModal();
+          setOpen(true);
+        }}
+        className="sl-nav-btn"
+      />
+      <dialog
+        ref={ref}
+        aria-labelledby={titleId}
+        className="sl-drawer"
+        onClose={() => setOpen(false)}
+        onClick={(e) => {
+          if (e.target === e.currentTarget || (e.target as HTMLElement).closest("a")) ref.current?.close();
+        }}
+      >
+        <div className="sl-drawer-body">
+          <div className="sl-drawer-top">
+            <h2 id={titleId}>{title}</h2>
+            <button type="button" aria-label={common[locale].close} onClick={() => ref.current?.close()}>
+              <Icon name="close" />
+            </button>
+          </div>
+          {children}
+        </div>
+      </dialog>
     </>
   );
 }

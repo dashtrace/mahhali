@@ -293,7 +293,117 @@
   font-size: calc(9px + var(--sl-caption-boost));
 }
 
+/* Menu drawer */
+.sl-shop .sl-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline: 0 auto;
+  width: min(86vw, 390px);
+  max-width: 390px;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  overflow-y: auto;
+  background: var(--sl-bg);
+  color: var(--sl-fg);
+  transition: transform 0.36s var(--sl-ease);
+}
+@starting-style {
+  .sl-shop .sl-drawer[open] {
+    transform: translateX(-100%);
+  }
+  .sl-shop[dir="rtl"] .sl-drawer[open] {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sl-shop .sl-drawer {
+    transition: none;
+  }
+}
+.sl-shop .sl-drawer::backdrop {
+  background: #1b10229c;
+}
+/* The padding sits in here so a tap on it isn't taken for a tap on the backdrop. */
+.sl-shop .sl-drawer-body {
+  padding: 31px 26px calc(31px + env(safe-area-inset-bottom));
+}
+.sl-shop .sl-drawer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block-end: 34px;
+}
+.sl-shop .sl-drawer-top h2 {
+  min-width: 0;
+  font-family: var(--sl-heading-font);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: calc(-0.035em * var(--sl-track));
+  overflow-wrap: anywhere;
+}
+.sl-shop .sl-drawer-top button {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--sl-line);
+  border-radius: 50%;
+  background: var(--sl-panel);
+}
+.sl-shop .sl-drawer-top button svg {
+  width: 24.5px;
+  height: 24.5px;
+}
+.sl-shop .sl-drawer-top button::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+}
+.sl-shop .sl-drawer-kicker {
+  margin-block-start: 32px;
+  color: var(--sl-accent);
+  font-size: calc(10px + var(--sl-caption-boost));
+  font-weight: 800;
+  letter-spacing: calc(0.16em * var(--sl-track));
+}
+.sl-shop .sl-drawer a {
+  display: block;
+  padding-block: 18px;
+  border-block-end: 1px solid var(--sl-line);
+  font-size: 17px;
+  font-weight: 600;
+}
+.sl-shop .sl-drawer a:hover {
+  color: var(--sl-accent);
+}
+
 /* Hero */
+/* Physical sides: logical ones turn with its vertical writing mode. */
+.sl-shop .sl-scroll-note {
+  position: absolute;
+  right: clamp(22px, 5vw, 85px);
+  bottom: 108px;
+  z-index: 3;
+  color: #fff;
+  font-size: calc(10px + var(--sl-caption-boost));
+  letter-spacing: calc(0.18em * var(--sl-track));
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  opacity: 0.8;
+}
+.sl-shop[dir="rtl"] .sl-scroll-note {
+  right: auto;
+  left: clamp(22px, 5vw, 85px);
+}
+@media (max-width: 700px) {
+  .sl-shop .sl-scroll-note {
+    display: none;
+  }
+}
 .sl-shop .sl-hero {
   position: relative;
   height: min(960px, 100svh);
@@ -2792,7 +2902,10 @@
   font-size: 12px;
 }
 .sl-shop .sl-result {
-  padding-block-start: 22px;
+  margin-block: 35px 18px;
+  padding-block-start: 50px;
+  border-block-start: 1px solid var(--sl-line);
+  scroll-margin-top: 95px;
 }
 .sl-shop .sl-result-head {
   display: flex;
@@ -2800,7 +2913,7 @@
   justify-content: space-between;
   gap: 20px;
 }
-.sl-shop .sl-result-head h1 {
+.sl-shop .sl-result-head h2 {
   margin-block: 13px;
   font-family: var(--sl-heading-font);
   font-size: clamp(28px, 3.3vw, 45px);
@@ -2977,7 +3090,17 @@
   background: var(--sl-panel);
 }
 .sl-shop .sl-review-product {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin-block-end: 20px;
+}
+.sl-shop .sl-review-product img {
+  flex: none;
+  width: 67px;
+  height: 77px;
+  object-fit: cover;
+  border-radius: 7px;
 }
 .sl-shop .sl-review-product strong {
   display: block;
@@ -3169,12 +3292,13 @@
     margin-block-start: 26px;
   }
   .sl-shop .sl-result {
-    padding-block-start: 0;
+    margin-block-start: 16px;
+    padding-block-start: 34px;
   }
   .sl-shop .sl-result-head {
     display: block;
   }
-  .sl-shop .sl-result-head h1 {
+  .sl-shop .sl-result-head h2 {
     font-size: 31px;
   }
   .sl-shop .sl-result-status {

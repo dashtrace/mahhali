@@ -109,6 +109,9 @@ export function HeroCarousel({
           <Icon name="arrowOut" className="sl-arrow-out" />
         </Link>
       </div>
+      <div aria-hidden className="sl-scroll-note">
+        {m.scrollNote}
+      </div>
       {count > 1 && (
         // Only over the controls and only for a mouse: the hero fills the screen, and a tap fires mouse events with no leave.
         <div
