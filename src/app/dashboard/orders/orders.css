@@ -169,6 +169,10 @@
     .sl-dash .order-mobile {
       display: block;
     }
+    /* Phones list the same orders as cards below. */
+    .sl-dash .history-table {
+      display: none;
+    }
     .sl-dash .order-card {
       padding: 14px;
     }

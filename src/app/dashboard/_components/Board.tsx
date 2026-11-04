@@ -158,7 +158,7 @@ export function BoardClient({ view, pages, counts, selected, q, assign, locale, 
           })}
         </div>
       ) : (
-        <div className="card">
+        <div className="card history-table">
           <div className="between wrap mb-[13px]">
             <b>{m.historyTitle}</b>
             <span className="hint">{m.historyHint}</span>
