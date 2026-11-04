@@ -14,6 +14,12 @@ export type OrderIssue = {
 
 export type RemittanceIssue = Lists["remittanceGaps"][number] & { courierId: string };
 
+/** A remittance whose own total matches can still pay an order short, over or not delivered: that isn't settled. */
+export function hasUnsettledOrder(lines: { orderId: string }[], couriers: Pick<Lists, "shortOrOver" | "notDeliveredButPaid">[]) {
+  const unsettled = new Set(couriers.flatMap((c) => [...c.shortOrOver, ...c.notDeliveredButPaid].map((r) => r.orderId)));
+  return lines.some((l) => unsettled.has(l.orderId));
+}
+
 /**
  * Everything to look at, one entry per order and per remittance, worst first. One order can sit in
  * several lists (a doorstep gap that is also unpaid), so the lists are merged by order id. This is

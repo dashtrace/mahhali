@@ -13,6 +13,7 @@ import { reportingService } from "@/server/services/reportingService";
 import { pageActor } from "../../../../_server/session";
 import { DashIcon } from "../../../_components/DashIcon";
 import { dayMonthYear } from "../../../orders/_components/labels";
+import { hasUnsettledOrder } from "../../openIssues";
 import { cash, remittanceRef, reportedOf } from "../../remittance";
 
 export const metadata = { title: "Remittance" };
@@ -34,6 +35,7 @@ export default async function RemittancePage({ params }: { params: Promise<{ id:
   const day = r.receivedAt.toISOString().slice(0, 10);
   const [rec, couriers] = await Promise.all([reportingService.reconciliation(actor, { from: day, to: day, courierId: r.courierId }), courierService.list(actor, {})]);
   const diff = rec.couriers.flatMap((c) => c.remittanceGaps).find((g) => g.remittanceId === r.id)?.diffMinor ?? 0n;
+  const unsettled = hasUnsettledOrder(r.lines, rec.couriers);
   const amount = (v: bigint) => formatMoney(v < 0n ? -v : v, rec.currency, locale);
   const courier = couriers.find((c) => c.id === r.courierId)?.name ?? m.noCourierName;
   const stats = [
@@ -51,7 +53,7 @@ export default async function RemittancePage({ params }: { params: Promise<{ id:
       <PageHeader
         title={fill(m.remittanceTitle, { ref: remittanceRef(r.id, r.reference) })}
         subtitle={`${courier} · ${dayMonthYear(r.receivedAt.toISOString(), locale)}`}
-        actions={<span className="mini-badge gray">{diff ? m.needsReview : m.settled}</span>}
+        actions={<span className="mini-badge gray">{diff || unsettled ? m.needsReview : m.settled}</span>}
       />
       <div className="split3">
         {stats.map((s) => (
@@ -65,7 +67,7 @@ export default async function RemittancePage({ params }: { params: Promise<{ id:
       </div>
       <section className="card">
         <h2>{m.flaggedTitle}</h2>
-        <p className="hint">{diff ? fill(diff < 0n ? m.flaggedShort : m.flaggedOver, { amount: amount(diff) }) : m.flaggedNone}</p>
+        <p className="hint">{diff ? fill(diff < 0n ? m.flaggedShort : m.flaggedOver, { amount: amount(diff) }) : unsettled ? m.flaggedOrders : m.flaggedNone}</p>
         <div className="line-list">
           {r.lines.map((l) => (
             <div key={l.id} className="line-item">

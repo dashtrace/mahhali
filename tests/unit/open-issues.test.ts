@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { openIssues } from "@/app/dashboard/cash/openIssues";
+import { hasUnsettledOrder, openIssues } from "@/app/dashboard/cash/openIssues";
 
 const empty = { courierId: "c1", shortOrOver: [], notDeliveredButPaid: [], unpaid: [], doorstepGaps: [], remittanceGaps: [] };
 const ref = { orderId: "o1", number: 1001 };
@@ -44,5 +44,19 @@ describe("openIssues", () => {
   it("lists an order paid but not delivered", () => {
     const { orders } = openIssues([{ ...empty, notDeliveredButPaid: [{ ...ref, status: "RETURNED", paidMinor: 3000n }] }]);
     expect(orders[0].mismatch?.paidMinor).toBe(3000n);
+  });
+});
+
+describe("hasUnsettledOrder", () => {
+  const lines = [{ orderId: "o1" }];
+
+  it("flags a remittance carrying a short, over or not-delivered order", () => {
+    expect(hasUnsettledOrder(lines, [{ ...empty, shortOrOver: [short] }])).toBe(true);
+    expect(hasUnsettledOrder(lines, [{ ...empty, notDeliveredButPaid: [{ ...ref, status: "RETURNED", paidMinor: 3000n }] }])).toBe(true);
+  });
+
+  it("ignores other orders and issues that aren't about the payment", () => {
+    expect(hasUnsettledOrder([{ orderId: "o2" }], [{ ...empty, shortOrOver: [short] }])).toBe(false);
+    expect(hasUnsettledOrder(lines, [{ ...empty, doorstepGaps: [doorstep] }])).toBe(false);
   });
 });

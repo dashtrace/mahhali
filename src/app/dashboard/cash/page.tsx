@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/ui";
 import { pageActor } from "../../_server/session";
 import { DashIcon } from "../_components/DashIcon";
 import { dayMonthYear } from "../orders/_components/labels";
-import { openIssues } from "./openIssues";
+import { hasUnsettledOrder, openIssues } from "./openIssues";
 import { readPeriod } from "./period";
 import { PeriodForm } from "./PeriodForm";
 import { cash, remittanceHref, remittanceRef, reportedOf } from "./remittance";
@@ -255,6 +255,8 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
                       <td>
                         {gap ? (
                           <span className="mini-badge red">{fill(gap.diffMinor < 0n ? m.badgeShort : m.badgeOver, { amount: money(abs(gap.diffMinor)) })}</span>
+                        ) : hasUnsettledOrder(r.lines, rec.couriers) ? (
+                          <span className="mini-badge red">{m.needsReview}</span>
                         ) : (
                           <span className="mini-badge gray">{m.settled}</span>
                         )}
