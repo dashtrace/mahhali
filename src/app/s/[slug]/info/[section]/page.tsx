@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Icon, type IconName } from "@/components/Icon";
+import { Icon } from "@/components/Icon";
 import { ButtonLink, Card, EmptyState, FilterChip, cx } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { common } from "@/i18n/messages/common";
 import { storeMessages } from "@/i18n/messages/store";
-import { whatsappLink } from "@/lib/format";
 import { INFO_SECTIONS, ShopFrame } from "../../../../_storefront/ShopFrame";
 import { loadStore } from "../../_components/load";
-import { ShippingPolicy, TestimonialCard } from "../../_components/tiles";
+import { ContactList, ShippingPolicy, TestimonialCard } from "../../_components/tiles";
 import { FeedbackForm } from "./FeedbackForm";
 
 type Section = (typeof INFO_SECTIONS)[number];
@@ -81,46 +80,12 @@ export default async function InfoPage({ params }: Params) {
       </>
     );
   } else if (section === "contact") {
-    const socials = [
-      { network: t.instagram, href: shop.instagramUrl, icon: "instagram" as const, tile: "bg-[linear-gradient(45deg,#f9a03f,#d92e7f_55%,#7b3fe4)]" },
-      { network: t.facebook, href: shop.facebookUrl, icon: "facebook" as const, tile: "bg-[#1877f2]" },
-    ];
     content = (
       <>
         <h2 className={h2}>{m.contactHeading}</h2>
         <p className={body}>{fill(m.contactBody, { shop: shop.name })}</p>
         <h2 className={cx(h2, "mt-5")}>{m.followHeading}</h2>
-        <ul className="my-3.5 grid gap-2.5 min-[360px]:grid-cols-2">
-          {socials.map((s) => (
-            <li key={s.icon} className="flex">
-              {/* Defence in depth: the API only stores https links on the networks' own hosts. */}
-              {s.href?.startsWith("https://") ? (
-                <SocialCard
-                  href={s.href}
-                  label={`${fill(m.visitLabel, { network: s.network })} (${t.opensNewTab})`}
-                  icon={s.icon}
-                  tile={s.tile}
-                  title={s.network}
-                  sub={m.visitPage}
-                />
-              ) : (
-                <SocialCard label={fill(m.notConfiguredLabel, { network: s.network })} icon={s.icon} tile={s.tile} title={s.network} sub={m.notConfigured} />
-              )}
-            </li>
-          ))}
-          {shop.whatsappPhone && (
-            <li className="flex min-[360px]:col-span-2">
-              <SocialCard
-                href={whatsappLink(shop.whatsappPhone, t.whatsappGreeting)}
-                label={`${t.whatsappChat} (${t.opensNewTab})`}
-                icon="whatsapp"
-                tile="bg-sl-whatsapp"
-                title={t.whatsapp}
-                sub={m.messageThisShop}
-              />
-            </li>
-          )}
-        </ul>
+        <ContactList shop={shop} locale={locale} />
         <p className="text-xs leading-normal text-sl-muted">{m.contactNote}</p>
       </>
     );
@@ -157,30 +122,5 @@ export default async function InfoPage({ params }: Params) {
         <Card className="min-h-40 rounded-[17px] px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.035)] sm:px-6">{content}</Card>
       </div>
     </ShopFrame>
-  );
-}
-
-/** A contact channel tile: a link when the shop set it, otherwise a dimmed "not set up" card. */
-function SocialCard({ href, label, icon, tile, title, sub }: { href?: string; label: string; icon: IconName; tile: string; title: string; sub: string }) {
-  const inner = (
-    <>
-      <span aria-hidden className={cx("grid size-[30px] shrink-0 place-items-center rounded-[9px] text-white", tile)}>
-        <Icon name={icon} className="size-[18px]" />
-      </span>
-      <span className="min-w-0">
-        <span className="block break-words text-[13px] font-bold">{title}</span>
-        <span className="mt-0.5 block text-xs leading-tight text-sl-muted">{sub}</span>
-      </span>
-    </>
-  );
-  const box = "flex min-h-[60px] w-full items-center gap-2.5 rounded-sl border border-sl-border bg-sl-bg p-2.5 text-sl-fg";
-  return href ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className={cx(box, "transition hover:-translate-y-px hover:border-sl-accent")}>
-      {inner}
-    </a>
-  ) : (
-    <div role="img" aria-label={label} className={cx(box, "cursor-not-allowed opacity-60")}>
-      {inner}
-    </div>
   );
 }

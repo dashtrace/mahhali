@@ -4,7 +4,7 @@ import { Icon, type IconName } from "@/components/Icon";
 import { IconButtonLink, cx } from "@/components/ui";
 import { dirOf, fill, type Locale } from "@/i18n/locale";
 import { common, type CommonMessages } from "@/i18n/messages/common";
-import { whatsappLink } from "@/lib/format";
+import { httpsLink, whatsappLink } from "@/lib/format";
 import { themeTone, themeVars } from "../_server/theme";
 import { CartLink } from "./cart";
 import { playfair } from "./fonts";
@@ -29,9 +29,6 @@ export type FrameShop = {
 
 export const INFO_SECTIONS = ["about", "shipping", "contact", "feedback"] as const;
 const INFO_LABEL = { about: "infoAbout", shipping: "infoShipping", contact: "infoContact", feedback: "infoFeedback" } as const;
-
-// Defence in depth: the API only stores https links on allowlisted hosts.
-const https = (url: string | null | undefined) => (url && url.startsWith("https://") ? url : null);
 
 /**
  * The shop's own look and language around every public shop page: header with
@@ -257,8 +254,8 @@ function DrawerLinks({ shop, t }: { shop: FrameShop; t: CommonMessages }) {
 /** Instagram / Facebook / WhatsApp icon links, only those the shop set. */
 function Socials({ shop, t, whatsapp, className }: { shop: FrameShop; t: CommonMessages; whatsapp: string | null; className?: string }) {
   const links = [
-    { href: https(shop.instagramUrl), label: t.instagram, icon: "instagram" as const },
-    { href: https(shop.facebookUrl), label: t.facebook, icon: "facebook" as const },
+    { href: httpsLink(shop.instagramUrl), label: t.instagram, icon: "instagram" as const },
+    { href: httpsLink(shop.facebookUrl), label: t.facebook, icon: "facebook" as const },
     { href: whatsapp, label: t.whatsapp, icon: "whatsapp" as const },
   ].filter((l): l is { href: string; label: string; icon: "instagram" | "facebook" | "whatsapp" } => !!l.href);
   if (!links.length) return null;

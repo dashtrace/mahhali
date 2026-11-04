@@ -45,6 +45,9 @@ export function formatNumber(value: number, locale: Locale = "en", digits = 0): 
   return new Intl.NumberFormat(intl(locale), { maximumFractionDigits: digits }).format(value);
 }
 
+/** Defence in depth for owner links: the API only stores https links on allowlisted hosts. */
+export const httpsLink = (url: string | null | undefined) => (url?.startsWith("https://") ? url : null);
+
 /** "+96171123456" -> https://wa.me/96171123456 for the one-tap WhatsApp button. */
 export function whatsappLink(e164: string, text?: string): string {
   const base = `https://wa.me/${e164.replace(/\D/g, "")}`;
