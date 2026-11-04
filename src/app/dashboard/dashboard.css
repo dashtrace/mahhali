@@ -686,6 +686,9 @@
   .sl-dash .toolbar .control {
     width: auto;
   }
+  .sl-dash .toolbar .search .control {
+    width: 100%;
+  }
 
   /* Tabs. Selected: .selected / .active, or aria-current / aria-pressed on links and buttons. */
   .sl-dash .segbar {
