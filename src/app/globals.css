@@ -789,11 +789,11 @@
 }
 /* On home its svg has no viewBox: a thin plus, full size, clipped by a 17px box, so it sits low. */
 .sl-shop .sl-tile .sl-tile-add svg {
-  width: 24px;
-  height: 24px;
-  stroke-width: 1.75;
-  transform: translate(3.5px, 3.5px);
-  clip-path: inset(0 7px 7px 0);
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.4;
+  transform: none;
+  clip-path: none;
 }
 .sl-shop .sl-tile-add::after {
   content: "";
