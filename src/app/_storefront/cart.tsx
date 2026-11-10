@@ -93,7 +93,31 @@ export function setQty(slug: string, variantId: string, note: string | undefined
   const n = Math.min(Math.floor(qty), room);
   save(slug, n > 0 ? lines.map((l) => (l === line ? { ...l, qty: n } : l)) : lines.filter((l) => l !== line));
 }
+/** Updates a cart line's note without changing the total quantity. */
+export function updateLineNote(
+  slug: string,
+  variantId: string,
+  oldNote: string | undefined,
+  newNote: string
+): boolean {
+  const lines = current(slug);
+  const line = lines.find((l) => sameLine(l, variantId, oldNote));
 
+  if (!line) return false;
+
+  // Remove the original line, then add it with the updated note.
+  // If another line already has that note, the quantities merge.
+  const remaining = lines.filter((l) => l !== line);
+  const updated = withLine(remaining, {
+    ...line,
+    note: newNote,
+  });
+
+  if (updated.added !== line.qty) return false;
+
+  save(slug, updated.lines);
+  return true;
+}
 export function removeLine(slug: string, variantId: string, note?: string) {
   save(slug, current(slug).filter((l) => !sameLine(l, variantId, note)));
 }
