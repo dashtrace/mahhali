@@ -23,8 +23,8 @@ const SWIPE_PX = 38;
 const MAX_NOTE = 500;
 
 const variantName = (v: Variant, m: StoreMessages) => v.optionValues.filter(Boolean).join(" · ") || m.standard;
-/** "In stock" while at least MAX_QTY are left (the count is capped there), else how many are left. */
-const stockText = (v: Variant, m: StoreMessages) => (!v.inStock ? m.soldOut : v.left < MAX_QTY ? fill(m.onlyLeft, { n: v.left }) : m.inStock);
+const stockText = (v: Variant, m: StoreMessages) =>
+  v.inStock ? m.inStock : m.soldOut;
 /** The line under the quantity: what can still be added after the cart (the full count once it's all in the cart). */
 const stockLine = (v: Variant, inCart: number, m: StoreMessages) => {
   const n = leftAfterCart(v.left, inCart);
