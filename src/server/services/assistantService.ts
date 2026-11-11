@@ -1,10 +1,21 @@
+import { matchesSearch } from "../domain/arabic";
 import type { Currency } from "../domain/money";
 import { maskAddress, maskName, maskPhone, maskText } from "../domain/mask";
 import { notFound } from "../http/errors";
 import type { McpActor } from "../http/withRoute";
 import { formatMoney } from "@/lib/format";
-import type { ListOrdersToolInput, MyDeliveriesToolInput } from "../validation/mcp";
+import type {
+  ListOrdersToolInput,
+  ListProductsToolInput,
+  ListReviewsToolInput,
+  MyDeliveriesToolInput,
+  StockLevelsToolInput,
+} from "../validation/mcp";
 import { orderService } from "./orderService";
+import { productService } from "./productService";
+import { reviewService } from "./reviewService";
+import { shopService } from "./shopService";
+import { categoryService } from "./storefrontService";
 
 // What AI assistants (MCP tools) read. Each function calls the same service the
 // dashboard uses, then returns a compact view with customer details masked, so
@@ -101,6 +112,74 @@ export const assistantService = {
         ...orderView(o),
         failureReason: o.failureReason ? maskText(o.failureReason) : null,
         deliveredAt: o.deliveredAt,
+      })),
+    };
+  },
+
+  /** Products with their variants, prices and stock; search matches Arabic however it is typed. */
+  async listProducts(actor: McpActor, input: ListProductsToolInput) {
+    const [{ currency }, products, categories] = await Promise.all([
+      shopService.summary(actor),
+      productService.list(actor, { includeArchived: input.includeArchived }),
+      categoryService.list(actor),
+    ]);
+    const categoryName = new Map(categories.map((c) => [c.id, c.name]));
+    const matches = products.filter((p) => {
+      const category = p.categoryId ? (categoryName.get(p.categoryId) ?? "") : "";
+      if (input.category && !matchesSearch(category, input.category)) return false;
+      if (!input.search) return true;
+      const text = [p.name, p.description ?? "", category, ...p.variants.flatMap((v) => [v.sku ?? "", ...v.optionValues])].join(" ");
+      return matchesSearch(text, input.search);
+    });
+    return {
+      total: matches.length,
+      products: matches.slice(0, input.limit).map((p) => ({
+        id: p.id,
+        name: p.name,
+        status: p.status,
+        category: p.categoryId ? (categoryName.get(p.categoryId) ?? null) : null,
+        options: p.options,
+        rating: p.ratingCount > 0 ? { average: Number(p.ratingAvg), count: p.ratingCount } : null,
+        variants: p.variants
+          .filter((v) => !v.archived)
+          .map((v) => ({
+            options: v.optionValues,
+            sku: v.sku,
+            price: money(v.priceMinor, currency),
+            available: v.available,
+            reserved: v.reserved,
+          })),
+      })),
+    };
+  },
+
+  /** Variants of active products running low, lowest first. */
+  async stockLevels(actor: McpActor, input: StockLevelsToolInput) {
+    const products = await productService.list(actor, { includeArchived: false });
+    const low = products.flatMap((p) =>
+      p.variants
+        .filter((v) => !v.archived && v.available <= input.threshold)
+        .map((v) => ({ product: p.name, options: v.optionValues, sku: v.sku, available: v.available, reserved: v.reserved })),
+    );
+    low.sort((a, b) => a.available - b.available || a.product.localeCompare(b.product));
+    return { threshold: input.threshold, variants: low.slice(0, input.limit), total: low.length };
+  },
+
+  /** Customer reviews, newest first; the author's name and anything contact-like in the text are masked. */
+  async listReviews(actor: McpActor, input: ListReviewsToolInput) {
+    const reviews = (await reviewService.list(actor, input.status)).filter(
+      (r) => (input.maxRating === undefined || r.rating <= input.maxRating) && (input.minRating === undefined || r.rating >= input.minRating),
+    );
+    return {
+      total: reviews.length,
+      reviews: reviews.slice(0, input.limit).map((r) => ({
+        rating: r.rating,
+        comment: r.comment ? maskText(r.comment) : null,
+        author: maskName(r.authorName),
+        product: r.product.name,
+        orderNumber: r.order.number,
+        status: r.status,
+        createdAt: r.createdAt,
       })),
     };
   },

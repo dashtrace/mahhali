@@ -33,6 +33,28 @@ export const MyDeliveriesToolInput = z.strictObject({
   view: z.enum(["active", "done"]).default("active").describe("active: packed or out for delivery; done: delivered or returned in the last 7 days"),
 });
 
+export const ListProductsToolInput = z.strictObject({
+  search: z.string().trim().max(80).optional().describe("Words to find in the name, description, category, SKU or options; Arabic or English"),
+  category: z.string().trim().max(40).optional().describe("Only products in this category (by name)"),
+  includeArchived: z.boolean().default(false).describe("Also list archived products"),
+  limit: z.number().int().min(1).max(100).default(50),
+});
+
+export const StockLevelsToolInput = z.strictObject({
+  threshold: z.number().int().min(0).max(1000).default(3).describe("List variants with this many or fewer available"),
+  limit: z.number().int().min(1).max(200).default(50),
+});
+
+export const ListReviewsToolInput = z.strictObject({
+  status: z.enum(["PUBLISHED", "HIDDEN"]).optional(),
+  minRating: z.number().int().min(1).max(5).optional(),
+  maxRating: z.number().int().min(1).max(5).optional().describe("e.g. 2 to find unhappy customers"),
+  limit: z.number().int().min(1).max(100).default(30),
+});
+
 export type ListOrdersToolInput = z.infer<typeof ListOrdersToolInput>;
 export type GetOrderToolInput = z.infer<typeof GetOrderToolInput>;
 export type MyDeliveriesToolInput = z.infer<typeof MyDeliveriesToolInput>;
+export type ListProductsToolInput = z.infer<typeof ListProductsToolInput>;
+export type StockLevelsToolInput = z.infer<typeof StockLevelsToolInput>;
+export type ListReviewsToolInput = z.infer<typeof ListReviewsToolInput>;

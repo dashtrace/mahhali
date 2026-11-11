@@ -41,7 +41,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 - [x] **T10. Order tools:** `list_orders`, `get_order`, `my_deliveries`, with masked customers.
   - Integration: role access; shop A token can't see shop B orders; delivery sees only assigned orders; filters and paging; masking applied.
-- [ ] **T11. Catalogue tools:** `list_products` (Arabic search), `stock_levels`, `list_reviews`.
+- [x] **T11. Catalogue tools:** `list_products` (Arabic search), `stock_levels`, `list_reviews`.
   - Integration: role access, isolation, Arabic search, low-stock threshold, archived products only on request.
 - [ ] **T12. Finance tools:** `sales_metrics`, `cod_reconciliation`, `unsettled_cash`.
   - Integration: owner and manager only; numbers match the existing reporting and reconciliation services; USD and LBP formatting.
