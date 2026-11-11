@@ -52,9 +52,31 @@ export const ListReviewsToolInput = z.strictObject({
   limit: z.number().int().min(1).max(100).default(30),
 });
 
+export const SalesMetricsToolInput = z
+  .strictObject({
+    from: range.from.describe("First day, YYYY-MM-DD (UTC); 30 days before 'to' when left out"),
+    to: range.to.describe("Last day, YYYY-MM-DD (UTC); today when left out"),
+  })
+  .refine(fromNotAfterTo, rangeMessage);
+
+export const CodReconciliationToolInput = z
+  .strictObject({
+    from: range.from.describe("First day, YYYY-MM-DD (UTC); 30 days before 'to' when left out"),
+    to: range.to.describe("Last day, YYYY-MM-DD (UTC); today when left out"),
+    courierId: z.string().min(1).max(64).optional().describe("Only this courier (id from an earlier result)"),
+  })
+  .refine(fromNotAfterTo, rangeMessage);
+
+export const UnsettledCashToolInput = z.strictObject({
+  courierId: z.string().min(1).max(64).optional().describe("Only this courier (id from an earlier result)"),
+});
+
 export type ListOrdersToolInput = z.infer<typeof ListOrdersToolInput>;
 export type GetOrderToolInput = z.infer<typeof GetOrderToolInput>;
 export type MyDeliveriesToolInput = z.infer<typeof MyDeliveriesToolInput>;
 export type ListProductsToolInput = z.infer<typeof ListProductsToolInput>;
 export type StockLevelsToolInput = z.infer<typeof StockLevelsToolInput>;
 export type ListReviewsToolInput = z.infer<typeof ListReviewsToolInput>;
+export type SalesMetricsToolInput = z.infer<typeof SalesMetricsToolInput>;
+export type CodReconciliationToolInput = z.infer<typeof CodReconciliationToolInput>;
+export type UnsettledCashToolInput = z.infer<typeof UnsettledCashToolInput>;

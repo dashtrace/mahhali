@@ -43,7 +43,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
   - Integration: role access; shop A token can't see shop B orders; delivery sees only assigned orders; filters and paging; masking applied.
 - [x] **T11. Catalogue tools:** `list_products` (Arabic search), `stock_levels`, `list_reviews`.
   - Integration: role access, isolation, Arabic search, low-stock threshold, archived products only on request.
-- [ ] **T12. Finance tools:** `sales_metrics`, `cod_reconciliation`, `unsettled_cash`.
+- [x] **T12. Finance tools:** `sales_metrics`, `cod_reconciliation`, `unsettled_cash`.
   - Integration: owner and manager only; numbers match the existing reporting and reconciliation services; USD and LBP formatting.
 - [ ] **T13. Cross-cutting checks.**
   - Integration: one generated test calls every tool as every role and checks allow/deny against `canUseTool`; one test scans every read tool's output and finds no full phone number or email.

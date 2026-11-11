@@ -1,6 +1,7 @@
 import type { McpTool } from "../../domain/mcpPolicy";
 import type { ToolDef } from "../defineTool";
 import { listProducts, listReviews, stockLevels } from "./catalogue";
+import { codReconciliation, salesMetrics, unsettledCash } from "./finance";
 import { getOrder, listOrders, myDeliveries } from "./orders";
 import { shopInfo } from "./shop";
 
@@ -14,4 +15,7 @@ export const TOOLS: Partial<Record<McpTool, ToolDef<any>>> = {
   list_products: listProducts,
   stock_levels: stockLevels,
   list_reviews: listReviews,
+  sales_metrics: salesMetrics,
+  cod_reconciliation: codReconciliation,
+  unsettled_cash: unsettledCash,
 };

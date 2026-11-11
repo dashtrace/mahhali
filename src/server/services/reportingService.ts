@@ -61,6 +61,24 @@ export const reportingService = {
     };
   },
 
+  /** Delivered orders in the period: count, revenue and the items that sold most. */
+  async sales(actor: Actor, query: PeriodInput) {
+    const shop = await requireShop(actor);
+    const period = periodOf(query.from, query.to, new Date());
+    const [totals, top] = await Promise.all([
+      reportingRepo.deliveredTotals(shop.id, period),
+      reportingRepo.topItems(shop.id, period, 5),
+    ]);
+    return {
+      from: period.from,
+      to: period.to,
+      currency: shop.currency,
+      deliveredOrders: totals._count._all,
+      revenueMinor: totals._sum.totalMinor ?? 0n,
+      topItems: top.map((t) => ({ name: t.nameSnapshot, qty: t._sum.qty ?? 0 })),
+    };
+  },
+
   async metrics(actor: Actor, query: PeriodInput) {
     const shop = await requireShop(actor);
     const now = new Date();

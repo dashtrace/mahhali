@@ -58,6 +58,26 @@ export const reportingRepo = {
     return _min.createdAt;
   },
 
+  /** Orders delivered in the range: how many and what they came to. */
+  deliveredTotals(shopId: string, range: Range, client: Db = db) {
+    return client.order.aggregate({
+      where: { shopId, status: "DELIVERED", deliveredAt: { gte: range.start, lt: range.end } },
+      _count: { _all: true },
+      _sum: { totalMinor: true },
+    });
+  },
+
+  /** Items on orders delivered in the range, most sold first. */
+  topItems(shopId: string, range: Range, take: number, client: Db = db) {
+    return client.orderItem.groupBy({
+      by: ["nameSnapshot"],
+      where: { shopId, order: { shopId, status: "DELIVERED", deliveredAt: { gte: range.start, lt: range.end } } },
+      _sum: { qty: true },
+      orderBy: { _sum: { qty: "desc" } },
+      take,
+    });
+  },
+
   /** First contact and confirmation times of the range's confirmed orders. */
   confirmations(shopId: string, range: Range, client: Db = db) {
     return client.order.findMany({

@@ -5,14 +5,20 @@ import { notFound } from "../http/errors";
 import type { McpActor } from "../http/withRoute";
 import { formatMoney } from "@/lib/format";
 import type {
+  CodReconciliationToolInput,
   ListOrdersToolInput,
   ListProductsToolInput,
   ListReviewsToolInput,
   MyDeliveriesToolInput,
+  SalesMetricsToolInput,
   StockLevelsToolInput,
+  UnsettledCashToolInput,
 } from "../validation/mcp";
+import { courierService } from "./courierService";
 import { orderService } from "./orderService";
 import { productService } from "./productService";
+import { remittanceService } from "./remittanceService";
+import { reportingService } from "./reportingService";
 import { reviewService } from "./reviewService";
 import { shopService } from "./shopService";
 import { categoryService } from "./storefrontService";
@@ -182,5 +188,74 @@ export const assistantService = {
         createdAt: r.createdAt,
       })),
     };
+  },
+
+  /** Orders, delivered revenue, best sellers, confirmation speed and cash-on-delivery gaps for a period. */
+  async salesMetrics(actor: McpActor, input: SalesMetricsToolInput) {
+    const [metrics, sales] = await Promise.all([reportingService.metrics(actor, input), reportingService.sales(actor, input)]);
+    return {
+      from: metrics.from,
+      to: metrics.to,
+      ordersCreated: metrics.ordersCreated,
+      ordersPerDay: Math.round(metrics.ordersPerDay * 10) / 10,
+      ordersByStatus: metrics.ordersByStatus,
+      medianConfirmMinutes: metrics.medianConfirmMinutes,
+      delivered: { orders: sales.deliveredOrders, revenue: money(sales.revenueMinor, sales.currency) },
+      topItems: sales.topItems,
+      codGaps: { count: metrics.codGaps.count, amount: money(metrics.codGaps.sumMinor, sales.currency) },
+    };
+  },
+
+  /** Cash on delivery per courier: what was due, what was handed over, and where it does not match. */
+  async codReconciliation(actor: McpActor, input: CodReconciliationToolInput) {
+    const r = await reportingService.reconciliation(actor, input);
+    const m = (minor: bigint) => money(minor, r.currency);
+    const received = (x: { usdCents: bigint; lbp: bigint }) => ({ usd: money(x.usdCents, "USD"), lbp: money(x.lbp, "LBP") });
+    return {
+      from: r.from,
+      to: r.to,
+      totals: {
+        due: m(r.totals.expectedMinor),
+        received: received(r.totals.received),
+        receivedInShopCurrency: m(r.totals.receivedMinor),
+        gaps: { count: r.totals.gaps.count, amount: m(r.totals.gaps.sumMinor) },
+      },
+      couriers: r.couriers.map((c) => ({
+        courier: { id: c.courierId, name: c.courierName },
+        due: m(c.expectedMinor),
+        received: received(c.received),
+        gaps: { count: c.gaps.count, amount: m(c.gaps.sumMinor) },
+        unpaid: c.unpaid.slice(0, 20).map((u) => ({ order: u.number, due: m(u.dueMinor), daysOutstanding: u.daysOutstanding })),
+        shortOrOver: c.shortOrOver.slice(0, 20).map((g) => ({ order: g.number, due: m(g.dueMinor), paid: m(g.paidMinor), difference: m(g.diffMinor) })),
+        paidButNotDelivered: c.notDeliveredButPaid.slice(0, 20).map((g) => ({ order: g.number, status: g.status, paid: m(g.paidMinor) })),
+      })),
+    };
+  },
+
+  /** Delivered orders whose cash a courier has not handed over yet, per courier (deactivated couriers included). */
+  async unsettledCash(actor: McpActor, input: UnsettledCashToolInput) {
+    const couriers = (await courierService.list(actor, {})).filter((c) => !input.courierId || c.id === input.courierId);
+    if (input.courierId && couriers.length === 0) throw notFound("Courier");
+    const owing = await Promise.all(
+      couriers.map(async (c) => {
+        const orders = await remittanceService.unsettled(actor, c.id);
+        const due = new Map<Currency, bigint>();
+        for (const o of orders) due.set(o.currency, (due.get(o.currency) ?? 0n) + o.codMinor);
+        return {
+          courier: { id: c.id, name: c.name, active: c.active },
+          orderCount: orders.length,
+          due: [...due].map(([currency, minor]) => money(minor, currency)),
+          orders: orders.slice(0, 50).map((o) => ({
+            order: o.number,
+            deliveredAt: o.deliveredAt,
+            due: money(o.codMinor, o.currency),
+            reportedAtDoor: o.reportedUsdCents !== null || o.reportedLbp !== null
+              ? { usd: money(o.reportedUsdCents ?? 0n, "USD"), lbp: money(o.reportedLbp ?? 0n, "LBP") }
+              : null,
+          })),
+        };
+      }),
+    );
+    return { couriers: owing.filter((c) => c.orderCount > 0) };
   },
 };
