@@ -23,7 +23,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 2. OAuth server
 
-- [ ] **T5. Schema and migration.** Plugin tables (`oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`), `productImport`, `mcpToolCall`, `product.importId`; regenerate ERD.
+- [x] **T5. Schema and migration.** Plugin tables (`oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`), `productImport`, `mcpToolCall`, `product.importId`; regenerate ERD.
   - Integration: migration applies on the test DB; `npm run erd` leaves no diff.
 - [ ] **T6. Plugin and discovery.** Configure the plugin in `auth.ts` (opaque tokens, dynamic registration, PKCE, 1 h access / 30 d refresh), allow only the OAuth paths in the `before` hook, add `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`.
   - Integration: metadata documents have the right issuer, endpoints and scopes; a client can register; the organization and admin endpoints still return 404 (extends `auth-endpoints.test.ts`).

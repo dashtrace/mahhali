@@ -8,40 +8,47 @@ datasource db {
 }
 
 model User {
-  id              String          @id
-  name            String
-  email           String
-  emailVerified   Boolean         @default(false)
-  image           String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  role            String?
-  banned          Boolean?        @default(false)
-  banReason       String?
-  banExpires      DateTime?
-  sessions        Session[]
-  accounts        Account[]
-  memberships     Membership[]
-  invitations     Invitation[]
-  deliveredOrders Order[]         @relation("DeliveredBy")
-  adminActions    AdminAuditLog[]
+  id                 String              @id
+  name               String
+  email              String
+  emailVerified      Boolean             @default(false)
+  image              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  role               String?
+  banned             Boolean?            @default(false)
+  banReason          String?
+  banExpires         DateTime?
+  sessions           Session[]
+  accounts           Account[]
+  memberships        Membership[]
+  invitations        Invitation[]
+  deliveredOrders    Order[]             @relation("DeliveredBy")
+  adminActions       AdminAuditLog[]
+  oauthClients       OauthClient[]
+  oauthRefreshTokens OauthRefreshToken[]
+  oauthAccessTokens  OauthAccessToken[]
+  oauthConsents      OauthConsent[]
+  productImports     ProductImport[]
 
   @@unique([email])
   @@map("user")
 }
 
 model Session {
-  id             String   @id
-  expiresAt      DateTime
-  token          String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  ipAddress      String?
-  userAgent      String?
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  activeShopId   String?
-  impersonatedBy String?
+  id                 String              @id
+  expiresAt          DateTime
+  token              String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  ipAddress          String?
+  userAgent          String?
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeShopId       String?
+  impersonatedBy     String?
+  oauthRefreshTokens OauthRefreshToken[]
+  oauthAccessTokens  OauthAccessToken[]
 
   @@unique([token])
   @@index([userId])
@@ -143,6 +150,8 @@ model Shop {
   heroSlides             HeroSlide[]
   categories             Category[]
   testimonials           Testimonial[]
+  productImports         ProductImport[]
+  mcpToolCalls           McpToolCall[]
 
   @@unique([slug])
   @@map("shop")
@@ -262,6 +271,9 @@ model Product {
   customMaxLength   Int            @default(240)
   /// Option names, e.g. ["Size", "Colour"] or ["SPF"]; at most 3 (CHECK in the migration).
   options           String[]       @default([])
+  /// The AI-assistant or CSV import that created it; undo archives exactly these.
+  importId          String?
+  import            ProductImport? @relation(fields: [importId], references: [id], onDelete: SetNull)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   variants          Variant[]
@@ -269,6 +281,7 @@ model Product {
   reviews           Review[]
 
   @@index([shopId, status])
+  @@index([importId])
   @@map("product")
 }
 
@@ -596,4 +609,259 @@ model AdminAuditLog {
 
   @@index([at])
   @@map("admin_audit_log")
+}
+
+// ---------------------------------------------------------------------------
+// OAuth 2.1 provider (@better-auth/oauth-provider). Claude and ChatGPT register
+// here as clients; shop members connect them to one shop. The plugin owns the
+// shape of these tables. referenceId on consents and tokens holds the shopId
+// the user picked when connecting.
+
+model OauthClient {
+  id                               String                @id
+  clientId                         String                @unique
+  clientSecret                     String?
+  clientDiscoveryId                String?
+  disabled                         Boolean?              @default(false)
+  skipConsent                      Boolean?
+  enableEndSession                 Boolean?
+  subjectType                      String?
+  scopes                           String[]
+  clientCredentialsScopes          String[]              @default([])
+  /// Null for clients that registered themselves (Claude, ChatGPT).
+  userId                           String?
+  user                             User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                        DateTime?
+  updatedAt                        DateTime?
+  name                             String?
+  uri                              String?
+  icon                             String?
+  contacts                         String[]
+  tos                              String?
+  policy                           String?
+  softwareId                       String?
+  softwareVersion                  String?
+  softwareStatement                String?
+  redirectUris                     String[]
+  postLogoutRedirectUris           String[]
+  backchannelLogoutUri             String?
+  backchannelLogoutSessionRequired Boolean?
+  tokenEndpointAuthMethod          String?
+  applicationType                  String?
+  jwks                             String?
+  jwksUri                          String?
+  grantTypes                       String[]
+  responseTypes                    String[]
+  requirePKCE                      Boolean?
+  dpopBoundAccessTokens            Boolean?              @default(false)
+  referenceId                      String?
+  metadata                         Json?
+  resources                        OauthClientResource[]
+  refreshTokens                    OauthRefreshToken[]
+  accessTokens                     OauthAccessToken[]
+  consents                         OauthConsent[]
+
+  @@index([userId])
+  @@map("oauth_client")
+}
+
+/// A protected API. We have one: the MCP endpoint, seeded from the plugin config.
+model OauthResource {
+  id                            String                @id
+  identifier                    String                @unique
+  name                          String
+  accessTokenTtl                Int?
+  refreshTokenTtl               Int?
+  signingAlgorithm              String?
+  signingKeyId                  String?
+  allowedScopes                 String[]
+  customClaims                  Json?
+  dpopBoundAccessTokensRequired Boolean?              @default(false)
+  disabled                      Boolean?              @default(false)
+  createdAt                     DateTime?
+  updatedAt                     DateTime?
+  policyVersion                 Int?                  @default(1)
+  metadata                      Json?
+  clients                       OauthClientResource[]
+
+  @@map("oauth_resource")
+}
+
+model OauthClientResource {
+  id         String        @id
+  clientId   String
+  client     OauthClient   @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  resourceId String
+  resource   OauthResource @relation(fields: [resourceId], references: [identifier], onDelete: Cascade)
+  metadata   Json?
+  createdAt  DateTime?
+
+  @@unique([clientId, resourceId])
+  @@index([resourceId])
+  @@map("oauth_client_resource")
+}
+
+model OauthRefreshToken {
+  id                      String             @id
+  /// SHA-256 of the token, never the token itself.
+  token                   String             @unique
+  clientId                String
+  client                  OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?
+  session                 Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String
+  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The shop this connection is for.
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  expiresAt               DateTime
+  createdAt               DateTime
+  revoked                 DateTime?
+  rotatedAt               DateTime?
+  rotationReplayResponse  String?
+  rotationReplayExpiresAt DateTime?
+  authTime                DateTime?
+  confirmation            Json?
+  scopes                  String[]
+  accessTokens            OauthAccessToken[]
+
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@index([referenceId])
+  @@map("oauth_refresh_token")
+}
+
+model OauthAccessToken {
+  id                      String             @id
+  /// SHA-256 of the token, never the token itself. Looked up on every MCP call.
+  token                   String             @unique
+  clientId                String
+  client                  OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?
+  session                 Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String?
+  user                    User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The shop this connection is for.
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  refreshId               String?
+  refresh                 OauthRefreshToken? @relation(fields: [refreshId], references: [id], onDelete: Cascade)
+  expiresAt               DateTime
+  createdAt               DateTime
+  revoked                 DateTime?
+  confirmation            Json?
+  scopes                  String[]
+
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@index([refreshId])
+  @@index([referenceId])
+  @@map("oauth_access_token")
+}
+
+model OauthConsent {
+  id                      String      @id
+  clientId                String
+  client                  OauthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  userId                  String?
+  user                    User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The shop the user approved access to.
+  referenceId             String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  scopes                  String[]
+  createdAt               DateTime
+  updatedAt               DateTime
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([referenceId])
+  @@map("oauth_consent")
+}
+
+/// Replay protection for private_key_jwt client assertions; unused by our clients but part of the plugin schema.
+model OauthClientAssertion {
+  id        String   @id
+  expiresAt DateTime
+
+  @@map("oauth_client_assertion")
+}
+
+// ---------------------------------------------------------------------------
+// AI assistants (MCP)
+
+enum ImportSource {
+  MCP
+  DASHBOARD
+}
+
+enum ImportStatus {
+  /// Waiting for the user to confirm; expires at expiresAt.
+  PREVIEWED
+  /// The user asked for changes and a newer preview took its place.
+  SUPERSEDED
+  CONFIRMED
+  UNDONE
+}
+
+/// A bulk product import: the preview a user reviews, then the products it created.
+model ProductImport {
+  id           String       @id @default(cuid())
+  shopId       String
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source       ImportSource
+  status       ImportStatus @default(PREVIEWED)
+  /// The validated products, ready to create.
+  rows         Json
+  /// What the user was shown: per-row problems, duplicates, new categories.
+  report       Json
+  productCount Int
+  variantCount Int
+  expiresAt    DateTime
+  confirmedAt  DateTime?
+  undoneAt     DateTime?
+  createdAt    DateTime     @default(now())
+  products     Product[]
+
+  @@index([shopId, userId, status])
+  @@map("product_import")
+}
+
+enum McpOutcome {
+  OK
+  /// The role or the granted scopes do not allow the tool.
+  DENIED
+  /// The input failed validation.
+  INVALID
+  /// Any other error (not found, conflict, internal).
+  ERROR
+}
+
+/// One row per MCP tool call. Never stores the call's input or output.
+model McpToolCall {
+  id         String     @id @default(cuid())
+  shopId     String
+  shop       Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  userId     String
+  /// OauthClient.clientId; no FK so the log outlives a deleted client.
+  clientId   String
+  tool       String
+  outcome    McpOutcome
+  errorCode  String?
+  durationMs Int
+  createdAt  DateTime   @default(now())
+
+  @@index([shopId, createdAt])
+  @@index([userId, clientId, createdAt])
+  @@map("mcp_tool_call")
 }
