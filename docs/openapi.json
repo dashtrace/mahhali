@@ -7050,6 +7050,78 @@
           }
         }
       }
+    },
+    "/.well-known/oauth-authorization-server": {
+      "get": {
+        "summary": "OAuth authorization server metadata (RFC 8414)",
+        "tags": [
+          "AI assistants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Issuer, endpoints, scopes and supported grants",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-authorization-server/api/auth": {
+      "get": {
+        "summary": "OAuth authorization server metadata (RFC 8414)",
+        "tags": [
+          "AI assistants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Issuer, endpoints, scopes and supported grants",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "summary": "Protected resource metadata for /api/mcp (RFC 9728)",
+        "tags": [
+          "AI assistants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource, authorization server and scopes",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-protected-resource/api/mcp": {
+      "get": {
+        "summary": "Protected resource metadata for /api/mcp (RFC 9728)",
+        "tags": [
+          "AI assistants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource, authorization server and scopes",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {}

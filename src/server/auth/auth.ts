@@ -3,7 +3,9 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin, organization } from "better-auth/plugins";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { prisma } from "../db";
+import { OAUTH_HTTP_PATHS, OAUTH_SCOPES, hashOAuthToken, mcpResourceUrl } from "./oauth";
 import { ac, shopRoles } from "./permissions";
 
 /**
@@ -11,7 +13,7 @@ import { ac, shopRoles } from "./permissions";
  * the organization and admin plugin endpoints) would bypass our policy, so it
  * is reachable only from our own services through auth.api.
  */
-const PUBLIC_AUTH_PATHS = new Set(["/sign-in/email", "/sign-out", "/get-session", "/ok", "/error"]);
+const PUBLIC_AUTH_PATHS = new Set(["/sign-in/email", "/sign-out", "/get-session", "/ok", "/error", ...OAUTH_HTTP_PATHS]);
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
@@ -37,6 +39,27 @@ export const auth = betterAuth({
       },
     }),
     admin(),
+    // AI assistants (Claude, ChatGPT) connecting to /api/mcp. See oauth.ts.
+    oauthProvider({
+      loginPage: "/login",
+      consentPage: "/connect/consent",
+      scopes: OAUTH_SCOPES,
+      clientRegistrationDefaultScopes: OAUTH_SCOPES,
+      clientRegistrationAllowedScopes: OAUTH_SCOPES,
+      // Assistants register themselves (RFC 7591) without an account here.
+      allowDynamicClientRegistration: true,
+      allowUnauthenticatedClientRegistration: true,
+      // Desktop and CLI assistants use loopback callbacks without saying they are native apps.
+      clientRegistrationDefaultApplicationType: "infer",
+      resources: [{ identifier: mcpResourceUrl(), name: "Mahhali MCP", allowedScopes: OAUTH_SCOPES }],
+      clientRegistrationDefaultResources: [mcpResourceUrl()],
+      // Opaque tokens checked against the database on every call, so a revoke
+      // or a role change applies at once. No JWT signing keys to manage.
+      disableJwtPlugin: true,
+      storeTokens: { hash: (token) => hashOAuthToken(token) },
+      accessTokenExpiresIn: 60 * 60,
+      refreshTokenExpiresIn: 30 * 24 * 60 * 60,
+    }),
     nextCookies(),
   ],
 });
