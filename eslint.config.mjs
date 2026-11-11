@@ -35,5 +35,24 @@ const config = [
       ],
     },
   },
+  {
+    // MCP tools are routes for AI assistants: they go through services too.
+    files: ["src/server/mcp/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            { name: "@prisma/client", message: "Use a service instead." },
+            { name: "@/server/db", message: "Use a service instead." },
+          ],
+          patterns: [
+            { group: ["**/repositories/*", "@/server/repositories/*"], message: "Call a service instead." },
+            { group: ["**/db", "**/server/db"], message: "Use a service instead." },
+          ],
+        },
+      ],
+    },
+  },
 ];
 export default config;

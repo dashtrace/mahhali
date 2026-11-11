@@ -44,6 +44,12 @@ function brandingOf(shop: Shop) {
 
 // Shop settings, theme and logo: owner only (shop.settings).
 export const shopService = {
+  /** What any member may know about the shop they act for (shown to AI assistants as shop_info). */
+  async summary(actor: Actor) {
+    const shop = await load(actor);
+    return { name: shop.name, slug: shop.slug, currency: shop.currency, usdLbpRate: shop.usdLbpRate, language: shop.language };
+  },
+
   async settings(actor: Actor) {
     return settingsOf(await load(actor));
   },

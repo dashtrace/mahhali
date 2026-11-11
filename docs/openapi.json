@@ -16,6 +16,24 @@
         "type": "apiKey",
         "in": "header",
         "name": "x-cron-secret"
+      },
+      "mcpOAuth": {
+        "type": "oauth2",
+        "description": "Access tokens for AI assistants, bound to one shop. Clients register themselves (RFC 7591) and must use PKCE.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "/api/auth/oauth2/authorize",
+            "tokenUrl": "/api/auth/oauth2/token",
+            "refreshUrl": "/api/auth/oauth2/token",
+            "scopes": {
+              "orders:read": "See orders and deliveries",
+              "catalogue:read": "See products, stock and reviews",
+              "catalogue:write": "Add products (preview, confirm, undo)",
+              "finance:read": "See sales and cash on delivery",
+              "offline_access": "Stay connected with a refresh token"
+            }
+          }
+        }
       }
     },
     "schemas": {
@@ -7054,6 +7072,80 @@
           },
           "429": {
             "description": "Too many attempts; see the retry-after header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp": {
+      "post": {
+        "summary": "MCP endpoint (Streamable HTTP, stateless JSON-RPC) for AI assistants",
+        "description": "Tools are listed per connection: only those the member's role and the granted scopes allow.",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "mcpOAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Body is not JSON (JSON-RPC parse error)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token missing, expired or revoked; WWW-Authenticate points to the resource metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No longer a member of the shop, or the shop is suspended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "GET and DELETE: no event stream or session in stateless mode",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many calls from this connection",
             "content": {
               "application/json": {
                 "schema": {
