@@ -7,6 +7,8 @@ import { getLocale } from "@/i18n/server";
 import { can, type Action } from "@/server/domain/policy";
 import { accountService } from "@/server/services/accountService";
 import { reportingService } from "@/server/services/reportingService";
+import { testimonialService } from "@/server/services/storefrontService";
+import { orderService } from "@/server/services/orderService";
 import { fill } from "@/i18n/locale";
 import { pageActor, signedInUser } from "../_server/session";
 import { DashIcon, type DashIconName } from "./_components/DashIcon";
@@ -57,11 +59,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = await signedInUser();
   if (!user) return children;
   const actor = await pageActor("order.readAssigned", "/dashboard");
-  const [me, locale, reconciliation] = await Promise.all([
+  const [me, locale, reconciliation, orderCounts, pendingFeedback] = await Promise.all([
     accountService.me(actor),
     getLocale(),
     // The Cash page's default period, so the chip and the page's first view agree.
     can(actor.role, "reconciliation.read") ? reportingService.reconciliation(actor, {}) : null,
+    can(actor.role, "order.read") ? orderService.statusCounts(actor) : null,
+    can(actor.role, "review.read") ? testimonialService.pendingCount(actor) : 0,
   ]);
   const t = common[locale];
   const allowed = (s: Section) => can(actor.role, s.action);
@@ -69,7 +73,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const issuesLabel = issues === 1 ? t.navIssuesOne : issues ? fill(t.navIssues, { n: issues }) : undefined;
   const groups: NavGroup[] = GROUPS.map((g) => ({
     title: t[g.title],
-    items: g.sections.filter(allowed).map((s) => ({ href: s.href, label: t[s.key], icon: s.icon, count: s.href === "/dashboard/cash" ? issuesLabel : undefined })),
+    items: g.sections.filter(allowed).map((s) => ({
+      href: s.href,
+      label: t[s.key],
+      icon: s.icon,
+      count: s.href === "/dashboard/cash" ? issuesLabel : s.href === "/dashboard" && orderCounts?.NEW ? String(orderCounts.NEW) : s.href === "/dashboard/reviews" && pendingFeedback ? String(pendingFeedback) : undefined,
+      countTone: s.href === "/dashboard/cash" ? "warning" as const : "notification" as const,
+    })),
   })).filter((g) => g.items.length > 0);
   if (user?.isAdmin) groups.push({ title: t.navGroupPlatform, items: [{ href: "/admin", label: t.navAdmin, icon: "shield" }] });
   const tabs = TODAY.filter(allowed).map((s) => ({ href: s.href, label: t[s.tab ?? s.key], icon: s.icon }));
