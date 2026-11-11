@@ -8,6 +8,7 @@ import { can, type Action } from "@/server/domain/policy";
 import { accountService } from "@/server/services/accountService";
 import { reportingService } from "@/server/services/reportingService";
 import { testimonialService } from "@/server/services/storefrontService";
+import { reviewService } from "@/server/services/reviewService";
 import { orderService } from "@/server/services/orderService";
 import { fill } from "@/i18n/locale";
 import { pageActor, signedInUser } from "../_server/session";
@@ -65,7 +66,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // The Cash page's default period, so the chip and the page's first view agree.
     can(actor.role, "reconciliation.read") ? reportingService.reconciliation(actor, {}) : null,
     can(actor.role, "order.read") ? orderService.statusCounts(actor) : null,
-    can(actor.role, "review.read") ? testimonialService.pendingCount(actor) : 0,
+    can(actor.role, "review.read")
+      ? Promise.all([testimonialService.pendingCount(actor), reviewService.pendingCount(actor)]).then(([testimonials, products]) => testimonials + products)
+      : 0,
   ]);
   const t = common[locale];
   const allowed = (s: Section) => can(actor.role, s.action);

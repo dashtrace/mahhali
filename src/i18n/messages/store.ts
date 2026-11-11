@@ -304,9 +304,9 @@ export const storeMessages = defineMessages({
     yourFeedback: "Your feedback",
     feedbackPlaceholder: "Tell us about your experience...",
     feedbackTooShort: "Write at least 10 characters.",
-    consent: "I allow this shop to show my name and feedback on its website once the shop approves it.",
+    consent: "I allow my name and feedback to appear on this website.",
     sendFeedback: "Send feedback",
-    feedbackSent: "Thank you! Your feedback was sent and will appear once the shop approves it.",
+    feedbackSent: "Thank you for sharing your feedback!",
   },
   ar: {
     landingTitle: "متجرك على إنستغرام، منظَّم",
@@ -595,9 +595,9 @@ export const storeMessages = defineMessages({
     yourFeedback: "رأيك",
     feedbackPlaceholder: "أخبرنا عن تجربتك...",
     feedbackTooShort: "اكتب 10 أحرف على الأقل.",
-    consent: "أسمح لهذا المتجر بعرض اسمي ورأيي على موقعه الإلكتروني بعد موافقته عليه.",
+    consent: "أوافق على ظهور اسمي ورأيي على هذا الموقع الإلكتروني.",
     sendFeedback: "إرسال الرأي",
-    feedbackSent: "شكراً لك! أُرسل رأيك وسيظهر بعد موافقة المتجر عليه.",
+    feedbackSent: "شكراً لمشاركتنا رأيك!",
   },
 });
 
