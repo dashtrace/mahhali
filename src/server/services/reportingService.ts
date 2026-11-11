@@ -2,7 +2,7 @@ import { notFound } from "../http/errors";
 import type { Actor } from "../http/withRoute";
 import { medianConfirmMinutes, ordersPerDay, periodOf, type Period } from "../domain/metrics";
 import { ORDER_STATUSES } from "../domain/orderStatus";
-import { reconcile, type ReconcileLine, type ReconcileOrder } from "../domain/reconcile";
+import { reconcile, openCashExposure, type ReconcileLine, type ReconcileOrder } from "../domain/reconcile";
 import { reportingRepo } from "../repositories/reportingRepo";
 import { shopRepo } from "../repositories/shopRepo";
 import type { CourierPeriodInput, PeriodInput } from "../validation/money";
@@ -30,7 +30,15 @@ async function reconcileShop(shop: Shop, period: Period, courierId: string | und
     ),
     ...remittances.flatMap((r) => r.lines.map((l) => ({ ...l, courierId: r.courierId, order: toOrder(l.order) }))),
   ];
-  return reconcile({
+  const [supplements, acceptedRemittances, acceptedOrders] = await reportingRepo.cashAdjustments(
+    shop.id,
+    remittances.map((r) => r.id),
+    [...new Set([...delivered.map((o) => o.id), ...lines.map((l) => l.order.id)])],
+  );
+  const result = reconcile({
+    supplements,
+    acceptedRemittanceIds: acceptedRemittances.map((r) => r.remittanceId),
+    acceptedOrderIds: acceptedOrders.map((r) => r.orderId),
     currency: shop.currency,
     rate: shop.usdLbpRate?.toString() ?? null,
     toleranceMinor: shop.codToleranceMinor,
@@ -39,6 +47,7 @@ async function reconcileShop(shop: Shop, period: Period, courierId: string | und
     remittances,
     lines,
   });
+  return { ...result, acceptedOrderDecisions: acceptedOrders };
 }
 
 export const reportingService = {
@@ -58,6 +67,7 @@ export const reportingService = {
         .map((c) => ({ ...c, courierName: couriers.get(c.courierId) ?? null }))
         .sort((a, b) => (a.courierName ?? "").localeCompare(b.courierName ?? "")),
       totals: result.totals,
+      acceptedOrderDecisions: result.acceptedOrderDecisions,
     };
   },
 
@@ -81,7 +91,7 @@ export const reportingService = {
       ordersCreated: created,
       ordersPerDay: ordersPerDay(created, period, openedAt, now),
       ordersByStatus: Object.fromEntries(ORDER_STATUSES.map((s) => [s, counts.get(s) ?? 0])),
-      codGaps: cod.totals.gaps,
+      codGaps: openCashExposure(cod.couriers),
       // The "before" numbers the owner gave at sign-up.
       baseline: { ordersPerDay: shop.baselineOrdersPerDay, confirmMinutes: shop.baselineConfirmMinutes },
     };

@@ -58,12 +58,14 @@ export const remittanceService = {
           } catch {
             throw unprocessable("INVALID_AMOUNT", "Fees in pounds must be whole pounds.");
           }
-          return {
-            orderId: l.orderId,
-            collectedUsdCents: toMinor(l.collectedUsd, "USD"),
-            collectedLbp: BigInt(l.collectedLbp),
-            feeMinor,
-          };
+          const order = orders.get(l.orderId)!;
+          const reported = order.reportedUsdCents !== null || order.reportedLbp !== null;
+          const usd = reported ? order.reportedUsdCents ?? 0n : order.currency === "USD" ? order.codMinor : 0n;
+          const lbp = reported ? order.reportedLbp ?? 0n : order.currency === "LBP" ? order.codMinor : 0n;
+          if (toMinor(l.collectedUsd, "USD") !== usd || BigInt(l.collectedLbp) !== lbp) {
+            throw unprocessable("REPORTED_CASH_LOCKED", "Collected amounts must match the recorded delivery.");
+          }
+          return { orderId: l.orderId, collectedUsdCents: usd, collectedLbp: lbp, feeMinor };
         });
         return remittanceRepo.create(tx, actor.shopId, {
           courierId: input.courierId,
@@ -99,5 +101,47 @@ export const remittanceService = {
   async unsettled(actor: Actor, courierId: string) {
     await this.requireCourier(actor, courierId);
     return remittanceRepo.unsettled(actor.shopId, courierId);
+  },
+
+  /** The original remittance remains unchanged; each later receipt is append-only. */
+  async addPayment(actor: Actor, id: string, data: { amountUsd: string; amountLbp: string; reason: string; requestKey: string }) {
+    const r = await this.get(actor, id);
+    const earlier = await remittanceRepo.findSupplementByKey(actor.shopId, data.requestKey);
+    if (earlier) {
+      if (earlier.remittanceId !== id || earlier.amountUsdCents !== toMinor(data.amountUsd, "USD") || earlier.amountLbp !== BigInt(data.amountLbp))
+        throw conflict("REQUEST_KEY_REUSED", "This payment key was already used for a different payment.");
+      return earlier;
+    }
+    if (r.resolution) throw conflict("ACCEPTED", "This discrepancy was already accepted.");
+    const usd = toMinor(data.amountUsd, "USD");
+    const lbp = BigInt(data.amountLbp);
+    if (usd === 0n && lbp === 0n) throw unprocessable("ZERO_PAYMENT", "Enter an amount received.");
+    const shop = await shopRepo.findById(actor.shopId);
+    if (!shop) throw notFound("Shop");
+    if ((shop.currency === "USD" ? lbp : usd) > 0n && !shop.usdLbpRate) {
+      throw unprocessable("RATE_MISSING", "Set the exchange rate before recording foreign currency.");
+    }
+    try {
+      return await remittanceRepo.addSupplement(actor.shopId, id, { amountUsdCents: usd, amountLbp: lbp, reason: data.reason, recordedByUserId: actor.userId, requestKey: data.requestKey });
+    } catch (e) {
+      if (isUniqueViolation(e)) {
+        const saved = await remittanceRepo.findSupplementByKey(actor.shopId, data.requestKey);
+        if (saved && saved.remittanceId === id && saved.amountUsdCents === usd && saved.amountLbp === lbp) return saved;
+      }
+      throw e;
+    }
+  },
+
+  async acceptDifference(actor: Actor, id: string, reason: string) {
+    const r = await this.get(actor, id);
+    if (r.resolution) throw conflict("ALREADY_ACCEPTED", "This remittance is already resolved.");
+    return remittanceRepo.acceptDifference(actor.shopId, id, reason, actor.userId);
+  },
+
+  async acceptOrderDifference(actor: Actor, orderId: string, reason: string) {
+    const order = await remittanceRepo.findCashOrder(actor.shopId, orderId);
+    if (!order) throw notFound("Delivered remitted order");
+    if (order.cashResolution) throw conflict("ALREADY_ACCEPTED", "This order difference is already resolved.");
+    return remittanceRepo.acceptOrderDifference(actor.shopId, orderId, reason, actor.userId);
   },
 };

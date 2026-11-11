@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   reconcile,
+  openCashExposure,
   type ReconcileInput,
   type ReconcileLine,
   type ReconcileOrder,
@@ -42,6 +43,9 @@ function run(input: Partial<ReconcileInput>) {
     delivered: [],
     remittances: [],
     lines: [],
+    supplements: [],
+    acceptedRemittanceIds: [],
+    acceptedOrderIds: [],
     ...input,
   });
 }
@@ -208,6 +212,44 @@ describe("reconcile", () => {
     ]);
     expect(c.shortOrOver[0]).toMatchObject({ reportedMinor: 2000n, paidMinor: 2000n });
     expect(c.unpaid.map((u) => u.orderId)).toEqual([fine.id]);
+  });
+
+  it("counts an order discrepancy once but a distinct handover shortage separately", () => {
+    const o = order({ codMinor: 5000n, reportedUsdCents: 5500n });
+    const c = run({
+      delivered: [o],
+      lines: [line(o, { collectedUsdCents: 5500n })],
+      remittances: [remittance({ amountUsdCents: 4500n })],
+    }).couriers;
+    const exposure = openCashExposure(c);
+    expect(exposure).toMatchObject({ count: 2, orderCount: 1, remittanceCount: 1, sumMinor: 1500n });
+  });
+
+  it("keeps the initial receipt and counts later payments toward the handover", () => {
+    const o = order({ codMinor: 3000n });
+    const c = run({
+      delivered: [o],
+      lines: [line(o, { collectedUsdCents: 3000n })],
+      remittances: [remittance({ amountUsdCents: 2000n })],
+      supplements: [{ remittanceId: "r1", amountUsdCents: 1000n, amountLbp: 0n }],
+    }).couriers[0];
+    expect(c.receivedMinor).toBe(3000n);
+    expect(c.remittanceGaps).toEqual([]);
+  });
+
+  it("hides an explicitly accepted gap but preserves the recorded totals", () => {
+    const o = order({ codMinor: 3000n, reportedUsdCents: 3500n });
+    const c = run({
+      delivered: [o],
+      lines: [line(o, { collectedUsdCents: 3500n })],
+      remittances: [remittance({ amountUsdCents: 2500n })],
+      acceptedOrderIds: [o.id],
+      acceptedRemittanceIds: ["r1"],
+    }).couriers[0];
+    expect(c.receivedMinor).toBe(2500n);
+    expect(c.shortOrOver).toEqual([]);
+    expect(c.doorstepGaps).toEqual([]);
+    expect(c.remittanceGaps).toEqual([]);
   });
 
   it("keeps couriers apart and adds them up", () => {
