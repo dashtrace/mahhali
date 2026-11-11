@@ -18,7 +18,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
   - Unit: Lebanese and foreign E.164 phones, short numbers, Arabic and Latin names, single-word names, empty values.
 - [x] **T3. Arabic search** `src/server/domain/arabic.ts`: `normalizeSearch` (alef forms, ة/ه, ى/ي, diacritics, tatweel, case).
   - Unit: "عِطر" matches "عطر", "أحمر" matches "احمر", Latin text unchanged apart from case.
-- [ ] **T4. Scopes and tool policy** `src/server/domain/mcpPolicy.ts`: scopes (`orders:read`, `catalogue:read`, `catalogue:write`, `finance:read`), tool → `{ action, scope }`, `scopesForRole(role)`, `canUseTool(role, scopes, tool)`.
+- [x] **T4. Scopes and tool policy** `src/server/domain/mcpPolicy.ts`: scopes (`orders:read`, `catalogue:read`, `catalogue:write`, `finance:read`), tool → `{ action, scope }`, `scopesForRole(role)`, `canUseTool(role, scopes, tool)`.
   - Unit: generated from `policy.ts`, so every role × tool matches `can()`; a scope missing from the token denies; scopes beyond the role are never offered.
 
 ## 2. OAuth server
