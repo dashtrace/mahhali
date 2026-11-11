@@ -54,7 +54,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
   - Integration: writes no products; per-row errors; duplicate name and SKU flags; new categories listed; USD and LBP prices; a new preview replaces the user's previous one; Staff and Delivery denied.
 - [x] **T15. Confirm and undo.** Tools `confirm_product_import` and `undo_product_import`; products created active with `importId`; response includes dashboard links.
   - Integration: products appear in the dashboard product list and storefront; retry returns the same result; another user, another shop, a replaced preview or an expired preview is refused; one bad row rolls back everything; undo archives exactly that import's products and only within 24 h; Arabic names round-trip.
-- [ ] **T16. Cleanup** *(stretch)*. Expired previews deleted by the existing `expire-reservations` cron run.
+- [x] **T16. Cleanup** *(stretch)*. Expired previews deleted by the existing `expire-reservations` cron run.
   - Integration: old previews removed, confirmed imports kept.
 
 ## 6. Dashboard

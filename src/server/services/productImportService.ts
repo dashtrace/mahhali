@@ -234,4 +234,10 @@ export const productImportService = {
     });
     return { importId, archived: archived ?? 0, alreadyUndone: archived === null };
   },
+
+  /** Run by the scheduled job: previews nobody confirmed, an hour after they expired. Confirmed and undone imports stay. */
+  async deleteExpiredPreviews(now = new Date()) {
+    const { count } = await productImportRepo.deleteExpired(new Date(now.getTime() - 60 * 60 * 1000));
+    return { expiredPreviews: count };
+  },
 };
