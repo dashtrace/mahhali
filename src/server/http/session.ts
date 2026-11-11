@@ -2,7 +2,7 @@ import { auth } from "../auth/auth";
 import { can, isShopRole, type Action } from "../domain/policy";
 import { membershipRepo } from "../repositories/membershipRepo";
 import { forbidden, unauthorized } from "./errors";
-import type { Actor, AdminActor } from "./withRoute";
+import type { Actor, AdminActor, UserActor } from "./withRoute";
 
 /**
  * The signed-in shop member behind a request, checked against the policy.
@@ -27,6 +27,12 @@ export async function resolveAdmin(headers: Headers): Promise<AdminActor> {
   const session = await auth.api.getSession({ headers });
   if (!session) throw unauthorized();
   if (session.user.role !== "admin") throw forbidden("Platform admins only.");
+  return { userId: session.user.id };
+}
+
+export async function resolveUser(headers: Headers): Promise<UserActor> {
+  const session = await auth.api.getSession({ headers });
+  if (!session) throw unauthorized();
   return { userId: session.user.id };
 }
 

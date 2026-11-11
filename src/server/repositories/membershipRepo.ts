@@ -59,6 +59,15 @@ export const membershipRepo = {
     });
   },
 
+  /** Shops the user may connect an AI assistant to: every membership in a shop that is not suspended. */
+  listConnectable(userId: string, client: Db = db) {
+    return client.membership.findMany({
+      where: { userId, shop: { suspended: false } },
+      include: { shop: { select: { id: true, name: true, logo: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+  },
+
   /** Points one session of userId at shopId, so withRoute resolves that membership. */
   setActiveShop(userId: string, sessionToken: string, shopId: string, client: Db = db) {
     return client.session.updateMany({ where: { token: sessionToken, userId }, data: { activeShopId: shopId } });

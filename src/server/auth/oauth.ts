@@ -28,7 +28,9 @@ export function mcpResourceMetadataUrl(): string {
 export const OAUTH_SCOPES = ["offline_access", ...MCP_SCOPES];
 
 /**
- * Better Auth endpoints an AI assistant or our connect pages call over HTTP.
+ * Better Auth endpoints reachable over HTTP for connecting an AI assistant: the
+ * assistant calls authorize, token, register and revoke; our connect pages call
+ * continue and consent (auth.ts narrows consent to what the role allows).
  * Everything else the plugin adds (client and consent CRUD, introspection,
  * userinfo, admin) stays reachable only from our services.
  */
@@ -37,8 +39,8 @@ export const OAUTH_HTTP_PATHS = [
   "/oauth2/token",
   "/oauth2/register",
   "/oauth2/revoke",
-  "/oauth2/consent",
   "/oauth2/continue",
+  "/oauth2/consent",
 ];
 
 /** Tokens are stored as SHA-256, so a database leak exposes no usable token. */

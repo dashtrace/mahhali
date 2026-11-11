@@ -7,6 +7,7 @@ import { GET as authGet, POST as authPost } from "@/app/api/auth/[...all]/route"
 import { prisma } from "@/server/db";
 import { MCP_SCOPES } from "@/server/domain/mcpPolicy";
 import { call, resetDb, signUpOwner } from "./helpers";
+import { registerClient } from "./oauthHelpers";
 
 const ISSUER = "http://localhost:3000/api/auth";
 const MCP = "http://localhost:3000/api/mcp";
@@ -23,16 +24,6 @@ async function hit(method: "GET" | "POST", path: string, body?: unknown, cookie?
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return (method === "GET" ? authGet : authPost)(req);
-}
-
-export function registerClient(redirectUri = "https://claude.ai/api/mcp/auth_callback") {
-  return hit("POST", "/oauth2/register", {
-    client_name: "Claude",
-    redirect_uris: [redirectUri],
-    token_endpoint_auth_method: "none",
-    grant_types: ["authorization_code", "refresh_token"],
-    response_types: ["code"],
-  });
 }
 
 describe("OAuth discovery for AI assistants", () => {
@@ -66,15 +57,11 @@ describe("OAuth discovery for AI assistants", () => {
   });
 
   it("lets an assistant register itself without an account and links it to the MCP resource", async () => {
-    const res = await registerClient();
-    expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.client_id).toEqual(expect.any(String));
-    expect(body.redirect_uris).toEqual(["https://claude.ai/api/mcp/auth_callback"]);
-
-    const client = await prisma.oauthClient.findUniqueOrThrow({ where: { clientId: body.client_id } });
+    const clientId = await registerClient();
+    const client = await prisma.oauthClient.findUniqueOrThrow({ where: { clientId } });
     expect(client.userId).toBeNull();
-    const links = await prisma.oauthClientResource.findMany({ where: { clientId: body.client_id } });
+    expect(client.redirectUris).toEqual(["https://claude.ai/api/mcp/auth_callback"]);
+    const links = await prisma.oauthClientResource.findMany({ where: { clientId } });
     expect(links.map((l) => l.resourceId)).toEqual([MCP]);
   });
 

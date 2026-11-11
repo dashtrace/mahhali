@@ -1425,6 +1425,20 @@
           "message",
           "consent"
         ]
+      },
+      "ChooseShopBody": {
+        "type": "object",
+        "properties": {
+          "shopId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "shopId"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -7040,6 +7054,99 @@
           },
           "429": {
             "description": "Too many attempts; see the retry-after header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connect/shop": {
+      "get": {
+        "summary": "Shops the signed-in user can connect an AI assistant to, with their role in each",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shops, roles and the scopes each role can grant",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Pick the shop an AI assistant connection is for",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChooseShopBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Shop chosen; continue the OAuth flow",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another shop",
             "content": {
               "application/json": {
                 "schema": {

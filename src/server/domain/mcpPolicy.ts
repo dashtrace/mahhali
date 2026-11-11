@@ -63,3 +63,33 @@ export function scopesForRole(role: ShopRole): McpScope[] {
     MCP_TOOLS.some((tool) => TOOLS[tool].scope === scope && roleAllows(role, tool)),
   );
 }
+
+/**
+ * The shop a connection is for: the one the user picked (the session's active
+ * shop) if they can still connect it, or their only shop. Null means they have
+ * to pick one.
+ */
+export function connectShop(connectable: readonly string[], activeShopId: string | null | undefined): string | null {
+  if (activeShopId && connectable.includes(activeShopId)) return activeShopId;
+  return connectable.length === 1 ? connectable[0] : null;
+}
+
+/** Whether to show the shop picker. Members of one shop skip it; members of several always choose. */
+export function needsShopPicker(
+  connectable: readonly string[],
+  activeShopId: string | null | undefined,
+  pickedJustNow: boolean,
+): boolean {
+  if (connectable.length === 1) return false;
+  return !(pickedJustNow && connectShop(connectable, activeShopId) !== null);
+}
+
+/**
+ * The scopes a consent grants: those the assistant asked for, the user left
+ * ticked (all, if the request names none) and the role allows. offline_access
+ * (a refresh token) comes along when asked for.
+ */
+export function grantableScopes(role: ShopRole, requested: readonly string[], ticked?: readonly string[]): string[] {
+  const granted: string[] = scopesForRole(role).filter((s) => requested.includes(s) && (!ticked || ticked.includes(s)));
+  return requested.includes("offline_access") ? [...granted, "offline_access"] : granted;
+}

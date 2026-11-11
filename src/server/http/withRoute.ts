@@ -4,7 +4,7 @@ import type { Action, ShopRole } from "../domain/policy";
 import { adminRepo } from "../repositories/adminRepo";
 import { AppError, badRequest, unauthorized } from "./errors";
 import { json } from "./json";
-import { resolveActor, resolveAdmin } from "./session";
+import { resolveActor, resolveAdmin, resolveUser } from "./session";
 
 export type Actor = {
   userId: string;
@@ -16,9 +16,14 @@ export type Actor = {
 /** A platform admin (Better Auth admin role). Not tied to any shop. */
 export type AdminActor = { userId: string };
 
+/** Any signed-in user, before a shop is chosen (connecting an AI assistant). */
+export type UserActor = { userId: string };
+
 type Access =
   | { kind: "public" }
   | { kind: "shop"; action: Action }
+  // Signed in, no shop or role check: the user is choosing which shop to act for.
+  | { kind: "user" }
   // Platform admins only; every request is written to the audit log.
   | { kind: "admin" }
   // Host cron jobs, authenticated by the CRON_SECRET header.
@@ -51,6 +56,10 @@ export function withRoute<B = undefined, Q = undefined, P = undefined>(
 export function withRoute<B = undefined, Q = undefined, P = undefined>(
   config: Config<B, Q, P> & { access: { kind: "admin" } },
   handler: Handler<B, Q, P, AdminActor>,
+): RouteFn;
+export function withRoute<B = undefined, Q = undefined, P = undefined>(
+  config: Config<B, Q, P> & { access: { kind: "user" } },
+  handler: Handler<B, Q, P, UserActor>,
 ): RouteFn;
 export function withRoute<B = undefined, Q = undefined, P = undefined>(
   config: Config<B, Q, P> & { access: { kind: "public" } | { kind: "cron" } },
@@ -86,7 +95,7 @@ export function withRoute<B, Q, P>(
   };
 }
 
-async function resolveAccess(req: Request, access: Access): Promise<Actor | AdminActor | null> {
+async function resolveAccess(req: Request, access: Access): Promise<Actor | AdminActor | UserActor | null> {
   switch (access.kind) {
     case "public":
       return null;
@@ -94,6 +103,8 @@ async function resolveAccess(req: Request, access: Access): Promise<Actor | Admi
       return resolveActor(req.headers, access.action);
     case "admin":
       return resolveAdmin(req.headers);
+    case "user":
+      return resolveUser(req.headers);
     case "cron": {
       const secret = process.env.CRON_SECRET;
       if (!secret || !safeEqual(req.headers.get("x-cron-secret") ?? "", secret)) throw unauthorized();

@@ -27,7 +27,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
   - Integration: migration applies on the test DB; `npm run erd` leaves no diff.
 - [x] **T6. Plugin and discovery.** Configure the plugin in `auth.ts` (opaque tokens, dynamic registration, PKCE, 1 h access / 30 d refresh), allow only the OAuth paths in the `before` hook, add `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`.
   - Integration: metadata documents have the right issuer, endpoints and scopes; a client can register; the organization and admin endpoints still return 404 (extends `auth-endpoints.test.ts`).
-- [ ] **T7. Shop picker and consent.** Pages `/connect/shop` and `/connect/consent` (English and Arabic); `postLogin.consentReferenceId` stores the shop; a service lists connectable shops and the scopes each role may grant.
+- [x] **T7. Shop picker and consent.** Pages `/connect/shop` and `/connect/consent` (English and Arabic); `postLogin.consentReferenceId` stores the shop; a service lists connectable shops and the scopes each role may grant.
   - Integration: full authorize → code → token flow with PKCE; the token's `referenceId` is the chosen shop; one-shop users skip the picker; suspended shops are not listed; Staff can't be granted `finance:read`; Delivery only gets `orders:read`; a shop the user isn't a member of is refused.
 
 ## 3. MCP core
