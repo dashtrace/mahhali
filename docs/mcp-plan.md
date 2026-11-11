@@ -39,7 +39,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 4. Read tools
 
-- [ ] **T10. Order tools:** `list_orders`, `get_order`, `my_deliveries`, with masked customers.
+- [x] **T10. Order tools:** `list_orders`, `get_order`, `my_deliveries`, with masked customers.
   - Integration: role access; shop A token can't see shop B orders; delivery sees only assigned orders; filters and paging; masking applied.
 - [ ] **T11. Catalogue tools:** `list_products` (Arabic search), `stock_levels`, `list_reviews`.
   - Integration: role access, isolation, Arabic search, low-stock threshold, archived products only on request.

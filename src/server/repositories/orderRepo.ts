@@ -115,7 +115,18 @@ export const orderRepo = {
 
   async list(
     shopId: string,
-    f: { status?: OrderStatus; courierId?: string; number?: number; phoneDigits?: string; name?: string; item?: string; cursor?: string; limit: number },
+    f: {
+      status?: OrderStatus;
+      courierId?: string;
+      number?: number;
+      phoneDigits?: string;
+      name?: string;
+      item?: string;
+      since?: Date;
+      until?: Date;
+      cursor?: string;
+      limit: number;
+    },
     client: Db = db,
   ) {
     const search: Prisma.OrderWhereInput[] = [];
@@ -128,6 +139,7 @@ export const orderRepo = {
         shopId,
         ...(f.status ? { status: f.status } : {}),
         ...(f.courierId ? { courierId: f.courierId } : {}),
+        ...(f.since || f.until ? { createdAt: { ...(f.since ? { gte: f.since } : {}), ...(f.until ? { lt: f.until } : {}) } } : {}),
         ...(search.length ? { OR: search } : {}),
       },
       include: listInclude,
