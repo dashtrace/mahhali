@@ -50,7 +50,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 5. Product import
 
-- [ ] **T14. Preview.** `productImportService.preview` + `productImportRepo`; tool `preview_product_import` (max 100 products, `CreateProductBody` rows).
+- [x] **T14. Preview.** `productImportService.preview` + `productImportRepo`; tool `preview_product_import` (max 100 products, `CreateProductBody` rows).
   - Integration: writes no products; per-row errors; duplicate name and SKU flags; new categories listed; USD and LBP prices; a new preview replaces the user's previous one; Staff and Delivery denied.
 - [ ] **T15. Confirm and undo.** Tools `confirm_product_import` and `undo_product_import`; products created active with `importId`; response includes dashboard links.
   - Integration: products appear in the dashboard product list and storefront; retry returns the same result; another user, another shop, a replaced preview or an expired preview is refused; one bad row rolls back everything; undo archives exactly that import's products and only within 24 h; Arabic names round-trip.

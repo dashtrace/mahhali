@@ -23,6 +23,7 @@ const SAMPLE_ARGS: Partial<Record<McpTool, Record<string, unknown>>> = {
   sales_metrics: {},
   cod_reconciliation: {},
   unsettled_cash: {},
+  preview_product_import: { products: [{ name: "Matrix product", variants: [{ price: "1" }] }] },
 };
 
 const PHONE = "+96171123456";

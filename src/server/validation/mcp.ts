@@ -1,3 +1,4 @@
+import { IMPORT_MAX_PRODUCTS } from "../domain/productImport";
 import { range, fromNotAfterTo, rangeMessage } from "./money";
 import { OrderStatusEnum } from "./order";
 import { z } from "./zod";
@@ -71,6 +72,27 @@ export const UnsettledCashToolInput = z.strictObject({
   courierId: z.string().min(1).max(64).optional().describe("Only this courier (id from an earlier result)"),
 });
 
+// Rows are checked one by one against the product schema (CreateProductBody),
+// so one bad row is reported in the preview instead of failing the whole call.
+const ImportVariant = z.strictObject({
+  optionValues: z.array(z.string().max(60)).max(5).optional().describe("One value per option, in the product's option order, e.g. [\"M\", \"Black\"]"),
+  sku: z.string().max(60).nullish(),
+  price: z.union([z.string().max(20), z.number().nonnegative()]).describe("In the shop's currency, e.g. \"25\" or \"25.50\" for USD, \"450000\" for LBP"),
+  stock: z.number().int().min(0).max(100_000).optional().describe("Items available; 0 when not given"),
+});
+
+const ImportProduct = z.strictObject({
+  name: z.string().max(200),
+  description: z.string().max(4000).nullish(),
+  category: z.string().max(60).nullish().describe("Category name; a new one is created if the shop has none by that name"),
+  options: z.array(z.string().max(60)).max(5).optional().describe("Option names such as [\"Size\", \"Colour\"]; none for a product with one variant"),
+  variants: z.array(ImportVariant).min(1).max(100),
+});
+
+export const PreviewImportToolInput = z.strictObject({
+  products: z.array(ImportProduct).min(1).max(IMPORT_MAX_PRODUCTS),
+});
+
 export type ListOrdersToolInput = z.infer<typeof ListOrdersToolInput>;
 export type GetOrderToolInput = z.infer<typeof GetOrderToolInput>;
 export type MyDeliveriesToolInput = z.infer<typeof MyDeliveriesToolInput>;
@@ -80,3 +102,4 @@ export type ListReviewsToolInput = z.infer<typeof ListReviewsToolInput>;
 export type SalesMetricsToolInput = z.infer<typeof SalesMetricsToolInput>;
 export type CodReconciliationToolInput = z.infer<typeof CodReconciliationToolInput>;
 export type UnsettledCashToolInput = z.infer<typeof UnsettledCashToolInput>;
+export type PreviewImportToolInput = z.infer<typeof PreviewImportToolInput>;
