@@ -14,9 +14,9 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 1. Domain (pure functions)
 
-- [ ] **T2. Masking** `src/server/domain/mask.ts`: `maskName`, `maskPhone`, `maskAddress`, `maskEmail`.
+- [x] **T2. Masking** `src/server/domain/mask.ts`: `maskName`, `maskPhone`, `maskAddress`, `maskText` (hides phones and emails in customer notes).
   - Unit: Lebanese and foreign E.164 phones, short numbers, Arabic and Latin names, single-word names, empty values.
-- [ ] **T3. Arabic search** `src/server/domain/arabic.ts`: `normalizeSearch` (alef forms, ة/ه, ى/ي, diacritics, tatweel, case).
+- [x] **T3. Arabic search** `src/server/domain/arabic.ts`: `normalizeSearch` (alef forms, ة/ه, ى/ي, diacritics, tatweel, case).
   - Unit: "عِطر" matches "عطر", "أحمر" matches "احمر", Latin text unchanged apart from case.
 - [ ] **T4. Scopes and tool policy** `src/server/domain/mcpPolicy.ts`: scopes (`orders:read`, `catalogue:read`, `catalogue:write`, `finance:read`), tool → `{ action, scope }`, `scopesForRole(role)`, `canUseTool(role, scopes, tool)`.
   - Unit: generated from `policy.ts`, so every role × tool matches `can()`; a scope missing from the token denies; scopes beyond the role are never offered.
