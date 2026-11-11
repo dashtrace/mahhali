@@ -11,7 +11,7 @@ import { ShopCatalogue } from "../_components/ShopCatalogue";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 6;
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
