@@ -46,6 +46,8 @@ model Session {
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   activeShopId       String?
+  /// The shop picked while connecting an AI assistant; kept apart from activeShopId so the dashboard does not switch shops.
+  connectShopId      String?
   impersonatedBy     String?
   oauthRefreshTokens OauthRefreshToken[]
   oauthAccessTokens  OauthAccessToken[]

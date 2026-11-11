@@ -1,5 +1,5 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
-import { ChooseShopBody } from "../connect";
+import { ChooseShopBody, RevokeConnectionBody } from "../connect";
 import type { PathHelpers } from "./helpers";
 
 // AI assistants (Claude, ChatGPT): OAuth discovery and connecting one to a shop.
@@ -21,6 +21,31 @@ export function registerMcp(r: OpenAPIRegistry, { secured, ok, error, errors }: 
         },
       },
     },
+  });
+  r.registerPath({
+    method: "get",
+    path: "/api/connections",
+    summary: "AI assistants connected to the shop: everyone's for the owner, your own for other members",
+    tags: ["AI assistants"],
+    security: secured,
+    responses: { 200: ok("App, member, permissions, connected and last used"), 401: errors[401], 403: errors[403] },
+  });
+  r.registerPath({
+    method: "post",
+    path: "/api/connections/revoke",
+    summary: "Disconnect one AI assistant (your own, or any member's for the owner); its next call gets 401",
+    tags: ["AI assistants"],
+    security: secured,
+    request: { body: { content: { "application/json": { schema: RevokeConnectionBody } } } },
+    responses: { 200: ok("Disconnected"), 400: errors[400], 401: errors[401], 403: errors[403], 404: errors[404] },
+  });
+  r.registerPath({
+    method: "post",
+    path: "/api/connections/revoke-all",
+    summary: "Disconnect every AI assistant from the shop (owner)",
+    tags: ["AI assistants"],
+    security: secured,
+    responses: { 200: ok("How many connections were removed"), 401: errors[401], 403: errors[403] },
   });
   r.registerPath({
     method: "post",

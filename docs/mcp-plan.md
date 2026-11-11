@@ -59,7 +59,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 6. Dashboard
 
-- [ ] **T17. Connected apps and revoke.** Service, routes (registered in `openapi.ts`) and settings page: owner sees and revokes every connection to the shop, members their own; removing a member, banning a user or changing a password revokes their tokens.
+- [x] **T17. Connected apps and revoke.** Service, routes (registered in `openapi.ts`) and settings page: owner sees and revokes every connection to the shop, members their own; removing a member, banning a user or changing a password revokes their tokens.
   - Integration: owner revokes any; staff revokes only their own and gets 404 for others; revoked token fails on the next MCP call; each automatic cut-off works; "last used" comes from `mcpToolCall`.
 - [ ] **T18. Dashboard CSV upload** *(stretch)*. Upload a CSV in the products page, parse to rows, reuse preview and confirm.
   - Unit: CSV parsing (quotes, Arabic, one row per variant). Integration: upload → preview → confirm.

@@ -21,6 +21,10 @@ const PUBLIC_AUTH_PATHS = new Set(["/sign-in/email", "/sign-out", "/get-session"
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: { enabled: true, minPasswordLength: 8 },
+  session: {
+    // The shop picked while connecting an AI assistant (see oauth.ts); set only by connectService.
+    additionalFields: { connectShopId: { type: "string", required: false, input: false } },
+  },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       // ctx.request is only set for HTTP calls, not for auth.api calls from our services.
@@ -48,14 +52,14 @@ export const auth = betterAuth({
       loginPage: "/login",
       consentPage: "/connect/consent",
       // Each connection is for one shop. Members of several shops pick it on
-      // /connect/shop, which makes it the session's active shop; consents and
-      // tokens then carry it as referenceId.
+      // /connect/shop, which stores it on the session (connectShopId, not the
+      // dashboard's active shop); consents and tokens carry it as referenceId.
       postLogin: {
         page: "/connect/shop",
         shouldRedirect: async ({ user, session, isContinuation }) =>
-          needsShopPicker(await connectableShopIds(user.id), activeShopOf(session), isContinuation),
+          needsShopPicker(await connectableShopIds(user.id), connectShopOf(session), isContinuation),
         consentReferenceId: async ({ user, session }) => {
-          const shopId = connectShop(await connectableShopIds(user.id), activeShopOf(session));
+          const shopId = connectShop(await connectableShopIds(user.id), connectShopOf(session));
           if (!shopId) throw new APIError("FORBIDDEN", { error: "access_denied", error_description: "Choose a shop to connect." });
           return shopId;
         },
@@ -87,8 +91,8 @@ async function connectableShopIds(userId: string): Promise<string[]> {
   return (await membershipRepo.listConnectable(userId)).map((m) => m.shopId);
 }
 
-function activeShopOf(session: Record<string, unknown>): string | null {
-  return typeof session.activeOrganizationId === "string" ? session.activeOrganizationId : null;
+function connectShopOf(session: Record<string, unknown>): string | null {
+  return typeof session.connectShopId === "string" ? session.connectShopId : null;
 }
 
 type ConsentCtx = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
@@ -102,7 +106,7 @@ async function narrowConsent(ctx: ConsentCtx) {
   const session = await getSessionFromCtx(ctx);
   if (!session) return; // the plugin's own session check answers 401
   const memberships = await membershipRepo.listConnectable(session.user.id);
-  const shopId = connectShop(memberships.map((m) => m.shopId), activeShopOf(session.session));
+  const shopId = connectShop(memberships.map((m) => m.shopId), connectShopOf(session.session));
   const role = memberships.find((m) => m.shopId === shopId)?.role;
   if (!isShopRole(role)) {
     throw new APIError("FORBIDDEN", { error: "access_denied", error_description: "Choose a shop to connect." });

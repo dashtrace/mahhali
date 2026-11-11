@@ -94,6 +94,7 @@ erDiagram
     string userAgent
     string userId FK
     string activeShopId
+    string connectShopId
     string impersonatedBy
   }
   ACCOUNT {

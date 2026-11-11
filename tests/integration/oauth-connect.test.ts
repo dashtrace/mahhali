@@ -69,6 +69,16 @@ describe("connecting an AI assistant to one shop", () => {
     expect((await token(tokens.access_token)).referenceId).toBe(u.shopB);
   });
 
+  it("leaves the dashboard on its shop when the user connects an assistant to another", async () => {
+    const u = await ownerOfTwoShops();
+    const sessionToken = decodeURIComponent(u.cookie.match(/session_token=([^;.]+)/)![1]);
+    const before = await prisma.session.findFirstOrThrow({ where: { token: sessionToken } });
+    await connect({ cookie: u.cookie, shopId: u.shopB, scopes: ["orders:read"] });
+    const after = await prisma.session.findFirstOrThrow({ where: { token: sessionToken } });
+    expect(after.activeShopId).toBe(before.activeShopId);
+    expect(after.connectShopId).toBe(u.shopB);
+  });
+
   it("shows the picker again on the next connection, even with an active shop", async () => {
     const u = await ownerOfTwoShops();
     await connect({ cookie: u.cookie, shopId: u.shopA, scopes: ["orders:read"] });

@@ -17,6 +17,11 @@ export const mcpAuditRepo = {
     return client.mcpToolCall.create({ data: { ...call, errorCode: call.errorCode ?? null } });
   },
 
+  /** When each member's app last called a tool in this shop. */
+  lastUsed(shopId: string, client: Db = db) {
+    return client.mcpToolCall.groupBy({ by: ["userId", "clientId"], where: { shopId }, _max: { createdAt: true } });
+  },
+
   list(shopId: string, opts: { take: number }, client: Db = db) {
     return client.mcpToolCall.findMany({ where: { shopId }, orderBy: { createdAt: "desc" }, take: opts.take });
   },

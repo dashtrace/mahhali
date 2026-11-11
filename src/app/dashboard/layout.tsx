@@ -48,6 +48,7 @@ const GROUPS: { title: Key; sections: Section[] }[] = [
     sections: [
       { href: "/dashboard/settings", key: "navStorefrontSettings", icon: "settings", action: "shop.settings" },
       { href: "/dashboard/billing", key: "navPlanBilling", icon: "plan", action: "billing.manage" },
+      { href: "/dashboard/connections", key: "navConnectedApps", icon: "link", action: "connection.manage" },
     ],
   },
 ];

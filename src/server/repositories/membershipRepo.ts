@@ -68,6 +68,11 @@ export const membershipRepo = {
     });
   },
 
+  /** Records the shop a session picked for connecting an AI assistant; the dashboard's active shop is untouched. */
+  setConnectShop(userId: string, sessionToken: string, shopId: string, client: Db = db) {
+    return client.session.updateMany({ where: { token: sessionToken, userId }, data: { connectShopId: shopId } });
+  },
+
   /** Points one session of userId at shopId, so withRoute resolves that membership. */
   setActiveShop(userId: string, sessionToken: string, shopId: string, client: Db = db) {
     return client.session.updateMany({ where: { token: sessionToken, userId }, data: { activeShopId: shopId } });

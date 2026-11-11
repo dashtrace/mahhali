@@ -3,6 +3,7 @@ import { notFound, unprocessable } from "../http/errors";
 import type { Actor } from "../http/withRoute";
 import { invitationRepo } from "../repositories/invitationRepo";
 import { membershipRepo } from "../repositories/membershipRepo";
+import { oauthRepo } from "../repositories/oauthRepo";
 import { transaction } from "../repositories/tx";
 import type { UpdateMemberInput } from "../validation/team";
 
@@ -61,9 +62,13 @@ export const staffService = {
     const member = await membershipRepo.findById(actor.shopId, membershipId);
     if (!member) throw notFound("Member");
     protectOwner(actor, member);
-    if (!(await transaction((tx) => membershipRepo.remove(tx, actor.shopId, membershipId, member.userId)))) {
-      throw notFound("Member");
-    }
+    const removed = await transaction(async (tx) => {
+      if (!(await membershipRepo.remove(tx, actor.shopId, membershipId, member.userId))) return false;
+      // Their AI assistants lose access too (they would be refused anyway; this keeps Connected apps accurate).
+      await oauthRepo.revoke(tx, actor.shopId, { userId: member.userId }, new Date());
+      return true;
+    });
+    if (!removed) throw notFound("Member");
   },
 
   /** Every shop the signed-in user works for, with the one they are acting in marked. */
