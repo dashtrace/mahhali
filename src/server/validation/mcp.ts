@@ -93,6 +93,10 @@ export const PreviewImportToolInput = z.strictObject({
   products: z.array(ImportProduct).min(1).max(IMPORT_MAX_PRODUCTS),
 });
 
+export const ImportIdToolInput = z.strictObject({
+  importId: z.string().min(1).max(64).describe("The importId preview_product_import returned"),
+});
+
 export type ListOrdersToolInput = z.infer<typeof ListOrdersToolInput>;
 export type GetOrderToolInput = z.infer<typeof GetOrderToolInput>;
 export type MyDeliveriesToolInput = z.infer<typeof MyDeliveriesToolInput>;

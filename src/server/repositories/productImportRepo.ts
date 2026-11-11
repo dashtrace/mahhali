@@ -28,4 +28,31 @@ export const productImportRepo = {
   findById(shopId: string, id: string, client: Db = db) {
     return client.productImport.findFirst({ where: { id, shopId } });
   },
+
+  /**
+   * Marks the preview confirmed only if it is still waiting, unexpired and the
+   * user's own. Postgres re-checks after a concurrent confirm commits, so a
+   * preview is confirmed once.
+   */
+  async confirm(tx: Db, shopId: string, id: string, userId: string, now: Date) {
+    const { count } = await tx.productImport.updateMany({
+      where: { id, shopId, userId, status: "PREVIEWED", expiresAt: { gt: now } },
+      data: { status: "CONFIRMED", confirmedAt: now },
+    });
+    return count === 1;
+  },
+
+  /** Marks a confirmed import undone if it was confirmed after `since`. */
+  async undo(tx: Db, shopId: string, id: string, since: Date, now: Date) {
+    const { count } = await tx.productImport.updateMany({
+      where: { id, shopId, status: "CONFIRMED", confirmedAt: { gte: since } },
+      data: { status: "UNDONE", undoneAt: now },
+    });
+    return count === 1;
+  },
+
+  /** Previews nobody confirmed in time, older than `before`. */
+  deleteExpired(before: Date, client: Db = db) {
+    return client.productImport.deleteMany({ where: { status: { in: ["PREVIEWED", "SUPERSEDED"] }, expiresAt: { lt: before } } });
+  },
 };

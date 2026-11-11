@@ -2,7 +2,7 @@ import type { McpTool } from "../../domain/mcpPolicy";
 import type { ToolDef } from "../defineTool";
 import { listProducts, listReviews, stockLevels } from "./catalogue";
 import { codReconciliation, salesMetrics, unsettledCash } from "./finance";
-import { previewProductImport } from "./imports";
+import { confirmProductImport, previewProductImport, undoProductImport } from "./imports";
 import { getOrder, listOrders, myDeliveries } from "./orders";
 import { shopInfo } from "./shop";
 
@@ -20,4 +20,6 @@ export const TOOLS: Partial<Record<McpTool, ToolDef<any>>> = {
   cod_reconciliation: codReconciliation,
   unsettled_cash: unsettledCash,
   preview_product_import: previewProductImport,
+  confirm_product_import: confirmProductImport,
+  undo_product_import: undoProductImport,
 };

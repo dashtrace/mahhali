@@ -24,6 +24,9 @@ const SAMPLE_ARGS: Partial<Record<McpTool, Record<string, unknown>>> = {
   cod_reconciliation: {},
   unsettled_cash: {},
   preview_product_import: { products: [{ name: "Matrix product", variants: [{ price: "1" }] }] },
+  // No such import: allowed roles get "not found", which still shows the call was not denied.
+  confirm_product_import: { importId: "no-such-import" },
+  undo_product_import: { importId: "no-such-import" },
 };
 
 const PHONE = "+96171123456";
@@ -76,7 +79,7 @@ describe("MCP policy matrix", () => {
         });
         const allowed = canUseTool(m.role, m.scopes, tool);
         expect(last.outcome === "DENIED" ? "denied" : "allowed", `${m.role} ${tool}`).toBe(allowed ? "allowed" : "denied");
-        if (allowed) expect(last.outcome, `${m.role} ${tool}`).toBe("OK");
+        if (allowed && toolRule(tool).readOnly) expect(last.outcome, `${m.role} ${tool}`).toBe("OK");
       }
     }
   });

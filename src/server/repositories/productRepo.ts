@@ -24,6 +24,8 @@ export type ProductFields = {
   customPlaceholder?: string | null;
   customRequired?: boolean;
   customMaxLength?: number;
+  /** The bulk import that created it (undo archives by this). */
+  importId?: string | null;
 };
 
 export const productRepo = {
@@ -37,6 +39,18 @@ export const productRepo = {
 
   findById(shopId: string, id: string, client: Db = db) {
     return client.product.findFirst({ where: { id, shopId }, include: withVariants });
+  },
+
+  listByImport(shopId: string, importId: string, client: Db = db) {
+    return client.product.findMany({
+      where: { shopId, importId },
+      select: { id: true, name: true, status: true },
+      orderBy: { createdAt: "asc" },
+    });
+  },
+
+  archiveByImport(tx: Db, shopId: string, importId: string) {
+    return tx.product.updateMany({ where: { shopId, importId }, data: { status: "ARCHIVED" } });
   },
 
   async create(
