@@ -66,7 +66,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 7. Ship
 
-- [ ] **T19. Docs.** `docs/mcp.md` (connect steps for Claude and ChatGPT, tools, roles), FR/NFR additions, README section, CLAUDE.md status, regenerated OpenAPI and ERD.
+- [x] **T19. Docs.** `docs/mcp.md` (connect steps for Claude and ChatGPT, tools, roles), FR/NFR additions, README section, CLAUDE.md status, regenerated OpenAPI and ERD.
 - [ ] **T20. Real clients.** Run the app behind an HTTPS tunnel; test with MCP Inspector, then Claude (web and mobile voice) and ChatGPT (developer mode and voice) against the manual checklist, in English and Arabic, for each role.
 - [ ] **T21. AI evals** *(stretch)*. `scripts/mcp-evals.ts`: about 40 prompts through the Claude API against a seeded shop, graded by DB state and `mcpToolCall`.
 - [ ] **T22. Pull request.** Push the branch, open the PR into `main`, wait for CI to pass, merge.
