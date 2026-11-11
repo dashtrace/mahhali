@@ -8,8 +8,9 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 0. Setup
 
-- [ ] **T1. Dependencies.** Upgrade `better-auth` 1.7.10 → 1.7.14; add `@better-auth/oauth-provider` 1.7.14 and `@modelcontextprotocol/sdk` 1.32.2. Find which plugin tables are required.
+- [x] **T1. Dependencies.** Upgrade `better-auth` 1.7.10 → 1.7.14; add `@better-auth/oauth-provider` 1.7.14 and `@modelcontextprotocol/sdk` 1.32.2. Find which plugin tables are required.
   - Tests: the whole existing suite, lint, typecheck and build pass unchanged.
+  - Done: `overrides` pin `@better-auth/core` 1.7.14 and `better-call` 1.4.4 so the plugin's `^1.7.14` peer doesn't pull in 1.7.20. The plugin registers all 7 tables unconditionally, and `oauthResource` is used: the `/api/mcp` audience is seeded there from the `resources` option and tokens are checked against it. T5 creates all 7.
 
 ## 1. Domain (pure functions)
 
@@ -22,7 +23,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 2. OAuth server
 
-- [ ] **T5. Schema and migration.** Plugin tables, `productImport`, `mcpToolCall`, `product.importId`; regenerate ERD.
+- [ ] **T5. Schema and migration.** Plugin tables (`oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`, `oauthConsent`, `oauthClientAssertion`), `productImport`, `mcpToolCall`, `product.importId`; regenerate ERD.
   - Integration: migration applies on the test DB; `npm run erd` leaves no diff.
 - [ ] **T6. Plugin and discovery.** Configure the plugin in `auth.ts` (opaque tokens, dynamic registration, PKCE, 1 h access / 30 d refresh), allow only the OAuth paths in the `before` hook, add `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`.
   - Integration: metadata documents have the right issuer, endpoints and scopes; a client can register; the organization and admin endpoints still return 404 (extends `auth-endpoints.test.ts`).
