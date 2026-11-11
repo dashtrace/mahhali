@@ -14,6 +14,8 @@ export class AppError extends Error {
 export const badRequest = (message: string, details?: unknown) =>
   new AppError(400, "VALIDATION_FAILED", message, details);
 export const unauthorized = () => new AppError(401, "UNAUTHENTICATED", "Sign in to continue.");
+/** An AI assistant's access token is missing, expired or revoked: it should reconnect. */
+export const invalidToken = (message = "Connect again to continue.") => new AppError(401, "INVALID_TOKEN", message);
 export const forbidden = (message = "Your role does not allow this.") =>
   new AppError(403, "FORBIDDEN", message);
 // Anything in another shop is "not found", so ids from other shops reveal nothing.

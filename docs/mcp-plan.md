@@ -32,7 +32,7 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 
 ## 3. MCP core
 
-- [ ] **T8. `resolveMcpActor`** in `src/server/http/`: bearer token → `Actor`.
+- [x] **T8. `resolveMcpActor`** in `src/server/http/`: bearer token → `Actor`.
   - Integration: valid token works; expired, revoked, wrong audience, removed member, suspended shop and banned user are refused; a role change applies on the next call.
 - [ ] **T9. Endpoint and wrapper.** `src/app/api/mcp/route.ts` (Streamable HTTP, stateless); `defineTool` in `src/server/mcp/` runs actor → `canUseTool` → strict Zod → service → audit row in `mcpToolCall`; per-token rate limit; ESLint stops `src/server/mcp` importing repositories; first tool `shop_info` (shop name, currency, the user's role).
   - Integration: no token → 401 with `WWW-Authenticate` pointing to the resource metadata; `initialize` and `tools/list` work; each role lists only its tools; calling a hidden tool → denied; unknown fields such as `shopId` → invalid; audit rows for OK, DENIED and INVALID, with no inputs or outputs stored.
