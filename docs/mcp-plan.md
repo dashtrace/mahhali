@@ -70,3 +70,31 @@ Tasks marked *(stretch)* are done only if time allows before the deadline.
 - [ ] **T20. Real clients.** Run the app behind an HTTPS tunnel; test with MCP Inspector, then Claude (web and mobile voice) and ChatGPT (developer mode and voice) against the manual checklist, in English and Arabic, for each role.
 - [ ] **T21. AI evals** *(stretch)*. `scripts/mcp-evals.ts`: about 40 prompts through the Claude API against a seeded shop, graded by DB state and `mcpToolCall`.
 - [ ] **T22. Pull request.** Push the branch, open the PR into `main`, wait for CI to pass, merge.
+
+## 8. Product photos (follow-up, same branch)
+
+Assistants can't hand image files to MCP tools, so photos come in two ways:
+
+- **Route 1, photo links.** A CSV `images` column (links separated by `|`), or links typed in the chat. The assistant passes them per product, optionally tied to a colour (`optionValue`). Photos are downloaded at preview time; a bad link is a warning on that row, not an error, so the product can still be imported. Confirm attaches them. Google Drive and Dropbox share links are turned into direct downloads; Instagram post links are refused with a clear message.
+- **Route 2, "Add photos" page.** After confirm the reply carries a link `/p/<token>`, valid 24 h, no login. The page (mobile, English and Arabic) lists the products from that import with their photos; the user picks several photos or takes them with the camera, optionally picks a colour, and they appear in the dashboard within 2 s. The tool `photo_upload_link({ importId })` makes a fresh link (the old one stops working).
+
+Rules (agreed 2026-11-12):
+- At most **5 photos per product**, from either route together. Photos can be added, not deleted, through these routes (deleting stays in the dashboard).
+- Links must be **HTTPS** on the default port, with no username or password in them. The server looks up the host, refuses private, loopback, link-local and internal addresses (IPv4 and IPv6, including tricks like `127.1`, `0x7f.1` and `::ffff:10.0.0.1`), connects to the address it checked, and re-checks each redirect (max 3). 10 s timeout, 3 MB cap while streaming, and the bytes must really be PNG, JPEG or WebP.
+- At most 50 downloads per preview call. Photos of unconfirmed previews are deleted by the cleanup cron.
+- An upload link works only for its own import's products, dies on expiry, undo or a suspended shop, and is rate-limited per link and per IP. A wrong, expired or foreign token → 404.
+
+- [ ] **T23. Link rules** `src/server/domain/photoLinks.ts` (pure): parse and normalise links, Drive/Dropbox rewrite, refuse http, ports, userinfo, Instagram; `isPublicAddress(ip)`; per-product cap.
+  - Unit: HTTPS only; Drive `file/d/<id>/view` and `open?id=` → direct; Dropbox `dl=0` → `raw=1`; private IPv4 ranges, `127.1`, `0x7f.1`, decimal `2130706433`, IPv6 `::1`, `fe80::`, `fc00::`, `::ffff:10.0.0.1` refused; public addresses allowed; colour must be one of the product's option values; a 6th photo refused.
+- [ ] **T24. Safe downloader** `src/server/storage/fetchPhoto.ts`: DNS check, pinned connection, redirects re-checked, timeout, size cap, type sniffing, saved through `saveUpload`.
+  - Integration (local HTTPS test server + fake DNS): good photo saved; HTML page refused; 4 MB refused mid-stream; slow server times out; redirect to a private address refused; redirect loop refused; host that resolves to `127.0.0.1` refused.
+- [ ] **T25. Photos in preview and confirm.** `images: [{ url, colour? }]` on each product in `preview_product_import`; warnings per row; confirm attaches them in order; cleanup deletes files of unconfirmed previews; instructions updated.
+  - Integration: preview with 2 good links and 1 bad → 2 photos, 1 warning, product ready; confirm → photos on the product in the dashboard API and storefront; colour stored as `optionValue`; 6 links → only 5 kept with a warning; re-preview deletes the old preview's files; expired preview files removed by cron; Arabic product names with photos.
+- [ ] **T26. Upload links.** Table `import_photo_link` (token hash, import, shop, creator, expiry) + migration; link returned by `confirm_product_import`; tool `photo_upload_link`; added to the policy matrix.
+  - Integration: confirm returns a working link; a new link replaces the old; Staff and Delivery can't call the tool; another user's or shop's import → not found; undone import → refused.
+- [ ] **T27. Upload page API** `GET/POST /api/photo-links/[token]` (registered in OpenAPI).
+  - Integration: lists only that import's products and photos; uploads several photos in one request; colour stored; a 6th photo refused; fake image refused; wrong, expired, undone-import and suspended-shop tokens → 404; a product from another import or shop → 404; rate limit hits 429.
+- [ ] **T28. Upload page UI** `src/app/p/[token]` (English and Arabic, mobile): multi-select and camera, colour picker, in-browser downscaling to fit 3 MB, progress, thumbnails.
+  - Unit: downscale size calculation. Integration: the page renders for a valid token and 404s for a bad one.
+- [ ] **T29. Docs.** `docs/mcp.md` (how users add photos), FR-40/41, OpenAPI, ERD, CLAUDE.md.
+- [ ] **T30. Manual test, then PR.** You test both routes in Claude (CSV with links, typed links, upload page on a phone); after your OK, push and open a PR into `sandbox`.

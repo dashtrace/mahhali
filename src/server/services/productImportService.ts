@@ -21,6 +21,8 @@ import { appUrl } from "../mail/mailer";
 import type { PreviewImportToolInput } from "../validation/mcp";
 import { CreateProductBody } from "../validation/product";
 import { money } from "./assistantService";
+import { photoLinkService } from "./photoLinkService";
+import { deleteImportPhotos, downloadImportPhotos, type PhotoProblem } from "./importPhotos";
 
 type ImportSource = "MCP" | "DASHBOARD";
 
@@ -58,6 +60,7 @@ function preview(p: PlannedProduct, currency: "USD" | "LBP") {
     category: p.category,
     options: p.options,
     variants: p.variants.map((v) => ({ options: v.optionValues, sku: v.sku, price: money(v.priceMinor, currency), stock: v.available })),
+    photos: (p.photos ?? []).map((photo) => ({ colour: photo.optionValue })),
   };
 }
 
@@ -120,9 +123,27 @@ export const productImportService = {
     });
 
     const byName = new Map(plan.products.map((p) => [p.name, p]));
+    // Photos only for products that will be created; the input row i is report row i.
+    const withPhotos = plan.rows.flatMap((r, i) => {
+      const product = r.status === "ready" ? byName.get(r.name) : undefined;
+      const requests = input.products[i].images ?? [];
+      return product && requests.length > 0 ? [{ row: r.row, product, requests }] : [];
+    });
+    const photoProblems = new Map<number, PhotoProblem[]>();
+    if (withPhotos.length > 0) {
+      const downloaded = await downloadImportPhotos(
+        actor.shopId,
+        withPhotos.map((w) => ({ requests: w.requests, optionValues: [...new Set(w.product.variants.flatMap((v) => v.optionValues))] })),
+      );
+      withPhotos.forEach((w, i) => {
+        w.product.photos = downloaded.photos[i];
+        if (downloaded.problems[i].length > 0) photoProblems.set(w.row, downloaded.problems[i]);
+      });
+    }
     const rows = plan.rows.map((r) => {
       const product = r.status === "ready" ? byName.get(r.name) : undefined;
-      return { ...r, ...(product ? { product: preview(product, shop.currency) } : {}) };
+      const problems = photoProblems.get(r.row);
+      return { ...r, ...(product ? { product: preview(product, shop.currency) } : {}), ...(problems ? { photoProblems: problems } : {}) };
     });
     const variantCount = plan.products.reduce((n, p) => n + p.variants.length, 0);
     const summary = {
@@ -131,14 +152,19 @@ export const productImportService = {
       duplicates: plan.rows.filter((r) => r.status === "duplicate").length,
       errors: plan.rows.filter((r) => r.status === "error").length,
       newCategories: plan.newCategories,
+      photos: plan.products.reduce((n, p) => n + (p.photos?.length ?? 0), 0),
+      photoProblems: [...photoProblems.values()].reduce((n, p) => n + p.length, 0),
     };
 
     let saved: { id: string; expiresAt: Date } | null = null;
     if (plan.products.length > 0) {
       const expiresAt = new Date(Date.now() + IMPORT_PREVIEW_MINUTES * 60_000);
-      saved = await transaction(async (tx) => {
-        await productImportRepo.supersedePreviews(tx, actor.shopId, actor.userId);
-        return productImportRepo.create(tx, {
+      let replaced: StoredProduct[][] = [];
+      try {
+        saved = await transaction(async (tx) => {
+          replaced = (await productImportRepo.listPreviews(tx, actor.shopId, actor.userId)).map((p) => p.rows as StoredProduct[]);
+          await productImportRepo.supersedePreviews(tx, actor.shopId, actor.userId);
+          return productImportRepo.create(tx, {
           shopId: actor.shopId,
           userId: actor.userId,
           source,
@@ -147,8 +173,14 @@ export const productImportService = {
           productCount: plan.products.length,
           variantCount,
           expiresAt,
+          });
         });
-      });
+      } catch (err) {
+        await deleteImportPhotos(actor.shopId, toStored(plan.products));
+        throw err;
+      }
+      // The replaced previews can never be confirmed, so their photos go now.
+      for (const rows of replaced) await deleteImportPhotos(actor.shopId, rows);
     }
     return {
       importId: saved?.id ?? null,
@@ -157,7 +189,7 @@ export const productImportService = {
       summary,
       rows,
       next: saved
-        ? "Show the user every ready product with its variants, prices and stock, and the skipped or failed rows. Call confirm_product_import with this importId only after they confirm."
+        ? "Show the user every ready product with its variants, prices, stock and photo count, the skipped or failed rows, and any photo links that failed. Call confirm_product_import with this importId only after they confirm."
         : "Nothing can be imported: show the user the problems so they can fix them.",
     };
   },
@@ -191,7 +223,7 @@ export const productImportService = {
         categoryIds.set(normalizeSearch(name), category.id);
       }
       for (const p of products) {
-        await productRepo.create(
+        const product = await productRepo.create(
           tx,
           actor.shopId,
           {
@@ -204,16 +236,22 @@ export const productImportService = {
           },
           actor.userId,
         );
+        for (const photo of p.photos ?? []) await productRepo.addImage(actor.shopId, product.id, photo, tx);
       }
       return { replayed: false, categoriesCreated: newCategories };
     });
     const products = await created(actor.shopId, importId);
+    // A replayed confirm keeps the link the first one gave; photo_upload_link makes a new one.
+    const photoUploadLink = result.replayed ? null : await photoLinkService.create(actor, importId);
     return {
       importId,
       replayed: result.replayed,
       products,
       categoriesCreated: result.categoriesCreated,
       productsPage: appUrl("/dashboard/products"),
+      addPhotos: photoUploadLink
+        ? { url: photoUploadLink.url, expiresAt: photoUploadLink.expiresAt, tell: photoUploadLink.next }
+        : "Call photo_upload_link with this importId for a link where the user can add photos from their phone.",
       undo: `undo_product_import with this importId archives these products within ${IMPORT_UNDO_HOURS} hours.`,
     };
   },
@@ -237,7 +275,10 @@ export const productImportService = {
 
   /** Run by the scheduled job: previews nobody confirmed, an hour after they expired. Confirmed and undone imports stay. */
   async deleteExpiredPreviews(now = new Date()) {
-    const { count } = await productImportRepo.deleteExpired(new Date(now.getTime() - 60 * 60 * 1000));
+    const before = new Date(now.getTime() - 60 * 60 * 1000);
+    const expired = await productImportRepo.listExpired(before);
+    for (const imp of expired) await deleteImportPhotos(imp.shopId, imp.rows as StoredProduct[]);
+    const { count } = await productImportRepo.deleteExpired(before);
     return { expiredPreviews: count };
   },
 };

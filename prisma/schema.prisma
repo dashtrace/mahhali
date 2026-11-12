@@ -30,6 +30,7 @@ model User {
   oauthAccessTokens  OauthAccessToken[]
   oauthConsents      OauthConsent[]
   productImports     ProductImport[]
+  importPhotoLinks   ImportPhotoLink[]
 
   @@unique([email])
   @@map("user")
@@ -157,6 +158,7 @@ model Shop {
   testimonials           Testimonial[]
   productImports         ProductImport[]
   mcpToolCalls           McpToolCall[]
+  importPhotoLinks       ImportPhotoLink[]
 
   @@unique([slug])
   @@map("shop")
@@ -888,9 +890,29 @@ model ProductImport {
   undoneAt     DateTime?
   createdAt    DateTime     @default(now())
   products     Product[]
+  photoLink    ImportPhotoLink?
 
   @@index([shopId, userId, status])
   @@map("product_import")
+}
+
+/// A no-login page link for adding photos to the products of one confirmed
+/// import, from a phone. One per import: a new link replaces the old one.
+model ImportPhotoLink {
+  id          String        @id @default(cuid())
+  shopId      String
+  shop        Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  importId    String        @unique
+  import      ProductImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  /// Only a hash of the link token is stored.
+  tokenHash   String        @unique
+  expiresAt   DateTime
+  createdAt   DateTime      @default(now())
+
+  @@index([shopId])
+  @@map("import_photo_link")
 }
 
 enum McpOutcome {

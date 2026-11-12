@@ -62,10 +62,13 @@ describe("confirming and undoing a product import", () => {
     expect(created.every((p) => p.status === "ACTIVE")).toBe(true);
     const hoodie = created.find((p) => p.name === products[0].name)!;
     const skus = products[0].variants.map((v) => (v as { sku: string }).sku);
-    expect(hoodie.variants.map((v) => [v.optionValues, v.priceMinor, v.available, v.sku])).toEqual([
+    // Variants come back in no particular order.
+    const variants = hoodie.variants.map((v) => [v.optionValues, v.priceMinor, v.available, v.sku]);
+    expect(variants).toHaveLength(2);
+    expect(variants).toEqual(expect.arrayContaining([
       [["M"], 2500n, 10, skus[0]],
       [["L"], 2500n, 4, skus[1]],
-    ]);
+    ]));
     const category = await prisma.category.findFirstOrThrow({ where: { shopId: owner.shop.id, name: "Hoodies" } });
     expect(hoodie.categoryId).toBe(category.id);
     expect(await prisma.stockMovement.count({ where: { variantId: { in: hoodie.variants.map((v) => v.id) } } })).toBe(2);

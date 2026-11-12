@@ -76,6 +76,9 @@ erDiagram
   USER |o--o{ OAUTH_CONSENT : "userId"
   SHOP ||--o{ PRODUCT_IMPORT : "shopId"
   USER ||--o{ PRODUCT_IMPORT : "userId"
+  SHOP ||--o{ IMPORT_PHOTO_LINK : "shopId"
+  PRODUCT_IMPORT ||--o| IMPORT_PHOTO_LINK : "importId"
+  USER ||--o{ IMPORT_PHOTO_LINK : "createdById"
   SHOP ||--o{ MCP_TOOL_CALL : "shopId"
   USER {
     string id PK
@@ -532,6 +535,15 @@ erDiagram
     datetime expiresAt
     datetime confirmedAt
     datetime undoneAt
+    datetime createdAt
+  }
+  IMPORT_PHOTO_LINK {
+    string id PK
+    string shopId FK
+    string importId FK, UK
+    string createdById FK
+    string tokenHash UK
+    datetime expiresAt
     datetime createdAt
   }
   MCP_TOOL_CALL {
