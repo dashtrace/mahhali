@@ -21,7 +21,7 @@ switches traffic to the new version.
    | `BETTER_AUTH_URL` | `https://<your domain>` |
    | `CRON_SECRET` | long random string |
    | `RAILWAY_RUN_UID` | `0` (the image runs as `node`; this lets it write to the volume) |
-   | `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | optional, see below |
+   | `BREVO_API_KEY`, `MAIL_FROM` | optional, see below |
    | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET` | optional, see below |
 
 6. Turn on backups for the Postgres volume (database service → **Backups**).
@@ -55,7 +55,7 @@ production. To try a change: `git checkout sandbox`, `git merge <branch>`, `git 
 2. Check that its `DATABASE_URL` is the `${{Postgres.DATABASE_URL}}` reference, so it uses the
    sandbox database, and that the volume is mounted at `/app/uploads`.
 3. Give it its own domain, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` and `CRON_SECRET`. Remove
-   `SMTP_USER` and `SMTP_PASS` so test orders never email real people.
+   `BREVO_API_KEY` so test orders never email real people.
 4. Create a project token for the `sandbox` environment.
 5. In GitHub, create an environment `sandbox` with the secret `SANDBOXRAILWAYTOKEN` (that token) and
    the variable `APP_URL` = `https://<sandbox domain>`.
@@ -85,11 +85,11 @@ so an admin on sandbox is not an admin on production.
 
 ## Email and billing
 
-- Email (Gmail SMTP): turn on 2-Step Verification for the Gmail account, create an App Password
-  (myaccount.google.com/apppasswords), and set `SMTP_USER` (the Gmail address), `SMTP_PASS` (the
-  16-character app password, no spaces) and `MAIL_FROM` (e.g. `StoreLift <that address>`; Gmail
-  rewrites any other sender to the account). Gmail allows about 500 emails a day. Without these,
-  emails are only logged and review invites wait for the retry job.
+- Email (Brevo HTTP API; Railway blocks outgoing SMTP): create a free Brevo account, add and
+  verify the sender address under **Senders, domains & IPs → Senders**, create a key under
+  **SMTP & API → API Keys**, and set `BREVO_API_KEY` and `MAIL_FROM` (e.g.
+  `StoreLift <that address>`). The free plan sends 300 emails a day. Without a key, emails are
+  only logged and review invites wait for the retry job.
 - Stripe test mode: create a Pro product with a monthly price, set `STRIPE_SECRET_KEY` and
   `STRIPE_PRICE_PRO`, then add a webhook endpoint `https://<domain>/api/billing/webhook` for
   `checkout.session.completed` and `customer.subscription.deleted` and set `STRIPE_WEBHOOK_SECRET`.
