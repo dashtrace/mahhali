@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RefreshOnChange } from "@/components/RefreshOnChange";
 import { Alert, PageHeader } from "@/components/ui";
 import { fill } from "@/i18n/locale";
 import { catalogueMessages } from "@/i18n/messages/catalogue";
@@ -66,6 +67,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           </>
         }
       />
+      {/* Products added elsewhere (another tab, a teammate, an AI assistant) appear within seconds. */}
+      <RefreshOnChange url="/api/products/version" seconds={2} />
       {sp.welcome && <Alert tone="success" className="mb-4">{m.welcome}</Alert>}
       {!canWrite && <Alert className="mb-4">{m.readOnly}</Alert>}
       <ProductList

@@ -966,6 +966,19 @@
     border-radius: 13px;
     overflow: hidden;
   }
+  /* A product that just appeared (added in another tab, by a teammate or an AI assistant). */
+  .sl-dash .product-manage.is-new {
+    animation: product-arrive 4s ease-out;
+  }
+  @keyframes product-arrive {
+    0% { opacity: 0; transform: translateY(6px); border-color: var(--green); box-shadow: 0 0 0 3px rgba(22, 121, 101, 0.25); }
+    10% { opacity: 1; transform: none; }
+    70% { border-color: var(--green); box-shadow: 0 0 0 3px rgba(22, 121, 101, 0.18); }
+    100% { border-color: var(--line); box-shadow: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sl-dash .product-manage.is-new { animation: none; border-color: var(--green); }
+  }
   .sl-dash .product-manage > img,
   .sl-dash .product-manage > .no-photo {
     display: block;
