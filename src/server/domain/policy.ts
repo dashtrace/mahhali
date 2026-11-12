@@ -32,6 +32,9 @@ const MATRIX = {
   "shop.settings": OWNER,
   "staff.manage": OWNER,
   "billing.manage": OWNER,
+  // AI assistants connected to the shop: every member sees and disconnects their own; the owner, everyone's.
+  "connection.manage": ALL,
+  "connection.manageAll": OWNER,
 } as const satisfies Record<string, readonly ShopRole[]>;
 
 export type Action = keyof typeof MATRIX;

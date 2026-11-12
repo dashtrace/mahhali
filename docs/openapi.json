@@ -16,6 +16,24 @@
         "type": "apiKey",
         "in": "header",
         "name": "x-cron-secret"
+      },
+      "mcpOAuth": {
+        "type": "oauth2",
+        "description": "Access tokens for AI assistants, bound to one shop. Clients register themselves (RFC 7591) and must use PKCE.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "/api/auth/oauth2/authorize",
+            "tokenUrl": "/api/auth/oauth2/token",
+            "refreshUrl": "/api/auth/oauth2/token",
+            "scopes": {
+              "orders:read": "See orders and deliveries",
+              "catalogue:read": "See products, stock and reviews",
+              "catalogue:write": "Add products (preview, confirm, undo)",
+              "finance:read": "See sales and cash on delivery",
+              "offline_access": "Stay connected with a refresh token"
+            }
+          }
+        }
       }
     },
     "schemas": {
@@ -1430,6 +1448,39 @@
           "message",
           "consent"
         ]
+      },
+      "RevokeConnectionBody": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "additionalProperties": false
+      },
+      "ChooseShopBody": {
+        "type": "object",
+        "properties": {
+          "shopId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "shopId"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -1707,6 +1758,49 @@
           },
           "422": {
             "description": "Price does not fit the shop currency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/version": {
+      "get": {
+        "summary": "A fingerprint of the product list; changes when products, photos or stock change",
+        "tags": [
+          "Products"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ version }",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed",
             "content": {
               "application/json": {
                 "schema": {
@@ -2748,6 +2842,26 @@
             },
             "required": false,
             "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-01"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-01"
+            },
+            "required": false,
+            "name": "to",
             "in": "query"
           }
         ],
@@ -7050,6 +7164,403 @@
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections": {
+      "get": {
+        "summary": "AI assistants connected to the shop: everyone's for the owner, your own for other members",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "App, member, permissions, connected and last used",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/revoke": {
+      "post": {
+        "summary": "Disconnect one AI assistant (your own, or any member's for the owner); its next call gets 401",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeConnectionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Disconnected",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another shop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/revoke-all": {
+      "post": {
+        "summary": "Disconnect every AI assistant from the shop (owner)",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "How many connections were removed",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp": {
+      "post": {
+        "summary": "MCP endpoint (Streamable HTTP, stateless JSON-RPC) for AI assistants",
+        "description": "Tools are listed per connection: only those the member's role and the granted scopes allow.",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "mcpOAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Body is not JSON (JSON-RPC parse error)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token missing, expired or revoked; WWW-Authenticate points to the resource metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No longer a member of the shop, or the shop is suspended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "GET and DELETE: no event stream or session in stateless mode",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many calls from this connection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connect/shop": {
+      "get": {
+        "summary": "Shops the signed-in user can connect an AI assistant to, with their role in each",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shops, roles and the scopes each role can grant",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Pick the shop an AI assistant connection is for",
+        "tags": [
+          "AI assistants"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChooseShopBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Shop chosen; continue the OAuth flow",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another shop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-authorization-server": {
+      "get": {
+        "summary": "OAuth authorization server metadata (RFC 8414)",
+        "tags": [
+          "AI assistants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Issuer, endpoints, scopes and supported grants",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-authorization-server/api/auth": {
+      "get": {
+        "summary": "OAuth authorization server metadata (RFC 8414)",
+        "tags": [
+          "AI assistants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Issuer, endpoints, scopes and supported grants",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "summary": "Protected resource metadata for /api/mcp (RFC 9728)",
+        "tags": [
+          "AI assistants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource, authorization server and scopes",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/oauth-protected-resource/api/mcp": {
+      "get": {
+        "summary": "Protected resource metadata for /api/mcp (RFC 9728)",
+        "tags": [
+          "AI assistants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource, authorization server and scopes",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }

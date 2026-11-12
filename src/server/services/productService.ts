@@ -49,6 +49,11 @@ async function checkCategory(actor: Actor, categoryId: string | null | undefined
 }
 
 export const productService = {
+  /** Lets the products page poll cheaply and reload only when something changed. */
+  async version(actor: Actor) {
+    return { version: await productRepo.version(actor.shopId) };
+  },
+
   list(actor: Actor, opts: { includeArchived: boolean }) {
     return productRepo.list(actor.shopId, opts);
   },

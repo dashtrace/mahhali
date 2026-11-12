@@ -4,10 +4,14 @@ import { POST as signupRoute } from "@/app/api/signup/route";
 
 const BASE = "http://localhost:3000";
 
-/** Empties every table between test files. */
+/**
+ * Empties every table between test files. oauth_resource is configuration: the
+ * OAuth plugin seeds the MCP resource once per process, so it is kept.
+ */
 export async function resetDb() {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
+    SELECT tablename FROM pg_tables
+    WHERE schemaname = 'public' AND tablename NOT IN ('_prisma_migrations', 'oauth_resource')`;
   const list = tables.map((t) => `"public"."${t.tablename}"`).join(", ");
   if (list) await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${list} CASCADE`);
 }

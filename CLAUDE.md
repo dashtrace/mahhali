@@ -53,4 +53,6 @@ Done on branch `feat/foundation` (commit 465e71d, 125 tests passing): schema + m
 4. Tracking page, review invites (email via Resend), logo/theme, admin views.
 5. Mobile-first UI, Arabic UI, Stripe test-mode pricing page, deploy to Railway.
 
+MCP connector (stretch goal) on branch `feat/mcp-connector`: plan and progress in docs/mcp-plan.md, design in docs/mcp.md. Every MCP tool goes through services; ESLint keeps src/server/mcp off repositories.
+
 Open questions: confirm 8 Nov deadline, the brief's stretch goal, pilot couriers, domain, team work split.

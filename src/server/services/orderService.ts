@@ -312,6 +312,9 @@ export const orderService = {
       courierId: q.courierId,
       cursor: q.cursor,
       limit: q.limit,
+      ...(q.from ? { since: new Date(Date.parse(q.from)) } : {}),
+      // "to" is inclusive: up to the start of the next day.
+      ...(q.to ? { until: new Date(Date.parse(q.to) + 24 * 60 * 60 * 1000) } : {}),
       ...(number !== null ? { number } : {}),
       // Local numbers ("03 123 456") are stored as +9613123456: match on the digits after the leading 0.
       ...(isPhone ? { phoneDigits: digits.replace(/^0/, "") } : {}),

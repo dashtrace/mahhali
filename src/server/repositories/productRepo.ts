@@ -24,6 +24,8 @@ export type ProductFields = {
   customPlaceholder?: string | null;
   customRequired?: boolean;
   customMaxLength?: number;
+  /** The bulk import that created it (undo archives by this). */
+  importId?: string | null;
 };
 
 export const productRepo = {
@@ -37,6 +39,38 @@ export const productRepo = {
 
   findById(shopId: string, id: string, client: Db = db) {
     return client.product.findFirst({ where: { id, shopId }, include: withVariants });
+  },
+
+  /**
+   * A fingerprint of everything the product list shows: it changes when a product is
+   * added, edited, archived or gets a photo, and when stock moves (orders included).
+   */
+  async version(shopId: string, client: Db = db) {
+    const [products, variants, images] = await Promise.all([
+      client.product.aggregate({ where: { shopId }, _count: { _all: true }, _max: { updatedAt: true } }),
+      client.variant.aggregate({ where: { shopId }, _count: { _all: true }, _sum: { available: true, reserved: true } }),
+      client.productImage.count({ where: { shopId } }),
+    ]);
+    return [
+      products._count._all,
+      products._max.updatedAt?.getTime() ?? 0,
+      variants._count._all,
+      variants._sum.available ?? 0,
+      variants._sum.reserved ?? 0,
+      images,
+    ].join(".");
+  },
+
+  listByImport(shopId: string, importId: string, client: Db = db) {
+    return client.product.findMany({
+      where: { shopId, importId },
+      select: { id: true, name: true, status: true },
+      orderBy: { createdAt: "asc" },
+    });
+  },
+
+  archiveByImport(tx: Db, shopId: string, importId: string) {
+    return tx.product.updateMany({ where: { shopId, importId }, data: { status: "ARCHIVED" } });
   },
 
   async create(
