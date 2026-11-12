@@ -25,7 +25,11 @@ export type PlannedProduct = {
   category: string | null;
   options: string[];
   variants: PlannedVariant[];
+  /** Photos downloaded at preview time, attached on confirm. */
+  photos?: ImportPhoto[];
 };
+
+export type ImportPhoto = { url: string; optionValue: string | null };
 
 export type ImportRowReport = {
   row: number;

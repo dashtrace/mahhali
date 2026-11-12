@@ -9,6 +9,11 @@ export const productImportRepo = {
     return tx.productImport.updateMany({ where: { shopId, userId, status: "PREVIEWED" }, data: { status: "SUPERSEDED" } });
   },
 
+  /** The user's previews still waiting, which a new preview is about to replace. */
+  listPreviews(tx: Db, shopId: string, userId: string) {
+    return tx.productImport.findMany({ where: { shopId, userId, status: "PREVIEWED" }, select: { id: true, rows: true } });
+  },
+
   create(
     tx: Db,
     data: {
@@ -49,6 +54,14 @@ export const productImportRepo = {
       data: { status: "UNDONE", undoneAt: now },
     });
     return count === 1;
+  },
+
+  /** Across shops, for the scheduled job: previews deleteExpired is about to remove, with their photos. */
+  listExpired(before: Date, client: Db = db) {
+    return client.productImport.findMany({
+      where: { status: { in: ["PREVIEWED", "SUPERSEDED"] }, expiresAt: { lt: before } },
+      select: { id: true, shopId: true, rows: true },
+    });
   },
 
   /** Previews nobody confirmed in time, older than `before`. */

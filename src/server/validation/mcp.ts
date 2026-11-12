@@ -87,6 +87,16 @@ const ImportProduct = z.strictObject({
   category: z.string().max(60).nullish().describe("Category name; a new one is created if the shop has none by that name"),
   options: z.array(z.string().max(60)).max(5).optional().describe("Option names such as [\"Size\", \"Colour\"]; none for a product with one variant"),
   variants: z.array(ImportVariant).min(1).max(100),
+  images: z
+    .array(
+      z.strictObject({
+        url: z.string().max(2048).describe("An https:// link to a PNG, JPEG or WebP photo (Google Drive and Dropbox share links work)"),
+        colour: z.string().max(60).nullish().describe("The option value this photo shows, e.g. \"Black\"; leave out when it shows every variant"),
+      }),
+    )
+    .max(20)
+    .optional()
+    .describe("Photo links for this product, from an images column or links the user typed. Up to 5 are kept"),
 });
 
 export const PreviewImportToolInput = z.strictObject({

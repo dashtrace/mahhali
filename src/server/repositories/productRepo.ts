@@ -69,6 +69,21 @@ export const productRepo = {
     });
   },
 
+  /** One import's products with their photos and option values, for the photo upload page. */
+  listByImportWithPhotos(shopId: string, importId: string, client: Db = db) {
+    return client.product.findMany({
+      where: { shopId, importId, status: { not: "ARCHIVED" } },
+      select: {
+        id: true,
+        name: true,
+        options: true,
+        variants: { where: { archived: false }, select: { optionValues: true } },
+        images: { select: { id: true, url: true, optionValue: true }, orderBy: { position: "asc" } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  },
+
   archiveByImport(tx: Db, shopId: string, importId: string) {
     return tx.product.updateMany({ where: { shopId, importId }, data: { status: "ARCHIVED" } });
   },

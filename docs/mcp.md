@@ -61,7 +61,7 @@ connection was granted its scope (`src/server/domain/mcpPolicy.ts`). The consent
 | `list_reviews` | `review.read` | `catalogue:read` | Yes | Yes | Yes | No |
 | `sales_metrics` | `metrics.read` | `finance:read` | Yes | Yes | No | No |
 | `cod_reconciliation`, `unsettled_cash` | `reconciliation.read` | `finance:read` | Yes | Yes | No | No |
-| `preview_product_import`, `confirm_product_import`, `undo_product_import` | `product.write` | `catalogue:write` | Yes | Yes | No | No |
+| `preview_product_import`, `confirm_product_import`, `undo_product_import`, `photo_upload_link` | `product.write` | `catalogue:write` | Yes | Yes | No | No |
 
 **Masking** (`src/server/domain/mask.ts`, applied in `assistantService`): customers appear as
 "Maya H.", phones as `+961 7•••••56`, addresses down to the area, no emails; phone numbers and emails
@@ -82,6 +82,38 @@ Recommended CSV columns, one row per variant:
 `name, description, category, option1, value1, option2, value2, sku, price, stock`.
 Assistants also map other headers, Arabic included.
 
+## Product photos
+
+Assistants can't hand image files to a tool, so photos come in two ways. A product has at most 5
+photos from both together; these routes only add photos (removing them stays in the dashboard).
+
+**Photo links.** An `images` CSV column with links separated by `|`, or links typed in the chat, go
+in each product's `images` (`{ url, colour? }`). `preview_product_import` downloads them straight
+away so the preview can say which links failed; a failed link doesn't stop the product. Confirm
+attaches them in order, with the colour as the photo's option value. Google Drive and Dropbox share
+links are turned into direct downloads; Instagram links are refused with a pointer to the upload page.
+The downloader (`src/server/storage/fetchPhoto.ts`) accepts HTTPS on port 443 only, without a user
+name; it looks the host up, refuses private, loopback, link-local and reserved addresses (IPv4 and
+IPv6), connects to the address it checked, checks every redirect again (3 at most), and stops at
+10 seconds or 3 MB. The bytes must be PNG, JPEG or WebP. Up to 50 downloads per preview; files of
+previews that are replaced or expire are deleted.
+
+**Add photos page.** `confirm_product_import` returns a link `/p/<token>` (and `photo_upload_link`
+makes a new one, which replaces the old). It works for 24 hours without signing in, only for that
+import's products, and stops when the import is undone or the shop is suspended. On the page (mobile,
+English and Arabic) the user picks several photos or takes one with the camera, optionally chooses a
+colour, and the photos show in the dashboard right away. Photos are shrunk in the browser to fit 3 MB.
+Uploads are all-or-nothing per request and rate limited per link and per address; only the token's
+hash is stored.
+
+Example CSV with photos:
+
+```
+name,option1,value1,price,stock,images
+Linen shirt,Colour,White,25,10,https://example.com/white.jpg|https://example.com/white-back.jpg
+Linen shirt,Colour,Navy,25,8,https://example.com/navy.jpg
+```
+
 ## Safety
 
 The server never sees the user's words, only tool calls. Whatever the assistant is told, a call can
@@ -98,16 +130,20 @@ never its input or output. Calls are rate limited to 120 a minute per connection
 | Table | Purpose |
 | --- | --- |
 | `oauth_client`, `oauth_resource`, `oauth_client_resource`, `oauth_access_token`, `oauth_refresh_token`, `oauth_consent`, `oauth_client_assertion` | The OAuth plugin's tables; `referenceId` holds the shop |
-| `product_import` | Previews, confirmed and undone imports |
+| `product_import` | Previews, confirmed and undone imports (with downloaded photo links) |
+| `import_photo_link` | The no-login "Add photos" link of a confirmed import (token hash, expiry) |
 | `mcp_tool_call` | Audit log of tool calls |
 | `product.importId` | The import that created a product |
 | `session.connectShopId` | The shop picked while connecting |
 
 ## Tests
 
-- Unit: `mask`, `arabic`, `mcp-policy` (role × scope, shop choice, consent narrowing), `product-import`.
+- Unit: `mask`, `arabic`, `mcp-policy` (role × scope, shop choice, consent narrowing), `product-import`,
+  `photo-links` (HTTPS, share links, private addresses however written), `photo-resize`.
 - Integration: `oauth-discovery`, `oauth-connect` (full OAuth flow with PKCE), `mcp-actor`,
   `mcp-endpoint`, `mcp-orders`, `mcp-catalogue`, `mcp-finance`, `mcp-import-preview`,
-  `mcp-import-confirm`, `mcp-import-cleanup`, `mcp-connections`, and `mcp-policy-matrix`, which calls
+  `mcp-import-confirm`, `mcp-import-cleanup`, `mcp-connections`, `photo-fetch` (the downloader
+  against a local HTTPS server: redirects, size, timeouts, private addresses), `mcp-import-photos`,
+  `mcp-photo-links` (the upload page API), and `mcp-policy-matrix`, which calls
   every tool as every role and scans every read tool's output for customer phone numbers, names,
   emails and streets.

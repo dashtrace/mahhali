@@ -1,8 +1,19 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
+import { z } from "../zod";
 import { ChooseShopBody, RevokeConnectionBody } from "../connect";
+import { TokenParam } from "../tracking";
 import type { PathHelpers } from "./helpers";
 
-// AI assistants (Claude, ChatGPT): OAuth discovery and connecting one to a shop.
+const PhotoLinkUpload = z
+  .object({
+    productId: z.string().openapi({ description: "A product of the link's import" }),
+    colour: z.string().max(60).optional().openapi({ description: "One of the product's option values; the photos show for every variant when left out" }),
+    file: z.array(z.string().openapi({ format: "binary" })).openapi({ description: "One or more PNG, JPEG or WebP photos, up to 3 MB each" }),
+  })
+  .openapi("PhotoLinkUpload");
+
+// AI assistants (Claude, ChatGPT): OAuth discovery, connecting one to a shop,
+// and the "Add photos" page for imported products.
 export function registerMcp(r: OpenAPIRegistry, { secured, ok, error, errors }: PathHelpers) {
   const oauth = r.registerComponent("securitySchemes", "mcpOAuth", {
     type: "oauth2",
@@ -98,4 +109,27 @@ export function registerMcp(r: OpenAPIRegistry, { secured, ok, error, errors }: 
       responses: { 200: ok("Resource, authorization server and scopes") },
     });
   }
+  const limited = error("Too many attempts; see the retry-after header");
+  r.registerPath({
+    method: "get",
+    path: "/api/public/photo-links/{token}",
+    summary: "Add photos page: the products of one confirmed import, their colours and photos (no login; the link works 24 h)",
+    tags: ["AI assistants"],
+    request: { params: TokenParam },
+    responses: { 200: ok("Shop name, expiry and products"), 400: errors[400], 404: error("Unknown, expired or undone link"), 429: limited },
+  });
+  r.registerPath({
+    method: "post",
+    path: "/api/public/photo-links/{token}/photos",
+    summary: "Add photos to one product of the link's import, up to 5 per product; all or nothing",
+    tags: ["AI assistants"],
+    request: { params: TokenParam, body: { content: { "multipart/form-data": { schema: PhotoLinkUpload } } } },
+    responses: {
+      201: ok("{ productId, added, photos, photosLeft }"),
+      400: errors[400],
+      404: error("Unknown, expired or undone link, or a product outside the import"),
+      422: error("NO_FILES, PHOTO_LIMIT, UNKNOWN_COLOUR, FILE_TOO_LARGE or UNSUPPORTED_FILE"),
+      429: limited,
+    },
+  });
 }

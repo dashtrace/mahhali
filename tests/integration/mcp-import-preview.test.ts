@@ -47,7 +47,7 @@ describe("previewing a product import", () => {
     const d = await preview(ownerToken, [hoodie, oud]);
     expect(d.importId).toEqual(expect.any(String));
     expect(new Date(d.expiresAt).getTime()).toBeGreaterThan(Date.now() + 14 * 60_000);
-    expect(d.summary).toEqual({ ready: 2, variants: 3, duplicates: 0, errors: 0, newCategories: ["Hoodies"] });
+    expect(d.summary).toEqual({ ready: 2, variants: 3, duplicates: 0, errors: 0, newCategories: ["Hoodies"], photos: 0, photoProblems: 0 });
     expect(d.rows[0].product.variants).toEqual([
       { options: ["M"], sku: "HD-M", price: { minor: 2500, text: "$25.00" }, stock: 10 },
       { options: ["L"], sku: "HD-L", price: { minor: 2550, text: "$25.50" }, stock: 4 },
