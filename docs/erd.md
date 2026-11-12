@@ -49,6 +49,12 @@ erDiagram
   SHOP ||--o{ REMITTANCE_LINE : "shopId"
   REMITTANCE ||--o{ REMITTANCE_LINE : "remittanceId"
   ORDER ||--o| REMITTANCE_LINE : "orderId"
+  SHOP ||--o{ REMITTANCE_SUPPLEMENT : "shopId"
+  REMITTANCE ||--o{ REMITTANCE_SUPPLEMENT : "remittanceId"
+  SHOP ||--o{ REMITTANCE_RESOLUTION : "shopId"
+  REMITTANCE ||--o| REMITTANCE_RESOLUTION : "remittanceId"
+  SHOP ||--o{ ORDER_CASH_RESOLUTION : "shopId"
+  ORDER ||--o| ORDER_CASH_RESOLUTION : "orderId"
   SHOP ||--o{ REVIEW_INVITE : "shopId"
   ORDER ||--o| REVIEW_INVITE : "orderId"
   SHOP ||--o{ REVIEW : "shopId"
@@ -323,6 +329,33 @@ erDiagram
     bigint collectedUsdCents
     bigint collectedLbp
     bigint feeMinor
+  }
+  REMITTANCE_SUPPLEMENT {
+    string id PK
+    string shopId FK
+    string remittanceId FK
+    bigint amountUsdCents
+    bigint amountLbp
+    string reason
+    string recordedByUserId
+    string requestKey
+    datetime createdAt
+  }
+  REMITTANCE_RESOLUTION {
+    string id PK
+    string shopId FK
+    string remittanceId FK, UK
+    string reason
+    string recordedByUserId
+    datetime createdAt
+  }
+  ORDER_CASH_RESOLUTION {
+    string id PK
+    string shopId FK
+    string orderId FK, UK
+    string reason
+    string recordedByUserId
+    datetime createdAt
   }
   REVIEW_INVITE {
     string id PK
