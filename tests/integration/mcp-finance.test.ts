@@ -26,13 +26,14 @@ beforeAll(async () => {
   const rami = await seedCourier(shopId, { name: "Rami", type: "INDIVIDUAL" });
   tootersId = toters.id;
 
-  const paid = await seedOrder(shopId, { variantId: oud.id, qty: 2, status: "DELIVERED", courierId: toters.id });
+  // The courier reported collecting $85 at the door for this $90 order, then handed over the $85.
+  const paid = await seedOrder(shopId, { variantId: oud.id, qty: 2, status: "DELIVERED", courierId: toters.id, reportedUsdCents: 8500n });
   paidOrderNumber = paid.number;
   await seedOrder(shopId, { variantId: oud.id, status: "DELIVERED", courierId: toters.id, reportedUsdCents: 4500n });
   await seedOrder(shopId, { variantId: shirt.id, status: "DELIVERED", courierId: rami.id });
   await seedOrder(shopId, { variantId: shirt.id });
 
-  // Toters hands over $85 for the $90 order: $5 short.
+  // Toters hands over the $85 it reported: $5 short of the $90 due.
   const remit = await call(createRemittance, "/api/remittances", {
     method: "POST",
     cookie: owner.cookie,
