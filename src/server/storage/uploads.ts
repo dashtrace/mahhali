@@ -27,7 +27,8 @@ export const UPLOAD_HEADERS = {
 };
 
 function uploadDir() {
-  return process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads");
+  // An empty UPLOAD_DIR (as in .env.example) means the default, not the project root.
+  return process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
 }
 
 /** The real type from the first bytes; the file name and claimed type are ignored. */
