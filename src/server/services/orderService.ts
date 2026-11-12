@@ -260,6 +260,10 @@ function courierScope(actor: Actor) {
 }
 
 export const orderService = {
+  
+  statusCounts(actor: Actor) {
+  return orderRepo.statusCounts(actor.shopId, undefined);
+},
   /** A guest order from the public catalogue. */
   async placeFromCatalogue(slug: string, input: PlaceOrderInput, opts: { idempotencyKey: string | null; ip: string }) {
     // shortcut: per IP and shop; generous because Lebanese mobile carriers put many buyers behind one IP.

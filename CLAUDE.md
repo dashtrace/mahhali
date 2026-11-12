@@ -20,7 +20,7 @@ Live URL deployed by CI; CI runs tests on every PR; Next.js route handlers (TS) 
 - Money: BigInt minor units (USD cents, LBP whole pounds). Shop.currency USD|LBP; usdLbpRate Decimal(14,2) frozen per order; cash collected recorded as USD cents and LBP separately.
 - Phones normalised to E.164 (default LB). Lebanese address fields.
 - Database: plain PostgreSQL 16 (Railway's Postgres service). NOT Supabase or Neon.
-- Deploy: Railway, one service from the Dockerfile + Postgres + a volume at /app/uploads. CI runs `railway up` after tests (gated by repo variable DEPLOY_ENABLED); migrations run as the pre-deploy command (railway.json); cron endpoints are called by the Scheduled jobs workflow. See deploy/README.md.
+- Deploy: Railway, one service from the Dockerfile + Postgres + a volume at /app/uploads. CI runs `railway up` after tests (gated by repo variable DEPLOY_ENABLED); migrations run as the pre-deploy command (railway.json); cron endpoints are called by the Scheduled jobs workflow. Pushes to `main` deploy to production, pushes to `sandbox` to the Railway `sandbox` environment. See deploy/README.md.
 - NFR wording: state requirements only (atomic/ACID); no "proven by automated test" lines in the requirements doc.
 
 ## Architecture rules (enforced by ESLint no-restricted-imports)

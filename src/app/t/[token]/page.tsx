@@ -269,7 +269,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
       {refresh}
       <TrackTop slug={shop.slug} shopName={shop.name} number={order.number} m={m} />
       <ScrollIntoView id="order-result" />
-      <section id="order-result" className="sl-result">
+      <section id="order-result" className="sl-result" style={{ scrollMarginTop: "7rem" }}>
         <div className="sl-result-head">
           <div>
             <p className="sl-page-eyebrow">{fill(m.orderEyebrow, { n: order.number })}</p>
@@ -288,7 +288,7 @@ export default async function TrackingPage({ params, searchParams }: Props) {
           </span>
         </div>
 
-        {bad && <p className="sl-order-alert">{status === "CANCELLED" ? m.cancelledBody : m.returnedBody}</p>}
+        {bad && <p className="sl-order-alert">{status === "CANCELLED" ? (order.cancellationReason || m.cancelledBody) : m.returnedBody}</p>}
 
         <ol className="sl-timeline" aria-label={m.progress}>
           {steps.map((s) => (

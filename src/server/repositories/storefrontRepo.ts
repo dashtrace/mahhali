@@ -93,6 +93,10 @@ export const testimonialRepo = {
     });
   },
 
+  pendingCount(shopId: string, client: Db = db) {
+    return client.testimonial.count({ where: { shopId, status: "PENDING" } });
+  },
+
   /** Newest approved ones, for the public storefront. */
   approved(shopId: string, take: number, client: Db = db) {
     return client.testimonial.findMany({

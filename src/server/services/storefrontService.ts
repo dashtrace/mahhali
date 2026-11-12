@@ -159,6 +159,10 @@ export const testimonialService = {
     return testimonialRepo.list(actor.shopId, status);
   },
 
+  pendingCount(actor: Actor) {
+    return testimonialRepo.pendingCount(actor.shopId);
+  },
+
   async moderate(actor: Actor, id: string, status: "APPROVED" | "REJECTED") {
     const updated = await testimonialRepo.setStatus(actor.shopId, id, { status, moderatedById: actor.userId });
     if (!updated) throw notFound("Testimonial");

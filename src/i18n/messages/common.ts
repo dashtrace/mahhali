@@ -3,7 +3,7 @@ import { defineMessages } from "../locale";
 // Strings shared by every screen: navigation, statuses, roles, buttons.
 export const common = defineMessages({
   en: {
-    appName: "Mahhali",
+    appName: "StoreLift",
     navOrders: "Orders",
     navDeliveries: "Deliveries",
     navProducts: "Products",
@@ -76,7 +76,7 @@ export const common = defineMessages({
     roleDelivery: "Delivery",
     whatsapp: "WhatsApp",
     call: "Call",
-    poweredBy: "Orders by Mahhali",
+    poweredBy: "Orders by StoreLift",
     navMain: "Main menu",
     // Storefront shell (ShopFrame) and shared primitives.
     navHome: "Home",
@@ -116,7 +116,7 @@ export const common = defineMessages({
     reviewsCount: "{n} reviews",
   },
   ar: {
-    appName: "محلّي",
+    appName: "StoreLift",
     navOrders: "الطلبات",
     navDeliveries: "التوصيل",
     navProducts: "المنتجات",
@@ -189,7 +189,7 @@ export const common = defineMessages({
     roleDelivery: "مندوب توصيل",
     whatsapp: "واتساب",
     call: "اتصال",
-    poweredBy: "الطلبات عبر محلّي",
+    poweredBy: "الطلبات عبر StoreLift",
     navMain: "القائمة الرئيسية",
     navHome: "الرئيسية",
     navShop: "المتجر",

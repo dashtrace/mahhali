@@ -21,6 +21,6 @@ export function buildOpenApi() {
   }
   return new OpenApiGeneratorV31(r.definitions).generateDocument({
     openapi: "3.1.0",
-    info: { title: "Mahhali API", version: "0.2.0", description: "Shop Link: orders for Instagram and WhatsApp shops." },
+    info: { title: "StoreLift API", version: "0.2.0", description: "Shop Link: orders for Instagram and WhatsApp shops." },
   });
 }
