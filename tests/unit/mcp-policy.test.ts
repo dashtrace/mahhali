@@ -55,8 +55,8 @@ describe("MCP tool policy", () => {
     for (const role of SHOP_ROLES) expect(toolsFor(role, [])).toEqual(["shop_info"]);
   });
 
-  it("marks only confirm and undo as writes", () => {
-    expect(MCP_TOOLS.filter((t) => !toolRule(t).readOnly)).toEqual(["confirm_product_import", "undo_product_import"]);
+  it("marks only confirm, undo and new photo links as writes", () => {
+    expect(MCP_TOOLS.filter((t) => !toolRule(t).readOnly)).toEqual(["confirm_product_import", "undo_product_import", "photo_upload_link"]);
   });
 });
 

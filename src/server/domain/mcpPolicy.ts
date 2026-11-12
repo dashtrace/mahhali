@@ -33,6 +33,7 @@ const TOOLS = {
   preview_product_import: { action: "product.write", scope: "catalogue:write", readOnly: true },
   confirm_product_import: { action: "product.write", scope: "catalogue:write", readOnly: false },
   undo_product_import: { action: "product.write", scope: "catalogue:write", readOnly: false },
+  photo_upload_link: { action: "product.write", scope: "catalogue:write", readOnly: false },
 } as const satisfies Record<string, ToolRule>;
 
 export type McpTool = keyof typeof TOOLS;

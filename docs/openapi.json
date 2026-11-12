@@ -1481,6 +1481,32 @@
           "shopId"
         ],
         "additionalProperties": false
+      },
+      "PhotoLinkUpload": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "description": "A product of the link's import"
+          },
+          "colour": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "One of the product's option values; the photos show for every variant when left out"
+          },
+          "file": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "binary"
+            },
+            "description": "One or more PNG, JPEG or WebP photos, up to 3 MB each"
+          }
+        },
+        "required": [
+          "productId",
+          "file"
+        ]
       }
     },
     "parameters": {}
@@ -7561,6 +7587,143 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/photo-links/{token}": {
+      "get": {
+        "summary": "Add photos page: the products of one confirmed import, their colours and photos (no login; the link works 24 h)",
+        "tags": [
+          "AI assistants"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shop name, expiry and products",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, expired or undone link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts; see the retry-after header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/photo-links/{token}/photos": {
+      "post": {
+        "summary": "Add photos to one product of the link's import, up to 5 per product; all or nothing",
+        "tags": [
+          "AI assistants"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoLinkUpload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "{ productId, added, photos, photosLeft }",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, expired or undone link, or a product outside the import",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "NO_FILES, PHOTO_LIMIT, UNKNOWN_COLOUR, FILE_TOO_LARGE or UNSUPPORTED_FILE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts; see the retry-after header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
               }
             }
           }
