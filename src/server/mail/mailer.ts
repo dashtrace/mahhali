@@ -1,22 +1,26 @@
-// Transactional email behind one small interface. Resend in production; in
+import nodemailer from "nodemailer";
+
+// Transactional email behind one small interface. Gmail SMTP in production; in
 // tests and local development the mail is kept in `outbox` (and logged in dev).
 export type Mail = { to: string; subject: string; text: string; html?: string };
 
 export const outbox: Mail[] = [];
 
 export async function sendMail(mail: Mail): Promise<void> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!user || !pass) {
     outbox.push(mail);
     if (process.env.NODE_ENV === "development") console.info(`[mail] to ${mail.to}: ${mail.subject}\n${mail.text}`);
     return;
   }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-    body: JSON.stringify({ from: process.env.MAIL_FROM ?? "StoreLift <orders@mahhali.app>", ...mail }),
+  const transport = nodemailer.createTransport({
+    host: process.env.SMTP_HOST ?? "smtp.gmail.com",
+    port: Number(process.env.SMTP_PORT ?? 465),
+    secure: Number(process.env.SMTP_PORT ?? 465) === 465,
+    auth: { user, pass },
   });
-  if (!res.ok) throw new Error(`Email provider refused the message: ${res.status} ${await res.text()}`);
+  await transport.sendMail({ from: process.env.MAIL_FROM ?? `StoreLift <${user}>`, ...mail });
 }
 
 /** The public base URL used in links inside emails. */
