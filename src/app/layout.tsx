@@ -10,7 +10,7 @@ const cairo = Cairo({ subsets: ["arabic", "latin"], variable: "--font-cairo", di
 const tajawal = Tajawal({ subsets: ["arabic", "latin"], weight: ["400", "500", "700"], variable: "--font-tajawal", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Mahhali", template: "%s · Mahhali" },
+  title: { default: "StoreLift", template: "%s · StoreLift" },
   description: "Orders, stock and cash on delivery for Instagram and WhatsApp shops.",
 };
 

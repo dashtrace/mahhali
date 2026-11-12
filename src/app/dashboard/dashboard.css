@@ -235,10 +235,23 @@
 .sl-dash .navlink .count {
   margin-inline-start: auto;
   font-size: 10px;
-  color: #b75a3b;
-  background: #fff5ee;
   border-radius: 30px;
   padding: 3px 7px;
+}
+.sl-dash .count-warning {
+  color: #ad4037;
+  background: #fff0ed;
+}
+.sl-dash .count-notification {
+  color: #127153;
+  background: #e1f4eb;
+}
+.sl-dash .drawer-nav .count {
+  margin-inline-start: auto;
+  border-radius: 30px;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 800;
 }
 .sl-dash .main {
   min-width: 0;

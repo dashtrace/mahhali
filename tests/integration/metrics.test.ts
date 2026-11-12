@@ -47,7 +47,7 @@ describe("metrics", () => {
       // The orders predate the test shop's sign-up, so it counts as open from the first one.
       ordersPerDay: 2.5,
       ordersByStatus: { NEW: 1, CONFIRMED: 2, PACKED: 0, OUT_FOR_DELIVERY: 0, DELIVERED: 1, CANCELLED: 1, RETURNED: 0 },
-      codGaps: { count: 1, sumMinor: 2500 },
+      codGaps: { count: 1, orderCount: 1, remittanceCount: 0, sumMinor: 2500 },
       baseline: { ordersPerDay: 3, confirmMinutes: 90 },
     });
   });

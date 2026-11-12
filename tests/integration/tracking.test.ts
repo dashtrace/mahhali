@@ -65,6 +65,24 @@ describe("order tracking page", () => {
     }
   });
 
+  it("exposes a staff-provided cancellation reason without leaking internal event notes", async () => {
+    const owner = await signUpOwner();
+    const { variant } = await seedVariant(owner.shop.id);
+    const order = await seedOrder(owner.shop.id, { variantId: variant.id, status: "CANCELLED" });
+    await prisma.orderEvent.createMany({
+      data: [
+        { shopId: owner.shop.id, orderId: order.id, type: "STATUS", fromValue: "NEW", toValue: "CONFIRMED", note: "internal note, never public", actorUserId: owner.user.id },
+        { shopId: owner.shop.id, orderId: order.id, type: "STATUS", fromValue: "CONFIRMED", toValue: "CANCELLED", note: "Sorry, this item is unavailable.", actorUserId: owner.user.id },
+      ],
+    });
+    const res = await view(order.publicToken);
+    expect(res.status).toBe(200);
+    expect(res.body.order.cancellationReason).toBe("Sorry, this item is unavailable.");
+    expect(res.body.order.timeline.at(-1)?.status).toBe("CANCELLED");
+    expect(JSON.stringify(res.body)).not.toContain("internal note, never public");
+    expect(JSON.stringify(res.body)).not.toContain(owner.user.id);
+  });
+
   it("converts pounds to dollars and leaves out the conversion when no rate was frozen", async () => {
     const lbp = await signUpOwner({ currency: "LBP", usdLbpRate: "89500" });
     const { variant } = await seedVariant(lbp.shop.id, { priceMinor: 895000n });

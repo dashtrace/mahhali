@@ -24,6 +24,9 @@ export const trackingService = {
         status: order.status,
         placedAt: order.createdAt,
         timeline: order.events.map((e) => ({ status: e.toValue, at: e.at })),
+        cancellationReason: order.status === "CANCELLED"
+          ? (order.events.slice().reverse().find((e) => e.toValue === "CANCELLED" && e.actorUserId !== null)?.note?.trim() || null)
+          : null,
         items: order.items.map((i) => ({
           name: i.nameSnapshot,
           unitPriceMinor: i.unitPriceMinor,

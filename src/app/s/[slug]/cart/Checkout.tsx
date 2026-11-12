@@ -14,7 +14,7 @@ import { ApiError, api, errorMessage, newIdempotencyKey } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 import { GOVERNORATES } from "@/server/domain/lebanon";
 import { checkNote } from "@/server/domain/storefront";
-import { clearCart, qtyOf, removeLine, setQty, useCart, type CartLine } from "../../../_storefront/cart";
+import { clearCart, qtyOf, removeLine, updateLineNote, setQty, useCart, type CartLine } from "../../../_storefront/cart";
 import type { CatalogueProduct } from "../../../_storefront/data";
 import { PageEmpty, PageHead } from "../_components/tiles";
 
@@ -47,6 +47,50 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
   const [error, setError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState(false);
   const [soldOut, setSoldOut] = useState<string[]>([]);
+
+  const [editingNoteKey, setEditingNoteKey] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteError, setNoteError] = useState<string | null>(null);
+
+  function cancelNoteEdit() {
+  setEditingNoteKey(null);
+  setNoteDraft("");
+  setNoteError(null);
+}
+
+function saveNoteEdit(row: Row) {
+  const customization = row.hit?.product.customization;
+  if (!customization) return;
+
+  const result = checkNote(customization, noteDraft);
+
+  if (!result.ok) {
+    setNoteError(
+      result.code === "CUSTOMIZATION_REQUIRED"
+        ? fill(m.lineNoteMissing, {
+            label: customization.label ?? "",
+          })
+        : fill(m.lineNoteTooLong, {
+            max: customization.maxLength,
+          })
+    );
+    return;
+  }
+
+  const saved = updateLineNote(
+    slug,
+    row.line.variantId,
+    row.line.note,
+    result.note ?? ""
+  );
+
+  if (!saved) {
+    setNoteError(m.noteSaveFailed);
+    return;
+  }
+
+  cancelNoteEdit();
+}
 
   const index = new Map(products.flatMap((p) => p.variants.map((v) => [v.id, { product: p, variant: v }] as const)));
   const rows: Row[] = lines.map((line) => {
@@ -201,8 +245,74 @@ export function Checkout({ slug, products, currency, deliveryFeeMinor, locale, s
                       {` · ${r.variant || m.standard}`}
                     </p>
                   )}
-                  {r.line.note && <NoteLine label={r.hit?.product.customization?.label} note={r.line.note} className="mb-2.5" />}
-                  {r.problem && <p className="mb-2.5 text-xs font-semibold text-sl-danger">{r.problem}</p>}
+                  {r.hit?.product.customization?.label && (
+  <div className="mb-2.5">
+    {editingNoteKey === `${r.line.variantId}:${r.line.note ?? ""}` ? (
+      <div className="space-y-2">
+        <label className="block text-xs font-semibold">
+          {r.hit.product.customization.label}
+        </label>
+
+        <Textarea
+          value={noteDraft}
+          onChange={(e) => {
+            setNoteDraft(e.target.value);
+            setNoteError(null);
+          }}
+          maxLength={500}
+          rows={3}
+        />
+
+        {noteError && (
+          <p className="text-xs text-sl-danger" role="alert">
+            {noteError}
+          </p>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            className="text-xs font-bold underline"
+            onClick={() => saveNoteEdit(r)}
+          >
+            {m.saveNote}
+          </button>
+
+          <button
+            type="button"
+            className="text-xs underline"
+            onClick={cancelNoteEdit}
+          >
+            {m.cancelNoteEdit}
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="space-y-1">
+        {r.line.note && (
+          <NoteLine
+            label={r.hit.product.customization.label}
+            note={r.line.note}
+          />
+        )}
+
+        <button
+          type="button"
+          className="text-xs font-bold underline"
+          onClick={() => {
+            setEditingNoteKey(
+              `${r.line.variantId}:${r.line.note ?? ""}`
+            );
+            setNoteDraft(r.line.note ?? "");
+            setNoteError(null);
+          }}
+        >
+          {m.editNote}
+        </button>
+      </div>
+    )}
+  </div>
+)}
                   <div className="sl-cart-controls">
                     {r.hit?.variant.inStock && (
                       <QtyStepper

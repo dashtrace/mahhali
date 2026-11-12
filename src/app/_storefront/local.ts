@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 // Per-shop browser storage for the guest cart and wishlist, kept in sync
 // across components (a custom event) and tabs (the storage event).
-const EVENT = "mahhali-local";
+const EVENT = "StoreLift-local";
 // Storage blocked (private mode): keep values for this page view only.
 const memory = new Map<string, string>();
 

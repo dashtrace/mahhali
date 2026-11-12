@@ -13,7 +13,7 @@ import { PreviewFrame } from "./PreviewFrame";
 export const metadata: Metadata = { title: "Preview", robots: { index: false, follow: false } };
 
 const VIEWS = ["home", "shop", "product"] as const;
-const PAGE_SIZE = 8; // as on the shop page
+const PAGE_SIZE = 6; // same limit as the public shop page
 const TESTIMONIALS = 12; // as catalogueService.forShop
 
 /** The owner's own shop as customers see it, in the settings page's frame. A shop that can't be shown lands on not-found.tsx. */

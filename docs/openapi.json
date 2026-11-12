@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Mahhali API",
+    "title": "StoreLift API",
     "version": "0.2.0",
     "description": "Shop Link: orders for Instagram and WhatsApp shops."
   },
@@ -1195,6 +1195,7 @@
       "ReviewStatus": {
         "type": "string",
         "enum": [
+          "PENDING",
           "PUBLISHED",
           "HIDDEN"
         ]
@@ -1203,7 +1204,11 @@
         "type": "object",
         "properties": {
           "status": {
-            "$ref": "#/components/schemas/ReviewStatus"
+            "type": "string",
+            "enum": [
+              "PUBLISHED",
+              "HIDDEN"
+            ]
           }
         },
         "required": [

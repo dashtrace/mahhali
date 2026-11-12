@@ -64,7 +64,8 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
             <bdi>{formatMoney(data.codGaps.sumMinor, me.shop.currency, locale)}</bdi>
           </div>
           <div className="sub">
-            {data.codGaps.count === 1 ? m.codGapsHintOne : fill(m.codGapsHint, { n: formatNumber(data.codGaps.count, locale) })}
+            {m.cashIssueMeaning} <br />
+            {fill(m.cashIssueBreakdown, { orders: data.codGaps.orderCount, remittances: data.codGaps.remittanceCount })}
             {can(actor.role, "reconciliation.read") && (
               <>
                 {" · "}

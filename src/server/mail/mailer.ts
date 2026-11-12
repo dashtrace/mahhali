@@ -14,7 +14,7 @@ export async function sendMail(mail: Mail): Promise<void> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-    body: JSON.stringify({ from: process.env.MAIL_FROM ?? "Mahhali <orders@mahhali.app>", ...mail }),
+    body: JSON.stringify({ from: process.env.MAIL_FROM ?? "StoreLift <orders@mahhali.app>", ...mail }),
   });
   if (!res.ok) throw new Error(`Email provider refused the message: ${res.status} ${await res.text()}`);
 }

@@ -44,6 +44,14 @@ export const reportingRepo = {
     });
   },
 
+  cashAdjustments(shopId: string, remittanceIds: string[], orderIds: string[], client: Db = db) {
+    return Promise.all([
+      client.remittanceSupplement.findMany({ where: { shopId, remittanceId: { in: remittanceIds } }, select: { remittanceId: true, amountUsdCents: true, amountLbp: true } }),
+      client.remittanceResolution.findMany({ where: { shopId, remittanceId: { in: remittanceIds } }, select: { remittanceId: true } }),
+      client.orderCashResolution.findMany({ where: { shopId, orderId: { in: orderIds } }, select: { orderId: true, reason: true, createdAt: true, order: { select: { number: true } } } }),
+    ]);
+  },
+
   countByStatus(shopId: string, range: Range, client: Db = db) {
     return client.order.groupBy({
       by: ["status"],

@@ -54,6 +54,9 @@ export type ReconcileInput = {
   remittances: ReconcileRemittance[];
   /** Every line of those remittances, plus any line that pays for a delivered order. */
   lines: ReconcileLine[];
+  supplements: { remittanceId: string; amountUsdCents: bigint; amountLbp: bigint }[];
+  acceptedRemittanceIds: string[];
+  acceptedOrderIds: string[];
 };
 
 type OrderRef = { orderId: string; number: number };
@@ -64,6 +67,7 @@ export type CourierReconciliation = {
   courierId: string;
   /** COD due on the orders this courier delivered in the period. */
   expectedMinor: bigint;
+  reportedMinor: bigint;
   /** Cash in the remittances received in the period, as handed over and in the shop currency. */
   received: Received;
   receivedMinor: bigint;
@@ -105,6 +109,7 @@ export function reconcile(input: ReconcileInput): Reconciliation {
       c = {
         courierId,
         expectedMinor: 0n,
+        reportedMinor: 0n,
         received: { usdCents: 0n, lbp: 0n },
         receivedMinor: 0n,
         settled: [],
@@ -129,6 +134,8 @@ export function reconcile(input: ReconcileInput): Reconciliation {
   // One line per order (RemittanceLine.orderId is unique), whichever query found it.
   const lineByOrder = new Map(input.lines.map((l) => [l.order.id, l]));
   const paidByOrder = new Map<string, bigint>();
+  const acceptedOrders = new Set(input.acceptedOrderIds);
+  const acceptedRemittances = new Set(input.acceptedRemittanceIds);
 
   for (const line of lineByOrder.values()) {
     const { order } = line;
@@ -143,7 +150,7 @@ export function reconcile(input: ReconcileInput): Reconciliation {
       continue;
     }
     const diffMinor = paidMinor - order.codMinor;
-    if (abs(diffMinor) <= input.toleranceMinor) {
+    if (abs(diffMinor) <= input.toleranceMinor || acceptedOrders.has(order.id)) {
       c.settled.push({ ...ref, dueMinor: order.codMinor, paidMinor });
     } else {
       c.shortOrOver.push({ ...ref, dueMinor: order.codMinor, reportedMinor: reportedOf(order), paidMinor, diffMinor });
@@ -161,9 +168,10 @@ export function reconcile(input: ReconcileInput): Reconciliation {
       c.unpaid.push({ ...ref, dueMinor: order.codMinor, deliveredAt: order.deliveredAt, daysOutstanding });
     }
     const reportedMinor = reportedOf(order);
+    c.reportedMinor += reportedMinor ?? order.codMinor;
     if (reportedMinor !== null) {
       const diffMinor = reportedMinor - order.codMinor;
-      if (abs(diffMinor) > input.toleranceMinor) {
+      if (abs(diffMinor) > input.toleranceMinor && !acceptedOrders.has(order.id)) {
         c.doorstepGaps.push({ ...ref, dueMinor: order.codMinor, reportedMinor, paidMinor: paidByOrder.get(order.id) ?? null, diffMinor });
       }
     }
@@ -171,16 +179,19 @@ export function reconcile(input: ReconcileInput): Reconciliation {
 
   for (const r of input.remittances) {
     const c = courier(r.courierId);
-    c.received.usdCents += r.amountUsdCents;
-    c.received.lbp += r.amountLbp;
+    const extra = input.supplements.filter((s) => s.remittanceId === r.id);
+    const totalUsd = r.amountUsdCents + extra.reduce((sum, s) => sum + s.amountUsdCents, 0n);
+    const totalLbp = r.amountLbp + extra.reduce((sum, s) => sum + s.amountLbp, 0n);
+    c.received.usdCents += totalUsd;
+    c.received.lbp += totalLbp;
     const lines = [...lineByOrder.values()].filter((l) => l.remittanceId === r.id);
     // Compare like with like (dollars with dollars, pounds with pounds), so only the
     // difference is converted and a rate change since the orders cannot create a gap.
     const usd = lines.reduce((sum, l) => sum + l.collectedUsdCents, 0n);
     const lbp = lines.reduce((sum, l) => sum + l.collectedLbp, 0n);
     const fees = lines.reduce((sum, l) => sum + l.feeMinor, 0n);
-    const diffMinor = convert(r.amountUsdCents - usd, r.amountLbp - lbp, input.currency, input.rate) + fees;
-    if (abs(diffMinor) > input.toleranceMinor) {
+    const diffMinor = convert(totalUsd - usd, totalLbp - lbp, input.currency, input.rate) + fees;
+    if (abs(diffMinor) > input.toleranceMinor && !acceptedRemittances.has(r.id)) {
       c.remittanceGaps.push({ remittanceId: r.id, receivedAt: r.receivedAt, reference: r.reference, diffMinor });
     }
   }
@@ -203,4 +214,26 @@ export function reconcile(input: ReconcileInput): Reconciliation {
     totals.gaps.sumMinor += c.gaps.sumMinor;
   }
   return { couriers: [...byCourier.values()], totals };
+}
+
+/** Open issue exposure sums absolute differences, NOT the net amount owed.
+ * Doorstep and COD differences on the same order are counted only once.
+ * A handover gap is a distinct event and appears separately.
+ */
+export function openCashExposure(couriers: CourierReconciliation[]) {
+  const orders = new Map<string, bigint>();
+  const absAmount = (n: bigint) => n < 0n ? -n : n;
+  for (const c of couriers) {
+    for (const x of c.shortOrOver) orders.set(x.orderId, absAmount(x.diffMinor));
+    for (const x of c.doorstepGaps) if (!orders.has(x.orderId)) orders.set(x.orderId, absAmount(x.diffMinor));
+    for (const x of c.unpaid) if (!orders.has(x.orderId)) orders.set(x.orderId, x.dueMinor);
+    for (const x of c.notDeliveredButPaid) if (!orders.has(x.orderId)) orders.set(x.orderId, absAmount(x.paidMinor));
+  }
+  const remittances = couriers.flatMap((c) => c.remittanceGaps);
+  return {
+    count: orders.size + remittances.length,
+    orderCount: orders.size,
+    remittanceCount: remittances.length,
+    sumMinor: [...orders.values()].reduce((a, b) => a + b, 0n) + remittances.reduce((a, r) => a + absAmount(r.diffMinor), 0n),
+  };
 }
