@@ -105,12 +105,16 @@ export const reviewRepo = {
     });
   },
 
-  listForShop(shopId: string, status: "PUBLISHED" | "HIDDEN" | undefined, client: Db = db) {
+  listForShop(shopId: string, status: "PENDING" | "PUBLISHED" | "HIDDEN" | undefined, client: Db = db) {
     return client.review.findMany({
       where: { shopId, ...(status ? { status } : {}) },
       include: forDashboard,
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     });
+  },
+
+  pendingCount(shopId: string, client: Db = db) {
+    return client.review.count({ where: { shopId, status: "PENDING" } });
   },
 
   findById(shopId: string, id: string, client: Db = db) {

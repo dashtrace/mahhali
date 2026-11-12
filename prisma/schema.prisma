@@ -137,6 +137,9 @@ model Shop {
   stockMovements         StockMovement[]
   couriers               Courier[]
   remittances            Remittance[]
+  remittanceSupplements  RemittanceSupplement[]
+  remittanceResolutions  RemittanceResolution[]
+  orderCashResolutions   OrderCashResolution[]
   remittanceLines        RemittanceLine[]
   reviewInvites          ReviewInvite[]
   reviews                Review[]
@@ -235,6 +238,7 @@ enum CourierType {
 }
 
 enum ReviewStatus {
+  PENDING
   PUBLISHED
   HIDDEN
 }
@@ -427,6 +431,7 @@ model Order {
   events            OrderEvent[]
   stockMovements    StockMovement[]
   remittanceLine    RemittanceLine?
+  cashResolution     OrderCashResolution?
   reviewInvite      ReviewInvite?
 
   @@unique([shopId, number])
@@ -525,6 +530,8 @@ model Remittance {
   recordedByUserId String?
   createdAt        DateTime         @default(now())
   lines            RemittanceLine[]
+  supplements      RemittanceSupplement[]
+  resolution       RemittanceResolution?
 
   @@index([shopId, courierId])
   @@map("remittance")
@@ -545,6 +552,53 @@ model RemittanceLine {
   feeMinor          BigInt     @default(0)
 
   @@map("remittance_line")
+}
+
+// Append-only receipts: additional money received AFTER the initial remittance.
+model RemittanceSupplement {
+  id               String     @id @default(cuid())
+  shopId           String
+  shop             Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  remittanceId     String
+  remittance       Remittance @relation(fields: [remittanceId], references: [id], onDelete: Cascade)
+  amountUsdCents   BigInt     @default(0)
+  amountLbp        BigInt     @default(0)
+  reason           String
+  recordedByUserId String
+  requestKey       String
+  createdAt        DateTime   @default(now())
+
+  @@unique([shopId, requestKey])
+  @@index([shopId, remittanceId])
+  @@map("remittance_supplement")
+}
+
+// An explicit owner/manager decision to accept a remaining handover difference.
+model RemittanceResolution {
+  id               String     @id @default(cuid())
+  shopId           String
+  shop             Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  remittanceId     String     @unique
+  remittance       Remittance @relation(fields: [remittanceId], references: [id], onDelete: Cascade)
+  reason           String
+  recordedByUserId String
+  createdAt        DateTime   @default(now())
+
+  @@map("remittance_resolution")
+}
+
+// An explicit decision accepting an order-level due-vs-collected discrepancy.
+model OrderCashResolution {
+  id               String   @id @default(cuid())
+  shopId           String
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId          String   @unique
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason           String
+  recordedByUserId String
+  createdAt        DateTime @default(now())
+
+  @@map("order_cash_resolution")
 }
 
 model ReviewInvite {
@@ -576,7 +630,7 @@ model Review {
   rating         Int
   comment        String?
   authorName     String
-  status         ReviewStatus @default(PUBLISHED)
+  status         ReviewStatus @default(PENDING)
   hiddenByUserId String?
   hiddenAt       DateTime?
   createdAt      DateTime     @default(now())

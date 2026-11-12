@@ -10,13 +10,13 @@ import { httpsLink, whatsappLink } from "@/lib/format";
 import { homeHighlight } from "@/server/domain/storefront";
 import { FeedbackForm } from "../info/[section]/FeedbackForm";
 import { HeroCarousel } from "./HeroCarousel";
+import { ScrollArrow } from "./ScrollArrow";
 import type { StoreData } from "./load";
 import { ContactList, HomeTile, TestimonialCard } from "./tiles";
 
 // No directive, no async, no server-only imports: the settings preview renders this in a client component.
 // The sl-* classes port the approved storefront's CSS (globals.css).
 
-const SHELF_SIZE = 4;
 // One list has to fill the widest window (1900px) at 365px + 18px gap a card, or the loop shows a gap.
 const MARQUEE_MIN_CARDS = 5;
 
@@ -70,7 +70,8 @@ export function StoreHome({ shop, products, testimonials }: StoreData) {
                 {m.catRow}
               </Heading>
             </div>
-            <ul className="sl-category-row">
+            <div className="sl-scroll-actions"><ScrollArrow targetId="home-category-scroll" locale={locale} /></div>
+            <ul id="home-category-scroll" className="sl-category-row" aria-label={m.catRow} tabIndex={0}>
               {shop.categories.map((c) => {
                 const photo = products.find((p) => p.categoryId === c.id && p.images[0])?.images[0].url;
                 return (
@@ -108,8 +109,9 @@ export function StoreHome({ shop, products, testimonials }: StoreData) {
                 <Icon name="arrow" className="size-4" />
               </Link>
             </div>
-            <ul className="sl-tile-grid">
-              {section.items.slice(0, SHELF_SIZE).map((p) => (
+            <div className="sl-scroll-actions"><ScrollArrow targetId="home-product-scroll" locale={locale} /></div>
+            <ul id="home-product-scroll" className="sl-tile-grid" aria-label={section.title} tabIndex={0}>
+              {section.items.map((p) => (
                 <li key={p.id}>
                   <HomeTile slug={shop.slug} product={p} currency={shop.currency} locale={locale} />
                 </li>

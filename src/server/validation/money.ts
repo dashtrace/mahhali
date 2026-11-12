@@ -46,6 +46,13 @@ export const CourierPeriodQuery = z
 
 export const UnsettledQuery = z.object({ courierId: CourierId });
 
+export const CashReason = z.string().trim().min(5).max(500);
+export const RemittanceActionBody = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("PAYMENT"), requestKey: z.uuid(), amountUsd: Amount.default("0"), amountLbp: Pounds.default("0"), reason: CashReason }),
+  z.object({ kind: z.literal("ACCEPT"), reason: CashReason }),
+]);
+export const AcceptCashOrderBody = z.object({ reason: CashReason });
+
 export type CreateRemittanceInput = z.infer<typeof CreateRemittanceBody>;
 export type PeriodInput = z.infer<typeof PeriodQuery>;
 export type CourierPeriodInput = z.infer<typeof CourierPeriodQuery>;
