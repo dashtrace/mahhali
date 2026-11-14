@@ -5,11 +5,12 @@ import { db, type Db } from "./tx";
 // puts it in every where clause.
 
 /** Locks the shop row so a count-then-insert under a per-shop limit runs one at a time. */
-async function lockShop(tx: Db, shopId: string) {
+export async function lockShop(tx: Db, shopId: string) {
   await tx.$queryRaw`SELECT id FROM "shop" WHERE id = ${shopId} FOR NO KEY UPDATE`;
 }
 
-const slideFields = { id: true, imageUrl: true, kicker: true, title: true, body: true, position: true } as const;
+type SlideCta = { ctaLabel?: string | null; ctaCategoryId?: string | null; ctaCollectionId?: string | null; ctaSectionId?: string | null };
+const slideFields = { id: true, imageUrl: true, mobileImageUrl: true, kicker: true, title: true, body: true, ctaLabel: true, ctaCategoryId: true, ctaCollectionId: true, ctaSectionId: true, position: true } as const;
 
 export const slideRepo = {
   list(shopId: string, client: Db = db) {
@@ -21,14 +22,14 @@ export const slideRepo = {
   },
 
   /** Appends a slide unless the shop already has `max`; null when full. */
-  async create(tx: Db, shopId: string, data: { imageUrl: string; kicker: string | null; title: string; body: string | null }, max: number) {
+  async create(tx: Db, shopId: string, data: { imageUrl: string; mobileImageUrl?: string | null; kicker: string | null; title: string; body: string | null } & SlideCta, max: number) {
     await lockShop(tx, shopId);
     const existing = await tx.heroSlide.aggregate({ where: { shopId }, _count: { _all: true }, _max: { position: true } });
     if (existing._count._all >= max) return null;
     return tx.heroSlide.create({ data: { ...data, shopId, position: (existing._max.position ?? -1) + 1 }, select: slideFields });
   },
 
-  async update(shopId: string, id: string, data: { imageUrl?: string; kicker?: string | null; title?: string; body?: string | null }, client: Db = db) {
+  async update(shopId: string, id: string, data: { imageUrl?: string; mobileImageUrl?: string | null; kicker?: string | null; title?: string; body?: string | null } & SlideCta, client: Db = db) {
     const { count } = await client.heroSlide.updateMany({ where: { id, shopId }, data });
     return count === 1;
   },
@@ -48,7 +49,25 @@ const categoryFields = { id: true, name: true, position: true } as const;
 
 export const categoryRepo = {
   list(shopId: string, client: Db = db) {
-    return client.category.findMany({ where: { shopId }, select: categoryFields, orderBy: [{ position: "asc" }, { name: "asc" }] });
+    return client.category.findMany({
+      where: { shopId },
+      orderBy: [{ position: "asc" }, { name: "asc" }],
+      select: {
+        ...categoryFields,
+        collections: {
+          where: { shopId },
+          orderBy: [{ position: "asc" }, { id: "asc" }],
+          select: {
+            id: true, name: true, position: true,
+            sections: {
+              where: { shopId },
+              orderBy: [{ position: "asc" }, { id: "asc" }],
+              select: { id: true, name: true, position: true },
+            },
+          },
+        },
+      },
+    });
   },
 
   findById(shopId: string, id: string, client: Db = db) {
@@ -72,8 +91,12 @@ export const categoryRepo = {
     for (const [position, id] of ids.entries()) await tx.category.updateMany({ where: { id, shopId }, data: { position } });
   },
 
-  /** Its products become uncategorised (ON DELETE SET NULL). */
-  async delete(shopId: string, id: string, client: Db = db) {
+  /** Called inside the service transaction: detach products before cascading through both child levels. */
+  async delete(shopId: string, id: string, client: Db) {
+    await client.product.updateMany({
+      where: { shopId, categoryId: id },
+      data: { categoryId: null, collectionId: null, sectionId: null },
+    });
     const { count } = await client.category.deleteMany({ where: { id, shopId } });
     return count === 1;
   },

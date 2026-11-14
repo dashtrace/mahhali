@@ -23,6 +23,8 @@ erDiagram
   COURIER |o--o{ INVITATION : "courierId"
   SHOP ||--o{ PRODUCT : "shopId"
   CATEGORY |o--o{ PRODUCT : "categoryId"
+  PRODUCT_COLLECTION |o--o{ PRODUCT : "collectionId"
+  PRODUCT_SECTION |o--o{ PRODUCT : "sectionId"
   PRODUCT_IMPORT |o--o{ PRODUCT : "importId"
   SHOP ||--o{ CATEGORY : "shopId"
   SHOP ||--o{ HERO_SLIDE : "shopId"
@@ -80,6 +82,10 @@ erDiagram
   PRODUCT_IMPORT ||--o| IMPORT_PHOTO_LINK : "importId"
   USER ||--o{ IMPORT_PHOTO_LINK : "createdById"
   SHOP ||--o{ MCP_TOOL_CALL : "shopId"
+  SHOP ||--o{ PRODUCT_COLLECTION : "shopId"
+  CATEGORY ||--o{ PRODUCT_COLLECTION : "categoryId"
+  SHOP ||--o{ PRODUCT_SECTION : "shopId"
+  PRODUCT_COLLECTION ||--o{ PRODUCT_SECTION : "collectionId"
   USER {
     string id PK
     string name
@@ -189,6 +195,8 @@ erDiagram
     decimal ratingAvg
     int ratingCount
     string categoryId FK
+    string collectionId FK
+    string sectionId FK
     boolean featured
     json specs
     string customLabel
@@ -211,9 +219,14 @@ erDiagram
     string id PK
     string shopId FK
     string imageUrl
+    string mobileImageUrl
     string kicker
     string title
     string body
+    string ctaLabel
+    string ctaCategoryId
+    string ctaCollectionId
+    string ctaSectionId
     int position
     datetime createdAt
   }
@@ -556,5 +569,19 @@ erDiagram
     string errorCode
     int durationMs
     datetime createdAt
+  }
+  PRODUCT_COLLECTION {
+    string id PK
+    string shopId FK
+    string categoryId FK
+    string name
+    int position
+  }
+  PRODUCT_SECTION {
+    string id PK
+    string shopId FK
+    string collectionId FK
+    string name
+    int position
   }
 ```

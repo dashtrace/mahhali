@@ -85,7 +85,7 @@ What V1 must do, and how well. Pilot shops are in Lebanon and price in US dollar
 - **NFR-6 Reliability.** A double tap or a retry on a bad connection never creates a duplicate order; money is stored as whole cents or whole pounds in 64-bit integers, never as decimals, and each order keeps the exchange rate that applied when it was placed.
 - **NFR-7 Auditability.** Every order status change, stock change and admin action is recorded with who did it and when.
 - **NFR-8 Languages.** The interface supports English and Arabic, including right-to-left layout.
-- **NFR-9 Accessibility.** Theme colours chosen by shops keep readable text contrast (WCAG AA); forms have labels and work with a screen reader.
+- **NFR-9 Accessibility.** Theme contrast checks provide advisory readability warnings; owners can save any valid colour values without a contrast restriction. Explicit colour roles are preserved. Forms have labels and work with a screen reader.
 - **NFR-10 Maintainability.** Next.js route handlers in TypeScript with Prisma on plain PostgreSQL; the repository layer is separate from the service layer; validation on every route; README, ERD and OpenAPI contract kept in the repo.
 - **NFR-11 Testing and delivery.** Unit tests on business logic, integration tests on the main endpoints, all run by CI on every pull request; merges to main deploy automatically to a public URL.
 - **NFR-12 Email delivery.** Emails are sent only after the order change is saved, through an email provider with retries; a failed email never blocks or undoes an order or a delivery.

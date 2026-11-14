@@ -12,6 +12,8 @@ import { Check, Field } from "./kit";
 type Spec = { label: string; value: string };
 export type Extras = {
   categoryId: string;
+  collectionId: string;
+  sectionId: string;
   featured: boolean;
   specs: Spec[];
   custom: boolean;
@@ -20,12 +22,14 @@ export type Extras = {
   customRequired: boolean;
   customMaxLength: string;
 };
-export type Category = { id: string; name: string };
+export type Category = { id: string; name: string; collections?: { id: string; name: string; sections: { id: string; name: string }[] }[] };
 
 const MAX_SPECS = 12;
 
 export const blankExtras: Extras = {
   categoryId: "",
+  collectionId: "",
+  sectionId: "",
   featured: false,
   specs: [],
   custom: false,
@@ -38,6 +42,8 @@ export const blankExtras: Extras = {
 /** The editor's starting values from a product row (specs arrive as untyped JSON). */
 export function extrasOf(p: {
   categoryId: string | null;
+  collectionId?: string | null;
+  sectionId?: string | null;
   featured: boolean;
   specs: unknown;
   customLabel: string | null;
@@ -47,6 +53,8 @@ export function extrasOf(p: {
 }): Extras {
   return {
     categoryId: p.categoryId ?? "",
+    collectionId: p.collectionId ?? "",
+    sectionId: p.sectionId ?? "",
     featured: p.featured,
     specs: Array.isArray(p.specs) ? (p.specs as Spec[]) : [],
     custom: p.customLabel !== null,
@@ -61,6 +69,8 @@ export function extrasOf(p: {
 export function extrasBody(x: Extras) {
   return {
     categoryId: x.categoryId || null,
+    collectionId: x.collectionId || null,
+    sectionId: x.sectionId || null,
     featured: x.featured,
     specs: x.specs.map((s) => ({ label: s.label.trim(), value: s.value.trim() })).filter((s) => s.label || s.value),
     customLabel: x.custom ? x.customLabel.trim() || null : null,
@@ -88,6 +98,8 @@ export function ExtrasFields({ value: x, onChange, categories, visibility, m }: 
   const set = (patch: Partial<Extras>) => onChange({ ...x, ...patch });
   const setSpec = (i: number, patch: Partial<Spec>) => set({ specs: x.specs.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
   const max = Number(x.customMaxLength) || 240;
+  const collections = categories.find((c) => c.id === x.categoryId)?.collections ?? [];
+  const sections = collections.find((c) => c.id === x.collectionId)?.sections ?? [];
 
   return (
     <>
@@ -100,7 +112,7 @@ export function ExtrasFields({ value: x, onChange, categories, visibility, m }: 
           </Link>
         }
       >
-        <select className="control" value={x.categoryId} onChange={(e) => set({ categoryId: e.target.value })}>
+        <select className="control" value={x.categoryId} onChange={(e) => set({ categoryId: e.target.value, collectionId: "", sectionId: "" })}>
           <option value="">{m.noCategory}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -109,6 +121,18 @@ export function ExtrasFields({ value: x, onChange, categories, visibility, m }: 
           ))}
         </select>
       </Field>
+      {collections.length > 0 && <Field label={m.collection}>
+        <select className="control" value={x.collectionId} onChange={(e) => set({ collectionId: e.target.value, sectionId: "" })}>
+          <option value="">{m.noCollection}</option>
+          {collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </Field>}
+      {sections.length > 0 && <Field label={m.section}>
+        <select className="control" value={x.sectionId} onChange={(e) => set({ sectionId: e.target.value })}>
+          <option value="">{m.noSection}</option>
+          {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </Field>}
       {visibility}
       <Check label={m.featureOn} hint={m.featuredHint} checked={x.featured} onChange={(e) => set({ featured: e.target.checked })} />
 

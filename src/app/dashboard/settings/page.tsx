@@ -63,7 +63,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       return <StorefrontForm storefront={storefront} categories={categories} whatsappPhone={settings.whatsappPhone} m={m} t={t} />;
     }
     if (tab === "slides") {
-      return <SlidesEditor slides={await storefrontService.slides(actor)} max={MAX_SLIDES} m={m} t={t} />;
+      const [slides, categories] = await Promise.all([storefrontService.slides(actor), categoryService.list(actor)]);
+      return <SlidesEditor slides={slides} categories={categories} max={MAX_SLIDES} m={m} t={t} />;
     }
     const branding = await shopService.branding(actor);
     return <Branding theme={readTheme(branding.theme)} logo={branding.logo} m={m} t={t} />;

@@ -60,7 +60,7 @@ export function StoreHome({ shop, products, testimonials }: StoreData) {
   return (
     <>
       <h1 className="sr-only">{shop.name}</h1>
-      <HeroCarousel slides={shop.slides} shopHref={`${base}/shop`} shopName={shop.name} tagline={shop.tagline} locale={locale} />
+      <HeroCarousel categories={shop.categories} slides={shop.slides} shopHref={`${base}/shop`} shopName={shop.name} tagline={shop.tagline} locale={locale} />
 
       {shop.categories.length > 0 && (
         <section aria-labelledby="home-categories" className="sl-shell sl-categories">

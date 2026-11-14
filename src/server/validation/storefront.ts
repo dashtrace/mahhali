@@ -50,6 +50,10 @@ export const SlideFields = z.object({
   kicker: optionalText(40),
   title: z.string().trim().min(1).max(80),
   body: optionalText(160),
+  ctaLabel: optionalText(40),
+  ctaCategoryId: optionalText(64),
+  ctaCollectionId: optionalText(64),
+  ctaSectionId: optionalText(64),
 });
 
 export const UpdateSlideBody = z
@@ -57,6 +61,10 @@ export const UpdateSlideBody = z
     kicker: clearable(40),
     title: z.string().trim().min(1).max(80).optional(),
     body: clearable(160),
+    ctaLabel: clearable(40),
+    ctaCategoryId: clearable(64),
+    ctaCollectionId: clearable(64),
+    ctaSectionId: clearable(64),
     /** 0-based place in the carousel; the others shift to make room. */
     position: z.number().int().min(0).max(100).optional(),
   })

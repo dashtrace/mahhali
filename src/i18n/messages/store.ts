@@ -5,6 +5,10 @@ import { defineMessages } from "../locale";
 // order tracking and the review page. Shop pages follow the shop's language.
 export const storeMessages = defineMessages({
   en: {
+    collection: "Collection",
+    section: "Shop for",
+    allCollections: "All collections",
+    allSections: "All sections",
     // Landing
     landingTitle: "Your Instagram shop, organised",
     landingLead:
@@ -309,6 +313,10 @@ export const storeMessages = defineMessages({
     feedbackSent: "Thank you for sharing your feedback!",
   },
   ar: {
+    collection: "مجموعة",
+    section: "تسوق حسب",
+    allCollections: "كل المجموعات",
+    allSections: "كل الأقسام",
     landingTitle: "متجرك على إنستغرام، منظَّم",
     landingLead:
       "رابط كتالوج تضعه في البايو، وطلبات تحجز المخزون لحظة إرسالها، ودفع عند الاستلام تطابقه مع كل مندوب توصيل.",

@@ -17,7 +17,7 @@ export default async function CategoriesPage() {
   const count = (id: string) => products.filter((p) => p.categoryId === id).length;
   return (
     <CategoryManager
-      categories={categories.map((c) => ({ id: c.id, name: c.name, count: count(c.id) }))}
+      categories={categories.map((c) => ({ id: c.id, name: c.name, count: count(c.id), collections: c.collections }))}
       canWrite={can(actor.role, "product.write")}
       max={MAX_CATEGORIES}
       m={catalogueMessages[locale]}

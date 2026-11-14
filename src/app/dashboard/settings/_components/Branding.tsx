@@ -119,7 +119,9 @@ export function Branding({ theme: saved, logo: savedLogo, m, t }: Props) {
                   <strong>{m[`role${k}`]}</strong>
                 </label>
                 <span className="colorfield-value">
-                  <code dir="ltr">{theme[k] ?? m.textAuto}</code>
+                  <HexColourInput colour={drawn[k]} label={fill(m.hexColourLabel, { role: m[`role${k}`] })}
+                    hint={m.hexColourHint} onChange={(hex) => set(k, hex)} />
+                  {!theme[k] && <code>{m.textAuto}</code>}
                   {theme[k] && !REQUIRED_ROLES.includes(k) && (
                     <button type="button" aria-label={fill(m.setAutomatic, { role: m[`role${k}`] })} onClick={() => setAutomatic(k)}>
                       {m.textAuto}
@@ -137,7 +139,6 @@ export function Branding({ theme: saved, logo: savedLogo, m, t }: Props) {
             type="button"
             state={{ busy: save.busy, dirty, saved: done }}
             labels={t}
-            disabled={failures.length > 0}
             onClick={async () => {
               const ok = await save.run(() => api("/api/shop/branding", { method: "PATCH", body: theme }));
               setDone(ok);
@@ -278,4 +279,20 @@ function Logo({ logo, onChange, m, t }: { logo: string | null; onChange: (logo: 
       </div>
     </div>
   );
+}
+
+/** A normal text box supports pasting without depending on the browser's native colour popup. */
+function HexColourInput({ colour, label, hint, onChange }: { colour: string; label: string; hint: string; onChange: (hex: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const valid = (text: string) => /^#?[0-9a-f]{6}$/i.test(text.trim());
+  return <input type="text" className="colour-hex-input" aria-label={label} title={hint}
+    dir="ltr" autoComplete="off" autoCapitalize="none" spellCheck={false}
+    value={draft ?? colour} aria-invalid={draft !== null && !valid(draft)}
+    onFocus={(e) => e.currentTarget.select()}
+    onChange={(e) => {
+      const text = e.target.value;
+      setDraft(text);
+      if (valid(text)) onChange(`#${text.trim().replace(/^#/, "").toLowerCase()}`);
+    }}
+    onBlur={() => setDraft(null)} />;
 }

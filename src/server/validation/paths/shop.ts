@@ -81,7 +81,6 @@ export function registerShop(r: OpenAPIRegistry, { secured, ok, error, errors }:
       400: errors[400],
       401: errors[401],
       403: errors[403],
-      422: error("LOW_CONTRAST: text below WCAG AA; details list the failing pairs"),
     },
   });
   r.registerPath({

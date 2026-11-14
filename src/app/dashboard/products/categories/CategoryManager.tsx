@@ -8,9 +8,10 @@ import type { CommonMessages } from "@/i18n/messages/common";
 import { api } from "@/lib/api";
 import { DashIcon } from "../../_components/DashIcon";
 import { BackLink, Dialog, Field } from "../_components/kit";
+import { CollectionManager, type ManagedCollection } from "./CollectionManager";
 import { submitWith, useAction, useSave } from "../_components/useAction";
 
-type Category = { id: string; name: string; count: number };
+type Category = { id: string; name: string; count: number; collections: ManagedCollection[] };
 type Props = { categories: Category[]; canWrite: boolean; max: number; m: CatalogueMessages; t: CommonMessages };
 
 export function CategoryManager({ categories, canWrite, max, m, t }: Props) {
@@ -98,6 +99,7 @@ function Row({
 }) {
   const action = useSave(t.error);
   const [renaming, setRenaming] = useState(false);
+  const [managing, setManaging] = useState(false);
   const [dragging, setDragging] = useState(false);
   const move = (id: string, position: number) => action.run(() => api(`/api/categories/${id}`, { method: "PATCH", body: { position } }));
 
@@ -140,12 +142,18 @@ function Row({
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => setRenaming(true)}>
-              <DashIcon name="edit" size="sm" /> {m.rename}
-            </button>
+            <>
+              <button type="button" onClick={() => setManaging(true)}>{m.manageCollections}</button>
+              <button type="button" onClick={() => setRenaming(true)}>
+                <DashIcon name="edit" size="sm" /> {m.rename}
+              </button>
+            </>
           )}
         </div>
       )}
+      {managing && <Dialog title={`${c.name} · ${m.manageCollections}`} closeLabel={t.close} onClose={() => setManaging(false)}>
+        <CollectionManager categoryId={c.id} collections={c.collections} m={m} t={t} />
+      </Dialog>}
       {renaming && (
         <Dialog title={fill(m.renameTitle, { name: c.name })} closeLabel={t.close} onClose={() => setRenaming(false)}>
           <form

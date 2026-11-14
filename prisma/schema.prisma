@@ -155,6 +155,8 @@ model Shop {
   reviews                Review[]
   heroSlides             HeroSlide[]
   categories             Category[]
+  collections            ProductCollection[]
+  sections               ProductSection[]
   testimonials           Testimonial[]
   productImports         ProductImport[]
   mcpToolCalls           McpToolCall[]
@@ -268,6 +270,10 @@ model Product {
   /// Same shop only; the service checks. Deleting the category leaves the product uncategorised.
   categoryId        String?
   category          Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  collectionId      String?
+  collection        ProductCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  sectionId         String?
+  section           ProductSection?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   featured          Boolean        @default(false)
   /// [{ label, value }], at most 12.
   specs             Json?
@@ -288,6 +294,7 @@ model Product {
   images            ProductImage[]
   reviews           Review[]
 
+  @@index([shopId, categoryId, collectionId, sectionId])
   @@index([shopId, status])
   @@index([importId])
   @@map("product")
@@ -301,20 +308,28 @@ model Category {
   position  Int
   createdAt DateTime  @default(now())
   products  Product[]
+  collections ProductCollection[]
 
   @@unique([shopId, name])
   @@map("category")
 }
 
 /// A promo banner on the storefront home page; at most 6 per shop.
+// Optional destination IDs are validated by the service, like Shop.homeCategoryId.
+// The storefront falls back to the nearest surviving parent if a target is deleted.
 model HeroSlide {
   id        String   @id @default(cuid())
   shopId    String
   shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   imageUrl  String
+  mobileImageUrl String?
   kicker    String?
   title     String
   body      String?
+  ctaLabel String?
+  ctaCategoryId String?
+  ctaCollectionId String?
+  ctaSectionId String?
   position  Int
   createdAt DateTime @default(now())
 
@@ -942,4 +957,36 @@ model McpToolCall {
   @@index([shopId, createdAt])
   @@index([userId, clientId, createdAt])
   @@map("mcp_tool_call")
+}
+
+// Optional merchandising levels. Existing category-only products remain valid.
+model ProductCollection {
+  id         String           @id @default(cuid())
+  shopId     String
+  shop       Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  position   Int
+  sections   ProductSection[]
+  products   Product[]
+
+  @@unique([shopId, categoryId, name])
+  @@index([shopId, categoryId, position])
+  @@map("product_collection")
+}
+
+model ProductSection {
+  id           String            @id @default(cuid())
+  shopId       String
+  shop         Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  collectionId String
+  collection   ProductCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  name         String
+  position     Int
+  products     Product[]
+
+  @@unique([shopId, collectionId, name])
+  @@index([shopId, collectionId, position])
+  @@map("product_section")
 }

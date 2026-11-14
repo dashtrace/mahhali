@@ -64,7 +64,7 @@ describe("StoreHome", () => {
 
   it("keeps the agreed section order", () => {
     const html = render(
-      { about: "Our tale.", shippingInfo: "Two days.", whatsappPhone: "+96171123456", categories: [{ id: "c1", name: "Bags", productCount: 1 }] },
+      { about: "Our tale.", shippingInfo: "Two days.", whatsappPhone: "+96171123456", categories: [{ id: "c1", name: "Bags", productCount: 1, collections: [] }] },
       [product("p1", "c1")],
       [testimonial("t1")],
     );
@@ -92,8 +92,8 @@ describe("StoreHome", () => {
 
   it("uses a product photo for a category, or its initial without one", () => {
     const categories = [
-      { id: "c1", name: "Bags", productCount: 1 },
-      { id: "c2", name: "Shoes", productCount: 0 },
+      { id: "c1", name: "Bags", productCount: 1, collections: [] },
+      { id: "c2", name: "Shoes", productCount: 0, collections: [] },
     ];
     const html = render({ categories }, [product("p1", "c1")]);
     expect(html).toContain('src="/uploads/p1.jpg" alt="" loading="lazy" class="size-full');

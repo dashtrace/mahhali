@@ -91,6 +91,10 @@
     padding: 9px;
     background: #fff;
   }
+  .sl-dash .colorfield > span {
+    min-width: 0;
+    flex: 1;
+  }
   .sl-dash .colorfield input[type="color"] {
     appearance: none;
     border: 0;
@@ -114,9 +118,24 @@
   }
   .sl-dash .colorfield-value {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
     margin-top: 3px;
+  }
+  .sl-dash .colorfield .colour-hex-input {
+    width: 94px;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 3px 5px;
+    background: #fff;
+    color: var(--ink);
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+  }
+  .sl-dash .colour-hex-input[aria-invalid="true"] {
+    border-color: #b91c1c;
   }
   .sl-dash .colorfield code {
     font-size: 10px;
