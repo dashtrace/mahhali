@@ -145,8 +145,8 @@ describe("hero slides", () => {
     const list = await call(listSlides, "/api/shop/slides", { cookie: owner.cookie });
     expect(list.body.map((s: { id: string }) => s.id)).toEqual([second.body.id, first.body.id]);
     expect((await publicCatalogue()).body.shop.slides).toEqual([
-      { id: second.body.id, imageUrl: second.body.imageUrl, kicker: null, title: "Gift sets for Eid", body: null },
-      { id: first.body.id, imageUrl: first.body.imageUrl, kicker: "NEW", title: "Autumn drop", body: null },
+      { id: second.body.id, imageUrl: second.body.imageUrl, mobileImageUrl: null, kicker: null, title: "Gift sets for Eid", body: null, ctaLabel: null, ctaCategoryId: null, ctaCollectionId: null, ctaSectionId: null },
+      { id: first.body.id, imageUrl: first.body.imageUrl, mobileImageUrl: null, kicker: "NEW", title: "Autumn drop", body: null, ctaLabel: null, ctaCategoryId: null, ctaCollectionId: null, ctaSectionId: null },
     ]);
 
     const del = await call(deleteSlide, `/api/shop/slides/${first.body.id}`, { method: "DELETE", cookie: owner.cookie }, { id: first.body.id });
@@ -254,7 +254,7 @@ describe("categories", () => {
     expect(moved.status).toBe(404);
 
     const listed = (await publicCatalogue()).body;
-    expect(listed.shop.categories).toContainEqual({ id: mine.body.id, name: "Necklaces", productCount: 1 });
+    expect(listed.shop.categories).toContainEqual({ id: mine.body.id, name: "Necklaces", productCount: 1, collections: [] });
     expect(listed.products[0]).toMatchObject({ categoryId: mine.body.id, featured: true, specs: [{ label: "Metal", value: "Silver" }], customization: null });
 
     const del = await call(deleteCategory, `/api/categories/${mine.body.id}`, { method: "DELETE", cookie: owner.cookie }, { id: mine.body.id });

@@ -149,15 +149,16 @@ describe("branding", () => {
     expect(res.body.theme).toEqual({ primary: "#1e3a8a", accent: "#9d174d", background: "#ffffff", radius: "full", font: "cairo" });
   });
 
-  it("saves a text colour, and refuses one too faint for the background", async () => {
+  it("saves a text colour even when it is faint on the background", async () => {
     const theme = { primary: "#1e3a8a", accent: "#9d174d", background: "#ffffff", radius: "md", font: "system" };
     const res = await branding({ ...theme, text: "#1F2937" });
     expect(res.status).toBe(200);
     expect(res.body.theme.text).toBe("#1f2937");
 
     const faint = await branding({ ...theme, text: "#cccccc" });
-    expect(faint.status).toBe(422);
-    expect(faint.body.error.details).toEqual([expect.objectContaining({ pair: "body text on background", foreground: "#cccccc" })]);
+    expect(faint.status).toBe(200);
+    expect(faint.body.theme.text).toBe("#cccccc");
+    expect((await prisma.shop.findUniqueOrThrow({ where: { id: owner.shop.id } })).theme).toEqual({ ...theme, text: "#cccccc" });
     // Leaving the text colour out sets it back to automatic.
     expect((await branding(theme)).body.theme.text).toBeUndefined();
   });
@@ -177,25 +178,29 @@ describe("branding", () => {
     expect(original.body.theme).toEqual(base);
   });
 
-  it("refuses a saved colour role that fails its pair", async () => {
+  it("saves a low-contrast role and returns it unchanged", async () => {
     const shop = await signUpOwner();
     const base = { primary: "#874258", accent: "#b99b7b", background: "#faf5f1", radius: "md", font: "system" };
     const res = await branding({ ...base, muted: "#cccccc" }, shop.cookie);
-    expect(res.status).toBe(422);
-    expect(res.body.error.code).toBe("LOW_CONTRAST");
-    expect(res.body.error.details).toEqual([expect.objectContaining({ pair: "muted text on background", foreground: "#cccccc" })]);
-    expect((await prisma.shop.findUniqueOrThrow({ where: { id: shop.shop.id } })).theme).toBeNull();
+    expect(res.status).toBe(200);
+    const expected = { ...base, muted: "#cccccc" };
+    expect(res.body.theme).toEqual(expected);
+    expect((await prisma.shop.findUniqueOrThrow({ where: { id: shop.shop.id } })).theme).toEqual(expected);
+    expect((await call(getBranding, "/branding", { cookie: shop.cookie })).body.theme).toEqual(expected);
+    expect((await call(catalogue, "/catalogue", {}, { slug: shop.shop.slug })).body.shop.theme).toEqual(expected);
   });
 
-  it("refuses colours that make text hard to read and says which pair failed", async () => {
-    const before = (await prisma.shop.findUniqueOrThrow({ where: { id: owner.shop.id } })).theme;
-    const res = await branding({ primary: "#ffff00", accent: "#1e3a8a", background: "#ffffff", radius: "md", font: "system" });
-    expect(res.status).toBe(422);
-    expect(res.body.error.code).toBe("LOW_CONTRAST");
-    expect(res.body.error.details).toEqual([
-      { pair: "text on primary", foreground: "#ffffff", background: "#ffff00", ratio: 1.07 },
-    ]);
-    expect((await prisma.shop.findUniqueOrThrow({ where: { id: owner.shop.id } })).theme).toEqual(before);
+  it("accepts any valid colour combination, including identical text and background colours", async () => {
+    const chosen = {
+      primary: "#ffffff", accent: "#ffffff", background: "#ffffff", text: "#ffffff",
+      surface: "#ffffff", muted: "#ffffff", dark: "#ffffff", darkText: "#ffffff",
+      buttonText: "#ffffff", border: "#ffffff", radius: "md", font: "system",
+    };
+    const res = await branding(chosen);
+    expect(res.status).toBe(200);
+    expect(res.body.theme).toEqual(chosen);
+    expect((await prisma.shop.findUniqueOrThrow({ where: { id: owner.shop.id } })).theme).toEqual(chosen);
+    expect((await call(getBranding, "/branding", { cookie: owner.cookie })).body.theme).toEqual(chosen);
   });
 
   it("validates the theme shape", async () => {

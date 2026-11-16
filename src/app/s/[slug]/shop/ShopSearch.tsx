@@ -31,7 +31,7 @@ export function ShopSearch({ slug, filters, label, placeholder }: { slug: string
         }}
       />
       {/* A new search keeps the category, collection and price range. */}
-      {(["cat", "sort", "min", "max"] as const).map((k) => filters[k] && <input key={k} type="hidden" name={k} value={filters[k]} />)}
+      {(["cat", "collection", "section", "sort", "min", "max"] as const).map((k) => filters[k] && <input key={k} type="hidden" name={k} value={filters[k]} />)}
     </form>
   );
 }

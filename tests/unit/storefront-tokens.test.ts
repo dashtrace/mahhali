@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readTheme, storefrontTokens, themeVars } from "@/app/_server/theme";
-import { contrastRatio, MIN_CONTRAST, PALETTES, validateTheme } from "@/server/domain/theme";
+import { contrastRatio, PALETTES, validateTheme } from "@/server/domain/theme";
 
 const ROSEWOOD = {
   primary: "#874258",
@@ -56,9 +56,9 @@ describe("storefrontTokens", () => {
     expect(contrastRatio(tokens["--sl-band-ink"], tokens["--sl-band"])).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("ignores a saved darkText that fails on the derived band", () => {
+  it("honours saved darkText even when contrast on the derived band is low", () => {
     const tokens = storefrontTokens(readTheme({ ...PALETTES.classic, darkText: "#000000" }));
-    expect(tokens["--sl-band-ink"]).toBe("#ffffff");
+    expect(tokens["--sl-band-ink"]).toBe("#000000");
   });
 
   it("skips the surface tint when a saved text colour would fail on it", () => {
@@ -75,7 +75,7 @@ describe("storefrontTokens", () => {
       "--sl-surface": "#f1e8e1",
       "--sl-surface-accent": "#874258",
       "--sl-surface-accent-ink": "#ffffff",
-      "--sl-surface-muted": "#706767",
+      "--sl-surface-muted": "#756b68",
       "--sl-muted": "#756b68",
       "--sl-band": "#714558",
       "--sl-band-ink": "#fffaf5",
@@ -83,17 +83,27 @@ describe("storefrontTokens", () => {
     });
   });
 
-  it("keeps accent and muted readable on a surface they weren't checked against", () => {
+  it("preserves chosen accent and muted colours on the surface", () => {
     const tokens = storefrontTokens(readTheme({ ...ROSEWOOD, surface: "#c9a0ae" }));
-    expect(tokens["--sl-surface-accent"]).toBe(ROSEWOOD.text);
-    expect(contrastRatio(tokens["--sl-surface-muted"], "#c9a0ae")).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    expect(tokens["--sl-surface-accent"]).toBe(ROSEWOOD.primary);
+    expect(tokens["--sl-surface-muted"]).toBe(ROSEWOOD.muted);
   });
 
-  it("keeps button text readable when the surface swaps the button to the ink", () => {
+  it("keeps chosen button and button-text colours instead of swapping them", () => {
     const theme = { primary: "#767676", background: "#ffffff", text: "#000000", surface: "#8a8a8a", buttonText: "#000000" };
     const tokens = storefrontTokens(readTheme(theme));
-    expect(tokens["--sl-surface-accent"]).toBe("#000000");
-    expect(contrastRatio(tokens["--sl-surface-accent-ink"], tokens["--sl-surface-accent"])).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    expect(tokens["--sl-surface-accent"]).toBe(theme.primary);
+    expect(tokens["--sl-surface-accent-ink"]).toBe(theme.buttonText);
+  });
+});
+
+describe("explicit low-contrast colours", () => {
+  it("keeps all saved roles exactly while still reporting advisory contrast failures", () => {
+    const chosen = { ...ROSEWOOD, primary: "#ffffff", background: "#ffffff", text: "#ffffff", surface: "#ffffff", muted: "#ffffff", dark: "#ffffff", darkText: "#ffffff", buttonText: "#ffffff" };
+    expect(validateTheme(chosen).length).toBeGreaterThan(0);
+    const tokens = storefrontTokens(readTheme(chosen));
+    for (const key of ["--sl-accent", "--sl-accent-ink", "--sl-surface", "--sl-surface-accent", "--sl-surface-accent-ink", "--sl-surface-muted", "--sl-muted", "--sl-band", "--sl-band-ink"] as const) expect(tokens[key]).toBe("#ffffff");
+    expect(themeVars(chosen)).toMatchObject({ "--sl-bg": "#ffffff", "--sl-fg": "#ffffff" });
   });
 });
 

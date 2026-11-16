@@ -29,6 +29,8 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
   // Anything unknown or malformed in the URL is ignored rather than an error.
   const q = one(sp.q).trim().slice(0, 100);
   const cat = shop.categories.find((c) => c.id === one(sp.cat));
+  const collection = cat?.collections?.find((c) => c.id === one(sp.collection));
+  const section = collection?.sections.find((s) => s.id === one(sp.section));
   const sort: BrowseSort = (BROWSE_SORTS as readonly string[]).includes(one(sp.sort)) ? (one(sp.sort) as BrowseSort) : "all";
   const range = parsePriceRange(one(sp.min), one(sp.max), shop.currency);
   const priced = !!range && (range.min !== null || range.max !== null);
@@ -37,6 +39,8 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
     catalogueService.browse(slug, {
       q: q || undefined,
       categoryId: cat?.id,
+      collectionId: collection?.id,
+      sectionId: section?.id,
       min: range?.min ?? undefined,
       max: range?.max ?? undefined,
       sort,
@@ -58,6 +62,8 @@ export default async function ShopListingPage({ params, searchParams }: Props) {
         filters={{
           q: q || undefined,
           cat: cat?.id,
+          collection: collection?.id,
+          section: section?.id,
           sort: sort === "all" ? undefined : sort,
           min: priced ? one(sp.min).trim() || undefined : undefined,
           max: priced ? one(sp.max).trim() || undefined : undefined,

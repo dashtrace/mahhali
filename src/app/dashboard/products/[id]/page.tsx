@@ -29,7 +29,7 @@ export default async function EditProductPage({ params, searchParams }: { params
   return (
     <ProductEditor
       product={plain(product)}
-      categories={categories.map(({ id, name }) => ({ id, name }))}
+      categories={categories}
       canAdjust={can(actor.role, "stock.adjust")}
       initialStep={sp.step}
       created={sp.created === "1"}

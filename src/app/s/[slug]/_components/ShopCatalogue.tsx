@@ -26,7 +26,7 @@ export function ShopCatalogue({
 }: {
   slug: string;
   shopName: string;
-  categories: { id: string; name: string }[];
+  categories: { id: string; name: string; collections?: { id: string; name: string; sections: { id: string; name: string }[] }[] }[];
   currency: "USD" | "LBP";
   locale: Locale;
   /** Only filters that were valid in the URL. */
@@ -46,8 +46,10 @@ export function ShopCatalogue({
   const summary = priced ? `${bound(range?.min)} – ${bound(range?.max)}` : m.anyPrice;
   const category = categories.find((c) => c.id === cat);
   const sortTitles: Record<string, string> = { bestsellers: m.sectionBestsellers, new: m.sectionNew, featured: m.sectionFeatured };
-  const title = category?.name ?? (sort && sortTitles[sort]) ?? m.allProducts;
-  const filtered = !!(q || cat || sort || priced);
+  const selectedCollection = category?.collections?.find((c) => c.id === filters.collection);
+  const selectedSection = selectedCollection?.sections.find((s) => s.id === filters.section);
+  const title = selectedSection?.name ?? selectedCollection?.name ?? category?.name ?? (sort && sortTitles[sort]) ?? m.allProducts;
+  const filtered = !!(q || cat || filters.collection || filters.section || sort || priced);
   const first = (page - 1) * pageSize + 1;
   // A chip adds its filter and keeps the rest; tapping a selected chip takes it off again.
   const sortChip = (value: string, label: string) => (
@@ -84,6 +86,21 @@ export function ShopCatalogue({
             {(sort === "featured" || collections.featured) && sortChip("featured", m.sectionFeatured)}
           </ul>
         </nav>
+
+        {!!category?.collections?.length && <nav aria-label={m.collection}>
+          <p className="sl-taxonomy-label">{m.collection}</p>
+          <ul className="sl-filter-row">
+            <li><Link className="sl-pill" aria-current={!selectedCollection ? "true" : undefined} href={filterHref(slug, filters, { collection: undefined, section: undefined })}>{m.allCollections}</Link></li>
+            {category.collections.map((c) => <li key={c.id}><Link className="sl-pill" aria-current={selectedCollection?.id === c.id ? "true" : undefined} href={filterHref(slug, filters, { collection: c.id })}>{c.name}</Link></li>)}
+          </ul>
+        </nav>}
+        {!!selectedCollection?.sections.length && <nav aria-label={m.section}>
+          <p className="sl-taxonomy-label">{m.section}</p>
+          <ul className="sl-filter-row">
+            <li><Link className="sl-pill" aria-current={!selectedSection ? "true" : undefined} href={filterHref(slug, filters, { section: undefined })}>{m.allSections}</Link></li>
+            {selectedCollection.sections.map((s) => <li key={s.id}><Link className="sl-pill" aria-current={selectedSection?.id === s.id ? "true" : undefined} href={filterHref(slug, filters, { section: s.id })}>{s.name}</Link></li>)}
+          </ul>
+        </nav>}
 
         <PriceFilter key={`${min}|${max}`} slug={slug} currency={currency} locale={locale} filters={filters} min={min} max={max} summary={summary} />
 

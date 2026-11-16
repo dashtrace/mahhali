@@ -18,6 +18,8 @@ export type VariantInput = {
 /** Storefront fields of a product; undefined leaves a field as it is. */
 export type ProductFields = {
   categoryId?: string | null;
+  collectionId?: string | null;
+  sectionId?: string | null;
   featured?: boolean;
   specs?: { label: string; value: string }[];
   customLabel?: string | null;

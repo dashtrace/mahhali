@@ -30,6 +30,8 @@ const Spec = z.object({ label: z.string().trim().min(1).max(40), value: z.string
 // Optional in both create and PATCH; null clears. customLabel set = customization on.
 const storefrontFields = {
   categoryId: z.string().min(1).max(64).nullable().optional(),
+  collectionId: z.string().min(1).max(64).nullable().optional(),
+  sectionId: z.string().min(1).max(64).nullable().optional(),
   featured: z.boolean().optional(),
   specs: z.array(Spec).max(12).optional(),
   customLabel: z.string().trim().max(80).nullable().optional().transform((v) => (v === "" ? null : v)),

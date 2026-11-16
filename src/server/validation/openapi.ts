@@ -1,4 +1,5 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
+import { registerCollections } from "./paths/collections";
 import { registerCore } from "./paths/core";
 import { pathHelpers } from "./paths/helpers";
 import { registerMcp } from "./paths/mcp";
@@ -16,7 +17,7 @@ import { registerTeam } from "./paths/team";
 export function buildOpenApi() {
   const r = new OpenAPIRegistry();
   const h = pathHelpers(r);
-  for (const register of [registerCore, registerProducts, registerOrders, registerShop, registerMoney, registerTeam, registerReviews, registerStorefront, registerMcp]) {
+  for (const register of [registerCore, registerCollections, registerProducts, registerOrders, registerShop, registerMoney, registerTeam, registerReviews, registerStorefront, registerMcp]) {
     register(r, h);
   }
   return new OpenApiGeneratorV31(r.definitions).generateDocument({

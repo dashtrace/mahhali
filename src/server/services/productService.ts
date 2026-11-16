@@ -4,8 +4,10 @@ import { toMinor, type Currency } from "../domain/money";
 import { browseProducts, type BrowseOptions, type HomeSection, type LogoMode } from "../domain/storefront";
 import { remapValues } from "../domain/variants";
 import { productRepo } from "../repositories/productRepo";
+import { collectionRepo, sectionRepo } from "../repositories/collectionRepo";
+import type { Db } from "../repositories/tx";
 import { shopRepo } from "../repositories/shopRepo";
-import { categoryRepo, slideRepo, testimonialRepo } from "../repositories/storefrontRepo";
+import { categoryRepo, lockShop, slideRepo, testimonialRepo } from "../repositories/storefrontRepo";
 import { isUniqueViolation, transaction } from "../repositories/tx";
 import { deleteUpload, saveUpload } from "../storage/uploads";
 import {
@@ -43,9 +45,25 @@ async function currencyOf(actor: Actor) {
   return shop.currency;
 }
 
-/** A product may only be filed under a category of its own shop. */
-async function checkCategory(actor: Actor, categoryId: string | null | undefined) {
-  if (categoryId && !(await categoryRepo.findById(actor.shopId, categoryId))) throw notFound("Category");
+type Taxonomy = { categoryId?: string | null; collectionId?: string | null; sectionId?: string | null };
+async function taxonomy(actor: Actor, input: Taxonomy, current: Taxonomy, tx: Db) {
+  const categoryId = input.categoryId === undefined ? current.categoryId ?? null : input.categoryId;
+  const categoryChanged = categoryId !== (current.categoryId ?? null);
+  const collectionId = input.collectionId === undefined ? (categoryChanged ? null : current.collectionId ?? null) : input.collectionId;
+  const collectionChanged = collectionId !== (current.collectionId ?? null);
+  const sectionId = input.sectionId === undefined ? (categoryChanged || collectionChanged ? null : current.sectionId ?? null) : input.sectionId;
+  if (categoryId && !(await categoryRepo.findById(actor.shopId, categoryId, tx))) throw notFound("Category");
+  if (collectionId) {
+    const c = await collectionRepo.find(actor.shopId, collectionId, tx);
+    if (!c) throw notFound("Collection");
+    if (c.categoryId !== categoryId) throw unprocessable("COLLECTION_CATEGORY_MISMATCH", "Choose a collection within the selected category.");
+  }
+  if (sectionId) {
+    const s = await sectionRepo.find(actor.shopId, sectionId, tx);
+    if (!s) throw notFound("Section");
+    if (s.collectionId !== collectionId) throw unprocessable("SECTION_COLLECTION_MISMATCH", "Choose a section within the selected collection.");
+  }
+  return { categoryId, collectionId, sectionId };
 }
 
 export const productService = {
@@ -66,7 +84,6 @@ export const productService = {
 
   async create(actor: Actor, input: CreateProductInput) {
     const currency = await currencyOf(actor);
-    await checkCategory(actor, input.categoryId);
     const { variants: lines, description, ...fields } = input;
     const variants = lines.map((v) => ({
       optionValues: v.optionValues,
@@ -75,9 +92,11 @@ export const productService = {
       available: v.stock,
     }));
     try {
-      return await transaction((tx) =>
-        productRepo.create(tx, actor.shopId, { ...fields, description: description ?? null, variants }, actor.userId),
-      );
+      return await transaction(async (tx) => {
+        await lockShop(tx, actor.shopId);
+        const placement = await taxonomy(actor, input, {}, tx);
+        return productRepo.create(tx, actor.shopId, { ...fields, ...placement, description: description ?? null, variants }, actor.userId);
+      });
     } catch (error) {
       if (isUniqueViolation(error)) throw duplicateVariant();
       throw error;
@@ -85,10 +104,14 @@ export const productService = {
   },
 
   async update(actor: Actor, id: string, input: Partial<UpdateProductInput>) {
-    await checkCategory(actor, input.categoryId);
-    const updated = await productRepo.update(actor.shopId, id, input);
-    if (!updated) throw notFound("Product");
-    return this.get(actor, id);
+    return transaction(async (tx) => {
+      await lockShop(tx, actor.shopId);
+      const current = await productRepo.findById(actor.shopId, id, tx);
+      if (!current) throw notFound("Product");
+      const placement = await taxonomy(actor, input, current, tx);
+      if (!(await productRepo.update(actor.shopId, id, { ...input, ...placement }, tx))) throw notFound("Product");
+      return productRepo.findById(actor.shopId, id, tx);
+    });
   },
 
   /** "Deleting" a product archives it: old orders still point at its variants. */
@@ -214,6 +237,8 @@ async function publicProducts(shopId: string) {
       name: p.name,
       description: p.description,
       categoryId: p.categoryId,
+      collectionId: p.collectionId,
+      sectionId: p.sectionId,
       categoryName: p.categoryId ? (names.get(p.categoryId) ?? null) : null,
       featured: p.featured,
       specs: (p.specs as ProductSpec[] | null) ?? [],
@@ -266,10 +291,14 @@ export const catalogueService = {
         homeSection: shop.homeSection as HomeSection,
         homeCategoryId: shop.homeCategoryId,
         showTestimonials: shop.showTestimonials,
-        slides: slides.map((s) => ({ id: s.id, imageUrl: s.imageUrl, kicker: s.kicker, title: s.title, body: s.body })),
+        slides: slides.map((s) => ({
+          id: s.id, imageUrl: s.imageUrl, mobileImageUrl: s.mobileImageUrl, kicker: s.kicker, title: s.title, body: s.body,
+          ctaLabel: s.ctaLabel, ctaCategoryId: s.ctaCategoryId, ctaCollectionId: s.ctaCollectionId, ctaSectionId: s.ctaSectionId,
+        })),
         categories: categories.map((c) => ({
           id: c.id,
           name: c.name,
+          collections: c.collections,
           productCount: products.filter((p) => p.categoryId === c.id).length,
         })),
       },

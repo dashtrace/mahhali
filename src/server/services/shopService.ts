@@ -1,7 +1,7 @@
 import { notFound, unprocessable } from "../http/errors";
 import type { Actor } from "../http/withRoute";
 import { toMinor, type Currency } from "../domain/money";
-import { DEFAULT_THEME, PALETTES, validateTheme, type Theme } from "../domain/theme";
+import { DEFAULT_THEME, PALETTES, type Theme } from "../domain/theme";
 import { shopRepo } from "../repositories/shopRepo";
 import { deleteUpload, saveUpload } from "../storage/uploads";
 import type { BrandingInput, ShopSettingsInput } from "../validation/shop";
@@ -69,13 +69,9 @@ export const shopService = {
     return brandingOf(await load(actor));
   },
 
-  /** A ready-made palette or custom colours; refused when text would fall below WCAG AA. */
+  /** Save the owner's valid colour choices; contrast warnings in the editor are advisory. */
   async updateBranding(actor: Actor, input: BrandingInput) {
     const theme: Theme = "preset" in input ? PALETTES[input.preset] : input;
-    const failing = validateTheme(theme);
-    if (failing.length > 0) {
-      throw unprocessable("LOW_CONTRAST", "Some text would be hard to read with these colours.", failing);
-    }
     return brandingOf(await shopRepo.update(actor.shopId, { theme }));
   },
 
