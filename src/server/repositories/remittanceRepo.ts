@@ -3,7 +3,7 @@ import { db, type Db } from "./tx";
 
 // Every function takes shopId and puts it in every where clause.
 const withLines = {
-  lines: { include: { order: { select: { number: true } } }, orderBy: { order: { number: "asc" } } },
+  lines: { include: { order: { select: { number: true, currency: true } } }, orderBy: { order: { number: "asc" } } },
 } satisfies Prisma.RemittanceInclude;
 
 export type RemittanceRow = {
@@ -25,7 +25,7 @@ export const remittanceRepo = {
   ordersForLines(shopId: string, ids: string[], client: Db = db) {
     return client.order.findMany({
       where: { shopId, id: { in: ids } },
-      select: { id: true, number: true, courierId: true, currency: true, remittanceLine: { select: { id: true } } },
+      select: { id: true, number: true, courierId: true, currency: true, codMinor: true, reportedUsdCents: true, reportedLbp: true, remittanceLine: { select: { id: true } } },
     });
   },
 
@@ -39,13 +39,33 @@ export const remittanceRepo = {
   list(shopId: string, opts: { courierId?: string; start: Date; end: Date }, client: Db = db) {
     return client.remittance.findMany({
       where: { shopId, courierId: opts.courierId, receivedAt: { gte: opts.start, lt: opts.end } },
-      include: withLines,
+      include: { ...withLines, supplements: { orderBy: { createdAt: "asc" } }, resolution: true },
       orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
     });
   },
 
   find(shopId: string, id: string, client: Db = db) {
-    return client.remittance.findFirst({ where: { id, shopId }, include: withLines });
+    return client.remittance.findFirst({ where: { id, shopId }, include: { ...withLines, supplements: { orderBy: { createdAt: "asc" } }, resolution: true } });
+  },
+
+  addSupplement(shopId: string, remittanceId: string, data: { amountUsdCents: bigint; amountLbp: bigint; reason: string; recordedByUserId: string; requestKey: string }, client: Db = db) {
+    return client.remittanceSupplement.create({ data: { shopId, remittanceId, ...data } });
+  },
+
+  findSupplementByKey(shopId: string, requestKey: string, client: Db = db) {
+    return client.remittanceSupplement.findFirst({ where: { shopId, requestKey } });
+  },
+
+  acceptDifference(shopId: string, remittanceId: string, reason: string, userId: string, client: Db = db) {
+    return client.remittanceResolution.create({ data: { shopId, remittanceId, reason, recordedByUserId: userId } });
+  },
+
+  acceptOrderDifference(shopId: string, orderId: string, reason: string, userId: string, client: Db = db) {
+    return client.orderCashResolution.create({ data: { shopId, orderId, reason, recordedByUserId: userId } });
+  },
+
+  findCashOrder(shopId: string, orderId: string, client: Db = db) {
+    return client.order.findFirst({ where: { id: orderId, shopId, status: "DELIVERED" }, select: { id: true, cashResolution: { select: { id: true } } } });
   },
 
   /** Delivered orders of a courier that no remittance has paid for yet, oldest first. */

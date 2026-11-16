@@ -21,7 +21,7 @@ switches traffic to the new version.
    | `BETTER_AUTH_URL` | `https://<your domain>` |
    | `CRON_SECRET` | long random string |
    | `RAILWAY_RUN_UID` | `0` (the image runs as `node`; this lets it write to the volume) |
-   | `RESEND_API_KEY`, `MAIL_FROM` | optional, see below |
+   | `BREVO_API_KEY`, `MAIL_FROM` | optional, see below |
    | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET` | optional, see below |
 
 6. Turn on backups for the Postgres volume (database service → **Backups**).
@@ -41,13 +41,55 @@ In the GitHub repository settings:
 
 Every merge to `main` then runs the tests and deploys. The **Scheduled jobs** workflow calls
 `/api/cron/expire-reservations` and `/api/cron/review-emails` every 10 minutes; run it by hand from
-the Actions tab to test it.
+the Actions tab to test it. GitHub does not keep to that schedule (runs have been 4 to 8 hours apart),
+so these jobs can run late.
+
+## Sandbox
+
+A second Railway environment for demos and testing, with its own app, database, uploads volume and
+domain. Pushes to the `sandbox` branch deploy there after the tests pass; `main` still deploys to
+production. To try a change: `git checkout sandbox`, `git merge <branch>`, `git push`.
+
+1. In Railway: environment drop-down → **+ New Environment** → **Duplicate Environment**, named
+   `sandbox`, then approve the staged changes.
+2. Check that its `DATABASE_URL` is the `${{Postgres.DATABASE_URL}}` reference, so it uses the
+   sandbox database, and that the volume is mounted at `/app/uploads`.
+3. Give it its own domain, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` and `CRON_SECRET`. Remove
+   `BREVO_API_KEY` so test orders never email real people.
+4. Create a project token for the `sandbox` environment.
+5. In GitHub, create an environment `sandbox` with the secret `SANDBOXRAILWAYTOKEN` (that token) and
+   the variable `APP_URL` = `https://<sandbox domain>`.
+
+The **Scheduled jobs** workflow only calls production. Seed demo data here, never on production: its
+accounts share a password that is in this repo.
+
+## Platform admins
+
+A platform admin is a user whose `role` is `admin`. They open `/admin` to see all shops and their
+orders, suspend a shop, and read the audit log. No screen creates one and the admin plugin's HTTP
+endpoints are blocked (`src/server/auth/auth.ts`), so promote an account directly in that
+environment's database:
+
+1. Sign up at `/signup` on that environment. This also creates a shop for the account.
+2. Copy the public connection URL of that environment's Postgres (**Connect** tab) and run:
+
+   ```bash
+   psql "<public url>" -c "UPDATE \"user\" SET role = 'admin' WHERE email = 'you@example.com';"
+   ```
+
+   It should print `UPDATE 1`.
+3. Sign out and back in, then open `/admin`.
+
+To remove an admin, run the same command with `role = 'user'`. Each environment has its own users,
+so an admin on sandbox is not an admin on production.
 
 ## Email and billing
 
-- Email: create a Resend account, verify the sending domain (DNS records; allow a day), and set
-  `RESEND_API_KEY` and `MAIL_FROM`. Without a key, emails are only logged and review invites wait
-  for the retry job.
+- Email (Brevo HTTP API; Railway blocks outgoing SMTP): create a free Brevo account, add and
+  verify the sender address under **Senders, domains & IPs → Senders**, create a key under
+  **SMTP & API → API Keys**, and set `BREVO_API_KEY` and `MAIL_FROM` (e.g.
+  `StoreLift <that address>`). The free plan sends 300 emails a day. Without a key, emails are
+  only logged and review invites wait for the retry job.
 - Stripe test mode: create a Pro product with a monthly price, set `STRIPE_SECRET_KEY` and
   `STRIPE_PRICE_PRO`, then add a webhook endpoint `https://<domain>/api/billing/webhook` for
   `checkout.session.completed` and `customer.subscription.deleted` and set `STRIPE_WEBHOOK_SECRET`.

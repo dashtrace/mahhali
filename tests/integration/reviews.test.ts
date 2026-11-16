@@ -61,7 +61,7 @@ describe("verified reviews", () => {
     expect(res.status).toBe(201);
     expect(res.body).toEqual({ reviewed: 1 });
     const review = await prisma.review.findUniqueOrThrow({ where: { orderItemId: item.id } });
-    expect(review).toMatchObject({ rating: 4, comment: "Lovely fabric", authorName: "Maya H.", status: "PUBLISHED", shopId: owner.shop.id });
+    expect(review).toMatchObject({ rating: 4, comment: "Lovely fabric", authorName: "Maya H.", status: "PENDING", shopId: owner.shop.id });
 
     const again = await rate(token, item.id, 1);
     expect(again.status).toBe(410);
@@ -90,7 +90,7 @@ describe("verified reviews", () => {
     expect(results.map((r) => r.status).sort()).toEqual([201, 410, 410, 410, 410]);
     expect(await prisma.review.count({ where: { orderItemId: order.items[0].id } })).toBe(1);
     const product = await prisma.product.findFirstOrThrow({ where: { shopId: owner.shop.id } });
-    expect(product.ratingCount).toBe(1);
+    expect(product.ratingCount).toBe(0); // New reviews wait for approval.
   });
 
   it("counts concurrent reviews of one product from different orders", async () => {
@@ -100,8 +100,13 @@ describe("verified reviews", () => {
     for (let i = 0; i < 4; i++) orders.push(await delivered(owner.shop.id, { variantId: variant.id }));
     await Promise.all(orders.map((o, i) => rate(o.publicToken, o.items[0].id, i + 2)));
     const after = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
-    expect(after.ratingCount).toBe(4);
-    expect(after.ratingAvg.toString()).toBe("3.5");
+    expect(after.ratingCount).toBe(0);
+    expect(after.ratingAvg.toString()).toBe("0");
+    const pending = await prisma.review.findMany({ where: { shopId: owner.shop.id, productId: product.id } });
+    for (const review of pending) expect((await moderate(owner.cookie, review.id, "PUBLISHED")).status).toBe(200);
+    const approved = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(approved.ratingCount).toBe(4);
+    expect(approved.ratingAvg.toString()).toBe("3.5");
   });
 
   it("refuses items of another order and leaves the link usable", async () => {
@@ -151,6 +156,11 @@ describe("verified reviews", () => {
 
     let pub = await productPage(owner.shop.slug, product.id);
     expect(pub.status).toBe(200);
+    expect(pub.body).toMatchObject({ average: 0, count: 0 });
+    expect(pub.body.reviews).toHaveLength(0);
+    const submitted = await prisma.review.findMany({ where: { shopId: owner.shop.id, productId: product.id } });
+    for (const review of submitted) expect((await moderate(owner.cookie, review.id, "PUBLISHED")).status).toBe(200);
+    pub = await productPage(owner.shop.slug, product.id);
     expect(pub.body).toMatchObject({ product: { id: product.id, name: "Linen shirt" }, average: 3.5, count: 2 });
     expect(pub.body.reviews[0]).toEqual({ rating: 2, comment: "Too small", authorName: "Rami K.", createdAt: expect.any(String), verifiedBuyer: true });
 
@@ -173,6 +183,23 @@ describe("verified reviews", () => {
     expect(back.body).toMatchObject({ status: "PUBLISHED", hiddenByUserId: null, hiddenAt: null });
     const stored = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
     expect([stored.ratingAvg.toString(), stored.ratingCount]).toEqual(["3.5", 2]);
+  });
+
+  it("keeps pending and rejected reviews private, and counts only approved ratings", async () => {
+    const owner = await signUpOwner();
+    const { product, variant } = await seedVariant(owner.shop.id);
+    const o = await delivered(owner.shop.id, { variantId: variant.id });
+    expect((await rate(o.publicToken, o.items[0].id, 4, "Please review")).status).toBe(201);
+    const pending = await prisma.review.findUniqueOrThrow({ where: { orderItemId: o.items[0].id } });
+    expect(pending.status).toBe("PENDING");
+    expect((await productPage(owner.shop.slug, product.id)).body.count).toBe(0);
+    expect((await call(listReviews, "/api/reviews?status=PENDING", { cookie: owner.cookie })).body).toEqual([
+      expect.objectContaining({ id: pending.id, status: "PENDING" }),
+    ]);
+    expect((await moderate(owner.cookie, pending.id, "HIDDEN")).status).toBe(200);
+    expect((await productPage(owner.shop.slug, product.id)).body.count).toBe(0);
+    expect((await moderate(owner.cookie, pending.id, "PUBLISHED")).status).toBe(200);
+    expect((await productPage(owner.shop.slug, product.id)).body.count).toBe(1);
   });
 
   it("lets staff read reviews but only owners and managers hide them", async () => {
@@ -237,12 +264,13 @@ describe("review isolation", () => {
 
   it("shop B's product reviews are not served under shop A's link", async () => {
     expect((await productPage(shopA.shop.slug, productB)).status).toBe(404);
-    expect((await productPage(shopB.shop.slug, productB)).body.count).toBe(1);
+    expect((await productPage(shopB.shop.slug, productB)).body.count).toBe(0);
   });
 
-  it("shop B's review is still published", async () => {
+  it("shop B's new review is pending and private", async () => {
     const review = await prisma.review.findUniqueOrThrow({ where: { id: reviewB } });
-    expect([review.status, review.hiddenAt]).toEqual(["PUBLISHED", null]);
+    expect([review.status, review.hiddenAt]).toEqual(["PENDING", null]);
+    expect((await productPage(shopB.shop.slug, productB)).body.reviews).toHaveLength(0);
   });
 });
 

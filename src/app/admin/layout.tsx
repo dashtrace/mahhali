@@ -9,7 +9,7 @@ import { TopLinks } from "../dashboard/_components/Nav";
 import { pageAdmin } from "../_server/session";
 import { themeVars } from "../_server/theme";
 
-export const metadata = { title: { default: "Admin", template: "%s · Admin · Mahhali" } };
+export const metadata = { title: { default: "Admin", template: "%s · Admin · StoreLift" } };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await pageAdmin();

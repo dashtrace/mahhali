@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type TouchEvent } from "react";
-import { ArrowOut, Icon } from "@/components/Icon";
+import { Icon } from "@/components/Icon";
 import { IconButton } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages } from "@/i18n/messages/store";
 
-type Slide = { id: string; imageUrl: string; kicker: string | null; title: string; body: string | null };
+import { heroDestination, type HeroCategory, type HeroTarget } from "./heroDestination";
+
+type Slide = HeroTarget & { ctaLabel?: string | null; id: string; imageUrl: string; mobileImageUrl?: string | null; kicker: string | null; title: string; body: string | null };
 
 const AUTO_MS = 5000;
 const HOLD_MS = 8500; // after a marker, an arrow or a swipe, the visitor is in control for a while
@@ -23,12 +25,14 @@ const SWIPE_PX = 40;
  */
 export function HeroCarousel({
   slides,
+  categories = [],
   shopHref,
   shopName,
   tagline,
   locale,
 }: {
   slides: Slide[];
+  categories?: HeroCategory[];
   shopHref: string;
   shopName: string;
   tagline?: string | null;
@@ -84,15 +88,16 @@ export function HeroCarousel({
       onBlur={() => (paused.current = false)}
     >
       {slides.map((s, i) => (
-        // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
-        <img
-          key={s.id}
-          src={s.imageUrl}
-          alt=""
-          data-active={i === index}
-          loading={i === 0 ? "eager" : "lazy"}
-          className="sl-fade sl-hero-photo"
-        />
+        <picture key={s.id}>
+          {s.mobileImageUrl && <source media="(max-width: 700px)" srcSet={s.mobileImageUrl} />}
+          <img
+            src={s.imageUrl}
+            alt=""
+            data-active={i === index}
+            loading={i === 0 ? "eager" : "lazy"}
+            className="sl-fade sl-hero-photo"
+          />
+        </picture>
       ))}
       <div aria-hidden className="sl-hero-scrim" />
       <div className="sl-hero-copy">
@@ -106,9 +111,8 @@ export function HeroCarousel({
             </div>
           ))}
         </div>
-        <Link href={shopHref} className="sl-hero-cta">
-          {m.shopNow}
-          <ArrowOut />
+        <Link href={heroDestination(shopHref, slides[index], categories)} className="sl-hero-cta">
+          {slides[index].ctaLabel?.trim() || m.shopNow}
         </Link>
       </div>
       <div aria-hidden className="sl-scroll-note">
@@ -163,7 +167,6 @@ function BrandHero({ shopHref, shopName, tagline, locale }: { shopHref: string; 
         <p className="sl-hero-body">{tagline || m.heroFallbackBody}</p>
         <Link href={shopHref} className="sl-hero-cta">
           {m.shopNow}
-          <ArrowOut />
         </Link>
       </div>
     </section>

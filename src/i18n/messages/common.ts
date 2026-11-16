@@ -3,7 +3,7 @@ import { defineMessages } from "../locale";
 // Strings shared by every screen: navigation, statuses, roles, buttons.
 export const common = defineMessages({
   en: {
-    appName: "Mahhali",
+    appName: "StoreLift",
     navOrders: "Orders",
     navDeliveries: "Deliveries",
     navProducts: "Products",
@@ -27,6 +27,7 @@ export const common = defineMessages({
     navCustomerReviews: "Customer reviews",
     navTeamAccess: "Team & access",
     navStorefrontSettings: "Storefront & settings",
+    navConnectedApps: "Connected apps",
     navPlanBilling: "Plan & billing",
     allPages: "All pages",
     allPagesTitle: "All dashboard pages",
@@ -75,7 +76,7 @@ export const common = defineMessages({
     roleDelivery: "Delivery",
     whatsapp: "WhatsApp",
     call: "Call",
-    poweredBy: "Orders by Mahhali",
+    poweredBy: "Orders by StoreLift",
     navMain: "Main menu",
     // Storefront shell (ShopFrame) and shared primitives.
     navHome: "Home",
@@ -115,7 +116,7 @@ export const common = defineMessages({
     reviewsCount: "{n} reviews",
   },
   ar: {
-    appName: "محلّي",
+    appName: "StoreLift",
     navOrders: "الطلبات",
     navDeliveries: "التوصيل",
     navProducts: "المنتجات",
@@ -139,6 +140,7 @@ export const common = defineMessages({
     navCustomerReviews: "تقييمات العملاء",
     navTeamAccess: "الفريق والصلاحيات",
     navStorefrontSettings: "واجهة المتجر والإعدادات",
+    navConnectedApps: "التطبيقات المتصلة",
     navPlanBilling: "الباقة والفوترة",
     allPages: "كل الصفحات",
     allPagesTitle: "كل صفحات لوحة التحكم",
@@ -187,7 +189,7 @@ export const common = defineMessages({
     roleDelivery: "مندوب توصيل",
     whatsapp: "واتساب",
     call: "اتصال",
-    poweredBy: "الطلبات عبر محلّي",
+    poweredBy: "الطلبات عبر StoreLift",
     navMain: "القائمة الرئيسية",
     navHome: "الرئيسية",
     navShop: "المتجر",

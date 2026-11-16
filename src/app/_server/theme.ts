@@ -54,7 +54,7 @@ function derivedMuted(ink: string, background: string): string {
  * shops saved before the roles existed keep working. --sl-ornament is decoration,
  * never text. Accent and muted are only guaranteed on the page, so --sl-surface-*
  * are what text uses on --sl-surface (.sl-on-surface in globals.css).
- * Derived colours can pair with a saved one validateTheme never saw, so they check themselves.
+ * Explicit colours are preserved. Automatic roles still derive their own readable defaults.
  */
 export function storefrontTokens(t: Theme) {
   const ink = t.text ?? inkFor(t.background);
@@ -64,19 +64,19 @@ export function storefrontTokens(t: Theme) {
   const surface = t.surface ?? (reads(ink, tint) ? tint : t.background);
   const muted = t.muted ?? derivedMuted(ink, t.background);
   const accentInk = t.buttonText ?? t.background;
-  const surfaceAccent = reads(t.primary, surface) ? t.primary : ink;
+  const surfaceAccent = t.primary;
   return {
     "--sl-accent": t.primary,
     "--sl-accent-ink": accentInk,
     "--sl-ornament": t.accent,
     "--sl-surface": surface,
     "--sl-surface-accent": surfaceAccent,
-    // A button on the surface fills with --sl-surface-accent, which button text was never checked against.
-    "--sl-surface-accent-ink": reads(accentInk, surfaceAccent) ? accentInk : inkFor(surfaceAccent),
-    "--sl-surface-muted": reads(muted, surface) ? muted : derivedMuted(ink, surface),
+    // Explicit choices are authoritative, even when their contrast is low.
+    "--sl-surface-accent-ink": t.buttonText ?? (reads(accentInk, surfaceAccent) ? accentInk : inkFor(surfaceAccent)),
+    "--sl-surface-muted": t.muted ?? (reads(muted, surface) ? muted : derivedMuted(ink, surface)),
     "--sl-muted": muted,
     "--sl-band": band,
-    "--sl-band-ink": [t.darkText, t.background].find((c) => c && reads(c, band)) ?? inkFor(band),
+    "--sl-band-ink": t.darkText ?? (reads(t.background, band) ? t.background : inkFor(band)),
     "--sl-line": t.border ?? mix(ink, t.background, 11),
   };
 }

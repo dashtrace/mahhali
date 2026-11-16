@@ -44,6 +44,14 @@ export const reportingRepo = {
     });
   },
 
+  cashAdjustments(shopId: string, remittanceIds: string[], orderIds: string[], client: Db = db) {
+    return Promise.all([
+      client.remittanceSupplement.findMany({ where: { shopId, remittanceId: { in: remittanceIds } }, select: { remittanceId: true, amountUsdCents: true, amountLbp: true } }),
+      client.remittanceResolution.findMany({ where: { shopId, remittanceId: { in: remittanceIds } }, select: { remittanceId: true } }),
+      client.orderCashResolution.findMany({ where: { shopId, orderId: { in: orderIds } }, select: { orderId: true, reason: true, createdAt: true, order: { select: { number: true } } } }),
+    ]);
+  },
+
   countByStatus(shopId: string, range: Range, client: Db = db) {
     return client.order.groupBy({
       by: ["status"],
@@ -56,6 +64,26 @@ export const reportingRepo = {
   async firstOrderAt(shopId: string, client: Db = db) {
     const { _min } = await client.order.aggregate({ where: { shopId }, _min: { createdAt: true } });
     return _min.createdAt;
+  },
+
+  /** Orders delivered in the range: how many and what they came to. */
+  deliveredTotals(shopId: string, range: Range, client: Db = db) {
+    return client.order.aggregate({
+      where: { shopId, status: "DELIVERED", deliveredAt: { gte: range.start, lt: range.end } },
+      _count: { _all: true },
+      _sum: { totalMinor: true },
+    });
+  },
+
+  /** Items on orders delivered in the range, most sold first. */
+  topItems(shopId: string, range: Range, take: number, client: Db = db) {
+    return client.orderItem.groupBy({
+      by: ["nameSnapshot"],
+      where: { shopId, order: { shopId, status: "DELIVERED", deliveredAt: { gte: range.start, lt: range.end } } },
+      _sum: { qty: true },
+      orderBy: { _sum: { qty: "desc" } },
+      take,
+    });
   },
 
   /** First contact and confirmation times of the range's confirmed orders. */

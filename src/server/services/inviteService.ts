@@ -56,7 +56,7 @@ export const inviteService = {
     try {
       await sendMail({
         to: input.email,
-        subject: `You're invited to ${shop.name} on Mahhali`,
+        subject: `You're invited to ${shop.name} on StoreLift`,
         text: `Hi,\n\nYou've been invited to join ${shop.name} as ${input.role}. Accept here:\n${link}\n\nThe link works once and expires in ${INVITE_DAYS} days.`,
       });
     } catch (error) {

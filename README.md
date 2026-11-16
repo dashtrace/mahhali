@@ -72,6 +72,9 @@ Every response error has the same shape: `{ "error": { "code", "message", "detai
 | Remittances, reconciliation, metrics, hide reviews | Yes | Yes | No | No |
 | Shop settings, staff, billing | Yes | No | No | No |
 
+Connected AI assistants (Claude, ChatGPT) get the same limits as the member who connected them; see
+[docs/mcp.md](docs/mcp.md).
+
 Platform admins (the Mahhali team) use Better Auth's admin role on the user. The whole table lives in
 `src/server/domain/policy.ts` and is unit tested row by row.
 
@@ -100,6 +103,15 @@ Platform admins (the Mahhali team) use Better Auth's admin role on the user. The
   variants; a full option/value table set would add joins without anything the shops need.
 - **One long-running container plus plain PostgreSQL on Railway**, deployed by CI after the tests
   pass. A long-running Node server avoids serverless connection-pool and transaction-timeout problems.
+
+## AI assistants (MCP)
+
+Members connect Claude or ChatGPT to one shop at `/api/mcp` and sign in with their Mahhali account
+(OAuth 2.1 with PKCE; Mahhali is the authorization server). Assistants can read orders, deliveries,
+products, reviews, sales and cash on delivery, and owners and managers can add products from a CSV
+or a description after confirming a preview. Customer details are masked, every call is checked
+against the role and granted permissions, and members disconnect apps from
+**Dashboard → Connected apps**. Details: [docs/mcp.md](docs/mcp.md).
 
 ## Status
 

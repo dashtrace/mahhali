@@ -193,14 +193,17 @@ export function RemittanceForm({
                           {l.checked && (
                             <div className="grid grid-cols-2 gap-x-2 px-[15px] sm:grid-cols-3">
                               <Field label={m.collectedUsd}>
-                                <input className="control" inputMode="decimal" value={l.usd} onChange={(e) => set(o.id, { usd: e.target.value })} />
+                                <input className="control" value={l.usd} readOnly />
                               </Field>
                               <Field label={m.collectedLbp}>
-                                <input className="control" inputMode="numeric" value={l.lbp} onChange={(e) => set(o.id, { lbp: e.target.value })} />
+                                <input className="control" value={l.lbp} readOnly />
                               </Field>
                               <Field label={`${m.fee} (${o.currency})`}>
                                 <input className="control" inputMode={o.currency === "USD" ? "decimal" : "numeric"} value={l.fee} onChange={(e) => set(o.id, { fee: e.target.value })} />
                               </Field>
+                              <p className="hint col-span-2 sm:col-span-3">
+                                {o.reportedUsdCents !== null || o.reportedLbp !== null ? m.collectedReportedHint : m.collectedFallbackHint} {m.feeEntryHint}
+                              </p>
                             </div>
                           )}
                         </li>

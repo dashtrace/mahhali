@@ -6,7 +6,7 @@ import { PasswordField } from "@/components/PasswordField";
 import { Alert, Button, Field, Input } from "@/components/ui";
 import type { Locale } from "@/i18n/locale";
 import type { authMessages } from "@/i18n/messages/auth";
-import { authClient } from "@/lib/authClient";
+import { authClient, followOAuthRedirect } from "@/lib/authClient";
 
 export function LoginForm({ m, next, locale }: { m: (typeof authMessages)["en"]; next: string; locale: Locale }) {
   const router = useRouter();
@@ -19,7 +19,7 @@ export function LoginForm({ m, next, locale }: { m: (typeof authMessages)["en"];
     const form = new FormData(e.currentTarget);
     setPending(true);
     setError(null);
-    const { error } = await authClient.signIn.email({
+    const { data, error } = await authClient.signIn.email({
       email: String(form.get("email")),
       password: String(form.get("password")),
     });
@@ -28,6 +28,8 @@ export function LoginForm({ m, next, locale }: { m: (typeof authMessages)["en"];
       setPending(false);
       return;
     }
+    // Signing in while connecting an AI assistant: the OAuth flow carries on.
+    if (followOAuthRedirect(data)) return;
     router.push(next);
     router.refresh();
   }

@@ -29,21 +29,22 @@
     margin: 0;
   }
   .sl-dash .phone {
-    width: min(100%, 370px);
+    /* A portrait smartphone instead of a wide, short device mockup. */
+    width: min(100%, 340px);
     margin: 15px auto 0;
     border: 7px solid #203238;
-    border-radius: 32px;
+    border-radius: 38px;
     overflow: hidden;
     background: #fff;
     box-shadow: 0 22px 48px #071e2533;
   }
   .sl-dash .phone-screen {
-    display: block;
-    width: 100%;
-    /* 570px, leaving room for the bar above it on a short laptop screen. */
-    height: min(570px, calc(100dvh - 200px));
-    border: 0;
-  }
+  display: block;
+  width: 100%;
+  height: 600px;
+  max-height: calc(100dvh - 200px);
+  border: 0;
+}
   .sl-dash .preview-note {
     margin-top: 12px;
     text-align: center;
@@ -90,6 +91,10 @@
     padding: 9px;
     background: #fff;
   }
+  .sl-dash .colorfield > span {
+    min-width: 0;
+    flex: 1;
+  }
   .sl-dash .colorfield input[type="color"] {
     appearance: none;
     border: 0;
@@ -113,9 +118,24 @@
   }
   .sl-dash .colorfield-value {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
     margin-top: 3px;
+  }
+  .sl-dash .colorfield .colour-hex-input {
+    width: 94px;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 3px 5px;
+    background: #fff;
+    color: var(--ink);
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+  }
+  .sl-dash .colour-hex-input[aria-invalid="true"] {
+    border-color: #b91c1c;
   }
   .sl-dash .colorfield code {
     font-size: 10px;
@@ -242,7 +262,7 @@
       top: 0;
     }
     .sl-dash .phone {
-      width: min(100%, 360px);
+      width: min(100%, 340px);
     }
   }
   @media (max-width: 780px) {

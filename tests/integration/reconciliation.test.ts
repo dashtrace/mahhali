@@ -27,7 +27,7 @@ describe("reconciliation", () => {
       seedOrder(shopId, { variantId: variant.id, status: "DELIVERED", courierId, deliveredAt: daysAgo(days), ...extra });
 
     o.paid = await delivered(toters, 2);
-    o.short = await delivered(toters, 2);
+    o.short = await delivered(toters, 2, { reportedUsdCents: 2000n });
     o.unpaid = await delivered(toters, 3 + 1 / 24);
     o.returned = await seedOrder(shopId, { variantId: variant.id, status: "RETURNED", courierId: toters });
     o.doorstep = await delivered(wakilni, 1, { reportedUsdCents: 2000n });
@@ -64,11 +64,11 @@ describe("reconciliation", () => {
       received: { usdCents: 6900, lbp: 0 },
       receivedMinor: 6900,
       settled: [{ orderId: o.paid.id, number: o.paid.number, dueMinor: 2500, paidMinor: 2500 }],
-      shortOrOver: [{ orderId: o.short.id, dueMinor: 2500, reportedMinor: null, paidMinor: 2000, diffMinor: -500 }],
+      shortOrOver: [{ orderId: o.short.id, dueMinor: 2500, reportedMinor: 2000, paidMinor: 2000, diffMinor: -500 }],
       unpaid: [{ orderId: o.unpaid.id, dueMinor: 2500, daysOutstanding: 3 }],
       notDeliveredButPaid: [{ orderId: o.returned.id, status: "RETURNED", paidMinor: 2500 }],
       remittanceGaps: [{ reference: "TT-17", diffMinor: -100 }],
-      doorstepGaps: [],
+      doorstepGaps: [{ orderId: o.short.id, dueMinor: 2500, reportedMinor: 2000, paidMinor: 2000, diffMinor: -500 }],
       gaps: { count: 3, sumMinor: 5500 },
     });
     expect(w).toMatchObject({

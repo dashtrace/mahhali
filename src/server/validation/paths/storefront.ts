@@ -15,9 +15,14 @@ import type { PathHelpers } from "./helpers";
 const SlideUpload = z
   .object({
     file: z.string().openapi({ format: "binary", description: "PNG, JPEG or WebP, up to 3 MB" }),
+    mobileFile: z.string().openapi({ format: "binary", description: "Optional mobile image: PNG, JPEG or WebP, up to 3 MB" }).optional(),
     kicker: z.string().max(40).optional(),
     title: z.string().min(1).max(80),
     body: z.string().max(160).optional(),
+    ctaLabel: z.string().max(40).optional(),
+    ctaCategoryId: z.string().max(64).optional(),
+    ctaCollectionId: z.string().max(64).optional(),
+    ctaSectionId: z.string().max(64).optional(),
   })
   .openapi("SlideUpload");
 
@@ -103,6 +108,17 @@ export function registerStorefront(r: OpenAPIRegistry, { secured, ok, error, err
     security: secured,
     request: { params: IdParam },
     responses: deleted,
+  });
+  r.registerPath({
+    method: "post", path: "/api/shop/slides/{id}/mobile-image",
+    summary: "Upload or replace the optional mobile hero image (owner)", tags: ["Storefront"], security: secured,
+    request: { params: IdParam, body: { content: { "multipart/form-data": { schema: SlideImageUpload } } } },
+    responses: { 200: ok("Updated slide"), ...errors, 422: error("FILE_TOO_LARGE or UNSUPPORTED_FILE") },
+  });
+  r.registerPath({
+    method: "delete", path: "/api/shop/slides/{id}/mobile-image",
+    summary: "Remove the mobile image and use the desktop image on every screen (owner)", tags: ["Storefront"], security: secured,
+    request: { params: IdParam }, responses: { 200: ok("Updated slide"), ...errors },
   });
   r.registerPath({
     method: "get",

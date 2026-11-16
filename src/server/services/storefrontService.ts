@@ -1,9 +1,10 @@
+import { slideDestination } from "./slideDestination";
 import { MAX_CATEGORIES, MAX_SLIDES, moveTo } from "../domain/storefront";
 import { badRequest, notFound, unprocessable } from "../http/errors";
 import { rateLimit } from "../http/rateLimit";
 import type { Actor } from "../http/withRoute";
 import { shopRepo } from "../repositories/shopRepo";
-import { categoryRepo, slideRepo, testimonialRepo } from "../repositories/storefrontRepo";
+import { categoryRepo, lockShop, slideRepo, testimonialRepo } from "../repositories/storefrontRepo";
 import { isUniqueViolation, transaction } from "../repositories/tx";
 import { deleteUpload, saveUpload } from "../storage/uploads";
 import {
@@ -51,17 +52,28 @@ export const storefrontService = {
   /** Multipart: `file` (PNG, JPEG or WebP up to 3 MB) plus kicker, title and body. */
   async addSlide(actor: Actor, form: FormData) {
     const text = (k: string) => (typeof form.get(k) === "string" ? form.get(k) : undefined);
-    const fields = SlideFields.safeParse({ kicker: text("kicker"), title: text("title"), body: text("body") });
+    const fields = SlideFields.safeParse({
+      kicker: text("kicker"), title: text("title"), body: text("body"), ctaLabel: text("ctaLabel"),
+      ctaCategoryId: text("ctaCategoryId"), ctaCollectionId: text("ctaCollectionId"), ctaSectionId: text("ctaSectionId"),
+    });
     if (!fields.success) {
       throw badRequest("Invalid form", fields.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
     }
     const imageUrl = await saveUpload(actor.shopId, form.get("file"), "photo");
+    let mobileImageUrl: string | null = null;
     try {
-      const slide = await transaction((tx) => slideRepo.create(tx, actor.shopId, { imageUrl, ...fields.data }, MAX_SLIDES));
+      const mobileFile = form.get("mobileFile");
+      if (mobileFile !== null) mobileImageUrl = await saveUpload(actor.shopId, mobileFile, "photo");
+      const slide = await transaction(async (tx) => {
+        await lockShop(tx, actor.shopId);
+        const target = await slideDestination(actor, fields.data, {}, tx);
+        return slideRepo.create(tx, actor.shopId, { imageUrl, mobileImageUrl, ...fields.data, ...target }, MAX_SLIDES);
+      });
       if (!slide) throw unprocessable("SLIDE_LIMIT", `A shop can have up to ${MAX_SLIDES} slides.`, { max: MAX_SLIDES });
       return slide;
     } catch (error) {
       await deleteUpload(actor.shopId, imageUrl);
+      await deleteUpload(actor.shopId, mobileImageUrl);
       throw error;
     }
   },
@@ -70,8 +82,12 @@ export const storefrontService = {
   async updateSlide(actor: Actor, id: string, input: UpdateSlideInput) {
     const { position, ...text } = input;
     await transaction(async (tx) => {
-      if (!(await slideRepo.findById(actor.shopId, id, tx))) throw notFound("Slide");
-      await slideRepo.update(actor.shopId, id, text, tx);
+      await lockShop(tx, actor.shopId);
+      const current = await slideRepo.findById(actor.shopId, id, tx);
+      if (!current) throw notFound("Slide");
+      const changingTarget = input.ctaCategoryId !== undefined || input.ctaCollectionId !== undefined || input.ctaSectionId !== undefined;
+      const target = changingTarget ? await slideDestination(actor, input, current, tx) : {};
+      await slideRepo.update(actor.shopId, id, { ...text, ...target }, tx);
       if (position !== undefined) {
         const ids = (await slideRepo.list(actor.shopId, tx)).map((s) => s.id);
         await slideRepo.setOrder(tx, actor.shopId, moveTo(ids, id, position));
@@ -80,25 +96,51 @@ export const storefrontService = {
     return (await slideRepo.findById(actor.shopId, id))!;
   },
 
-  /** Multipart: `file`. Replaces the slide's image in place; its text and position stay. */
-  async setSlideImage(actor: Actor, id: string, form: FormData) {
-    const slide = await slideRepo.findById(actor.shopId, id);
-    if (!slide) throw notFound("Slide");
+  /** Replaces one image, preserving the other image, text, order and destination. */
+  async setSlideImage(actor: Actor, id: string, form: FormData, mobile = false) {
+    if (!(await slideRepo.findById(actor.shopId, id))) throw notFound("Slide");
     const imageUrl = await saveUpload(actor.shopId, form.get("file"), "photo");
+    let previous: string | null = null;
+    let updated;
     try {
-      if (!(await slideRepo.update(actor.shopId, id, { imageUrl }))) throw notFound("Slide");
+      updated = await transaction(async (tx) => {
+        await lockShop(tx, actor.shopId);
+        const current = await slideRepo.findById(actor.shopId, id, tx);
+        if (!current) throw notFound("Slide");
+        const data = mobile ? { mobileImageUrl: imageUrl } : { imageUrl };
+        previous = mobile ? current.mobileImageUrl : current.imageUrl;
+        if (!(await slideRepo.update(actor.shopId, id, data, tx))) throw notFound("Slide");
+        return { ...current, ...data };
+      });
     } catch (error) {
       await deleteUpload(actor.shopId, imageUrl);
       throw error;
     }
-    await deleteUpload(actor.shopId, slide.imageUrl);
-    return { ...slide, imageUrl };
+    if (previous !== updated.imageUrl && previous !== updated.mobileImageUrl) await deleteUpload(actor.shopId, previous);
+    return updated;
+  },
+
+  async removeSlideMobileImage(actor: Actor, id: string) {
+    const current = await transaction(async (tx) => {
+      await lockShop(tx, actor.shopId);
+      const slide = await slideRepo.findById(actor.shopId, id, tx);
+      if (!slide) throw notFound("Slide");
+      await slideRepo.update(actor.shopId, id, { mobileImageUrl: null }, tx);
+      return slide;
+    });
+    if (current.mobileImageUrl !== current.imageUrl) await deleteUpload(actor.shopId, current.mobileImageUrl);
+    return { ...current, mobileImageUrl: null };
   },
 
   async deleteSlide(actor: Actor, id: string) {
-    const slide = await slideRepo.findById(actor.shopId, id);
-    if (!slide || !(await slideRepo.delete(actor.shopId, id))) throw notFound("Slide");
-    await deleteUpload(actor.shopId, slide.imageUrl);
+    const current = await transaction(async (tx) => {
+      await lockShop(tx, actor.shopId);
+      const slide = await slideRepo.findById(actor.shopId, id, tx);
+      if (!slide || !(await slideRepo.delete(actor.shopId, id, tx))) throw notFound("Slide");
+      return slide;
+    });
+    await deleteUpload(actor.shopId, current.imageUrl);
+    if (current.mobileImageUrl !== current.imageUrl) await deleteUpload(actor.shopId, current.mobileImageUrl);
   },
 };
 
@@ -139,7 +181,10 @@ export const categoryService = {
   },
 
   async delete(actor: Actor, id: string) {
-    if (!(await categoryRepo.delete(actor.shopId, id))) throw notFound("Category");
+    await transaction(async (tx) => {
+      await lockShop(tx, actor.shopId);
+      if (!(await categoryRepo.delete(actor.shopId, id, tx))) throw notFound("Category");
+    });
   },
 };
 
@@ -157,6 +202,10 @@ export const testimonialService = {
 
   list(actor: Actor, status: TestimonialStatusValue | undefined) {
     return testimonialRepo.list(actor.shopId, status);
+  },
+
+  pendingCount(actor: Actor) {
+    return testimonialRepo.pendingCount(actor.shopId);
   },
 
   async moderate(actor: Actor, id: string, status: "APPROVED" | "REJECTED") {

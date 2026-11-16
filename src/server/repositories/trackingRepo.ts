@@ -20,7 +20,7 @@ export const trackingRepo = {
           },
           orderBy: { id: "asc" },
         },
-        events: { where: { type: "STATUS" }, select: { toValue: true, at: true }, orderBy: { at: "asc" } },
+        events: { where: { type: "STATUS" }, select: { toValue: true, at: true, note: true, actorUserId: true }, orderBy: { at: "asc" } },
         courier: { select: { name: true } },
         reviewInvite: { select: { usedAt: true, expiresAt: true } },
       },

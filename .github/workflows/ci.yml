@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, sandbox]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -51,17 +51,18 @@ jobs:
   deploy:
     # Turn on by setting the repository variable DEPLOY_ENABLED=true once the
     # Railway project exists, and add the secrets listed in deploy/README.md.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    if: github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     needs: test
     runs-on: ubuntu-latest
-    # RAILWAY_TOKEN is an environment secret of this GitHub environment.
+    # main deploys to production, sandbox to sandbox. Each token is a secret of
+    # its GitHub environment and only works for the matching Railway environment.
     environment:
-      name: production
+      name: ${{ github.ref_name == 'main' && 'production' || 'sandbox' }}
       url: ${{ vars.APP_URL }}
     permissions:
       contents: read
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_TOKEN: ${{ github.ref_name == 'main' && secrets.RAILWAY_TOKEN || secrets.SANDBOXRAILWAYTOKEN }}
     steps:
       - uses: actions/checkout@v4
       # Railway builds the Dockerfile, runs migrations (railway.json) and swaps in the new version.

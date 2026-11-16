@@ -32,6 +32,14 @@ export function registerProducts(r: OpenAPIRegistry, { secured, ok, error, error
     responses: { 200: ok("Products with variants"), 401: errors[401], 403: errors[403] },
   });
   r.registerPath({
+    method: "get",
+    path: "/api/products/version",
+    summary: "A fingerprint of the product list; changes when products, photos or stock change",
+    tags: ["Products"],
+    security: secured,
+    responses: { 200: ok("{ version }"), 401: errors[401], 403: errors[403] },
+  });
+  r.registerPath({
     method: "post",
     path: "/api/products",
     summary: "Create a product with its variants (owner, manager)",

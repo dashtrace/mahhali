@@ -22,7 +22,11 @@ export function TrackForm({ slug, number, m }: { slug: string; number?: number; 
       const { token } = await api<{ token: string }>(`/api/public/shops/${slug}/track`, {
         body: { number: Number(String(f.get("number")).replace(/\D/g, "")), phone: String(f.get("phone")) },
       });
-      router.push(`/t/${token}`);
+      // Next.js scrolls to the hash *after* the tracking page has mounted.
+      // The hash also works when a customer looks up the same order again
+      // from the tracking form already displayed on /t/[token].
+      router.push(`/t/${token}#order-result`);
+      setBusy(false);
       return;
     } catch (err) {
       // A malformed phone is a 400 about its format only; any miss is one generic 404.

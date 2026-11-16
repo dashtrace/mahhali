@@ -1,7 +1,8 @@
 import { IdParam, SlugParam } from "./common";
 import { z } from "./zod";
 
-const ReviewStatus = z.enum(["PUBLISHED", "HIDDEN"]).openapi("ReviewStatus");
+const ReviewStatus = z.enum(["PENDING", "PUBLISHED", "HIDDEN"]).openapi("ReviewStatus");
+const ModerateStatus = z.enum(["PUBLISHED", "HIDDEN"]);
 
 export const SubmitReviewsBody = z
   .object({
@@ -31,7 +32,7 @@ export const ProductReviewsParams = SlugParam.extend(IdParam.shape);
 
 export const ListReviewsQuery = z.object({ status: ReviewStatus.optional() });
 
-export const ModerateReviewBody = z.object({ status: ReviewStatus }).openapi("ModerateReviewBody");
+export const ModerateReviewBody = z.object({ status: ModerateStatus }).openapi("ModerateReviewBody");
 
 export type SubmitReviewsInput = z.infer<typeof SubmitReviewsBody>;
 export type ReviewStatusValue = z.infer<typeof ReviewStatus>;

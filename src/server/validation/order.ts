@@ -71,14 +71,18 @@ export const ManualOrderBody = z
 
 export const OrderStatusEnum = z.enum(ORDER_STATUSES).openapi("OrderStatus");
 
-export const ListOrdersQuery = z.object({
-  status: OrderStatusEnum.optional(),
-  courierId: z.string().min(1).max(64).optional(),
-  /** Order number (#1042), phone digits, part of the customer's name or part of an item's name. */
-  q: z.string().trim().max(80).optional(),
-  cursor: z.string().min(1).max(64).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-});
+export const ListOrdersQuery = z
+  .object({
+    status: OrderStatusEnum.optional(),
+    courierId: z.string().min(1).max(64).optional(),
+    /** Order number (#1042), phone digits, part of the customer's name or part of an item's name. */
+    q: z.string().trim().max(80).optional(),
+    cursor: z.string().min(1).max(64).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    /** Created on or after from / on or before to (YYYY-MM-DD, UTC). */
+    ...range,
+  })
+  .refine(fromNotAfterTo, rangeMessage);
 
 export const UpdateOrderBody = z
   .object({

@@ -8,7 +8,7 @@ export const PREVIEW_DRAFT = "sl-preview-draft";
 /** The key of a slide being added, which has no id until it is saved. */
 export const NEW_SLIDE = "new";
 
-type Slide = { id: string; imageUrl: string; kicker: string | null; title: string; body: string | null };
+type Slide = { ctaLabel?: string | null; ctaCategoryId?: string | null; ctaCollectionId?: string | null; ctaSectionId?: string | null; id: string; imageUrl: string; mobileImageUrl?: string | null; kicker: string | null; title: string; body: string | null };
 
 export type PreviewDraft = {
   theme?: unknown;

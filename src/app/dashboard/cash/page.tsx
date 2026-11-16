@@ -5,10 +5,12 @@ import { cashMessages } from "@/i18n/messages/money";
 import { getLocale } from "@/i18n/server";
 import { formatMoney } from "@/lib/format";
 import { can } from "@/server/domain/policy";
+import { openCashExposure } from "@/server/domain/reconcile";
 import { courierService } from "@/server/services/courierService";
 import { remittanceService } from "@/server/services/remittanceService";
 import { reportingService } from "@/server/services/reportingService";
 import { PageHeader } from "@/components/ui";
+import { OrderCashResolution } from "./CashResolutionActions";
 import { pageActor } from "../../_server/session";
 import { DashIcon } from "../_components/DashIcon";
 import { dayMonthYear } from "../orders/_components/labels";
@@ -43,6 +45,21 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
   const remitCouriers = canRemit ? (await Promise.all(couriers.map(async (c) => (c.active || (await remittanceService.unsettled(actor, c.id)).length > 0 ? [{ id: c.id, name: c.name }] : [])))).flat() : [];
 
   const issues = openIssues(rec.couriers);
+  // Only fees recorded on remittances received in the selected period.
+  // Each fee uses its order's currency; do not silently combine USD and LBP.
+  const feesKept = remittances.reduce(
+    (total, remittance) => {
+      for (const line of remittance.lines) {
+        if (line.order.currency === "USD") total.usdCents += line.feeMinor;
+        else total.lbp += line.feeMinor;
+      }
+      return total;
+    },
+    { usdCents: 0n, lbp: 0n },
+  );
+  const feesKeptLabel = cash(feesKept, locale) || money(0n);
+  const issueExposure = openCashExposure(rec.couriers);
+  const remittanceShortages = rec.couriers.flatMap((c) => c.remittanceGaps).reduce((s, r) => s + (r.diffMinor < 0n ? -r.diffMinor : 0n), 0n);
   const unpaid = rec.couriers.reduce((sum, c) => sum + c.unpaid.reduce((s, r) => s + r.dueMinor, 0n), 0n);
   // Only remittances in this period get a row to link to.
   const remittanceOfOrder = new Map(remittances.flatMap((r) => r.lines.map((l) => [l.orderId, r] as const)));
@@ -52,8 +69,9 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
   const tiles = [
     { label: m.tileDue, value: money(rec.totals.expectedMinor), hint: m.tileDueHint, tone: "" },
     { label: m.tileHanded, value: money(rec.totals.receivedMinor), hint: m.tileHandedHint, extra: handed !== money(rec.totals.receivedMinor) ? handed : "", tone: "green" },
+    { label: m.tileFeesKept, value: feesKeptLabel, hint: m.tileFeesKeptHint, extra: "", tone: "" },
     { label: m.tileUnpaid, value: money(unpaid), hint: m.tileUnpaidHint, tone: unpaid > 0n ? "red" : "" },
-    { label: m.tileIssues, value: String(issues.count), hint: m.tileIssuesHint, tone: issues.count > 0 ? "red" : "" },
+    { label: m.tileIssues, value: String(issues.count), hint: fill(m.tileIssuesHint, { short: money(remittanceShortages) }), tone: issues.count > 0 ? "red" : "" },
   ];
 
   return (
@@ -67,7 +85,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
       />
       <PeriodForm from={rec.from} to={rec.to} courierId={courierId} couriers={couriers.map((c) => ({ id: c.id, name: c.name }))} labels={m} />
 
-      <div className="split4 mb-[15px]">
+      <div className="mb-[15px] grid grid-cols-1 gap-[15px] sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {tiles.map((tile) => (
           <div key={tile.label} className="stat">
             <div className="eyebrow">{tile.label}</div>
@@ -89,7 +107,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
 
       {issues.count > 0 && (
         <div className="callout">
-          <DashIcon name="warning" size="sm" /> <b>{m.whyTitle}</b> {fill(issues.count === 1 ? m.whyFiguresOne : m.whyFigures, { unpaid: money(unpaid), n: issues.count })} {fill(m.whyBefore, { zero: money(0n) })} <b>{m.whyNot}</b> {m.whyAfter}
+          <DashIcon name="warning" size="sm" /> <b>{m.whyTitle}</b> {fill(m.cashExplanation, { unremitted: money(unpaid), short: money(remittanceShortages), n: issues.count })}
         </div>
       )}
 
@@ -130,6 +148,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
                       </Link>
                     </div>
                     <p className="hint mt-1.5 mb-0">{texts.filter(Boolean).join(" · ")}</p>
+                    {(o.shortOrOver || o.doorstep) && <OrderCashResolution orderId={o.orderId} m={m} />}
                   </div>
                   {remittance && (
                     <Link href={remittanceHref(remittance.id)} className="btn tiny">
@@ -165,24 +184,33 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
         )}
       </section>
 
+      {rec.acceptedOrderDecisions.length > 0 && <section className="card">
+        <h2>{m.acceptedOrderHistory}</h2>
+        <p className="hint">{m.acceptedExplanation}</p>
+        {rec.acceptedOrderDecisions.map((x) => <div key={x.orderId} className="line-item">
+          <div><Link href={`/dashboard/orders/${x.orderId}`} className="font-bold underline">{fill(m.orderLink, { n: x.order.number })}</Link><p className="hint mt-1">{x.reason}</p></div>
+        </div>)}
+      </section>}
+
       <section className="card">
         <div className="sectionbar">
           <h2 className="m-0">{m.byCourier}</h2>
-          <span className="hint">{fill(m.totalGaps, { amount: money(rec.totals.gaps.sumMinor), n: rec.totals.gaps.count })}</span>
+          <span className="hint">{fill(m.totalGaps, { amount: money(issueExposure.sumMinor), n: issueExposure.count })}</span>
         </div>
         {rec.couriers.length === 0 ? (
           <div className="empty">{m.noActivity}</div>
         ) : (
           rec.couriers.map((c) => {
             // shortcut: reconcile() returns no per-courier reported total, so orders without a doorstep gap count as reported = due; add reportedMinor to reconcile() for the exact figure.
-            const reported = c.expectedMinor + c.doorstepGaps.reduce((sum, r) => sum + r.diffMinor, 0n);
+            const reported = c.reportedMinor;
             const open = openIssues([c]).count;
+            const exposure = openCashExposure([c]);
             const received = cash(c.received, locale);
             const figures = [
               { label: m.due, value: money(c.expectedMinor) },
               { label: m.reported, value: money(reported) },
               { label: m.remitted, value: money(c.receivedMinor), hint: received !== money(c.receivedMinor) ? received : "" },
-              { label: m.gap, value: money(c.gaps.sumMinor), hint: fill(m.gapsHint, { n: c.gaps.count }), red: c.gaps.count > 0 },
+              { label: m.gap, value: money(exposure.sumMinor), hint: `${fill(m.gapsHint, { n: exposure.count })} · ${m.openDifferenceFormula}`, red: exposure.count > 0 },
             ];
             return (
               <div key={c.courierId} className="line-item block">
@@ -252,10 +280,12 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
                         <bdi>{cash(reportedOf(r, rec.currency), locale) || money(0n)}</bdi>
                       </td>
                       <td>
-                        <bdi>{cash({ usdCents: r.amountUsdCents, lbp: r.amountLbp }, locale) || money(0n)}</bdi>
+                        <bdi>{cash({ usdCents: r.amountUsdCents + r.supplements.reduce((a, s) => a + s.amountUsdCents, 0n), lbp: r.amountLbp + r.supplements.reduce((a, s) => a + s.amountLbp, 0n) }, locale) || money(0n)}</bdi>
                       </td>
                       <td>
-                        {gap ? (
+                        {r.resolution && !hasUnsettledOrder(r.lines, rec.couriers) ? (
+                          <span className="mini-badge gray">{m.acceptedStatus}</span>
+                        ) : gap ? (
                           <span className="mini-badge red">{fill(gap.diffMinor < 0n ? m.badgeShort : m.badgeOver, { amount: money(abs(gap.diffMinor)) })}</span>
                         ) : hasUnsettledOrder(r.lines, rec.couriers) ? (
                           <span className="mini-badge red">{m.needsReview}</span>

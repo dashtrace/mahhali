@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fill } from "@/i18n/locale";
 import type { CatalogueMessages } from "@/i18n/messages/catalogue";
 import type { CommonMessages } from "@/i18n/messages/common";
@@ -49,6 +49,7 @@ export function ProductList({
   const [query, setQuery] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
   const [limit, setLimit] = useState(PAGE);
+  const fresh = useFreshIds(rows);
 
   // Back from the editor returns to the same filters.
   useEffect(() => {
@@ -124,7 +125,7 @@ export function ProductList({
       ) : (
         <div className="product-list">
           {list.slice(0, limit).map((p) => (
-            <article key={p.id} className="product-manage">
+            <article key={p.id} className={`product-manage${fresh.has(p.id) ? " is-new" : ""}`}>
               {p.image ? (
                 // eslint-disable-next-line @next/next/no-img-element -- uploaded files are served as-is
                 <img src={p.image} alt={p.name} loading="lazy" />
@@ -173,4 +174,23 @@ function Badge({ p, m }: { p: ProductRow; m: CatalogueMessages }) {
   if (p.stock === 0) return <span className="mini-badge red shrink-0">{m.outOfStock}</span>;
   if (p.stock < LOW_STOCK) return <span className="mini-badge gray shrink-0">{m.lowStock}</span>;
   return <span className="mini-badge green shrink-0">{m.activeOnly}</span>;
+}
+
+/** Ids that appeared since the list first rendered (a product added elsewhere), highlighted for a few seconds. */
+function useFreshIds(rows: ProductRow[]): Set<string> {
+  const seen = useRef<Set<string> | null>(null);
+  const [fresh, setFresh] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (seen.current === null) {
+      seen.current = new Set(rows.map((r) => r.id));
+      return;
+    }
+    const added = rows.filter((r) => !seen.current!.has(r.id)).map((r) => r.id);
+    if (added.length === 0) return;
+    for (const id of added) seen.current.add(id);
+    setFresh((f) => new Set([...f, ...added]));
+    const timer = setTimeout(() => setFresh((f) => new Set([...f].filter((id) => !added.includes(id)))), 4000);
+    return () => clearTimeout(timer);
+  }, [rows]);
+  return fresh;
 }

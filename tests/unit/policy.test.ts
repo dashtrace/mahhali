@@ -22,6 +22,8 @@ const expected: Record<Action, ShopRole[]> = {
   "shop.settings": ["owner"],
   "staff.manage": ["owner"],
   "billing.manage": ["owner"],
+  "connection.manage": ["owner", "manager", "staff", "delivery"],
+  "connection.manageAll": ["owner"],
 };
 
 describe("can(role, action)", () => {
@@ -37,9 +39,9 @@ describe("can(role, action)", () => {
     }
   }
 
-  it("delivery users can only see assigned orders and mark them delivered", () => {
+  it("delivery users can only see assigned orders, mark them delivered and manage their own AI connections", () => {
     const deliveryActions = ACTIONS.filter((a) => can("delivery", a));
-    expect(deliveryActions.sort()).toEqual(["order.markDelivered", "order.readAssigned"]);
+    expect(deliveryActions.sort()).toEqual(["connection.manage", "order.markDelivered", "order.readAssigned"]);
   });
 });
 

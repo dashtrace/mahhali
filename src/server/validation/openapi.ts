@@ -1,6 +1,8 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
+import { registerCollections } from "./paths/collections";
 import { registerCore } from "./paths/core";
 import { pathHelpers } from "./paths/helpers";
+import { registerMcp } from "./paths/mcp";
 import { registerMoney } from "./paths/money";
 import { registerOrders } from "./paths/orders";
 import { registerProducts } from "./paths/products";
@@ -15,11 +17,11 @@ import { registerTeam } from "./paths/team";
 export function buildOpenApi() {
   const r = new OpenAPIRegistry();
   const h = pathHelpers(r);
-  for (const register of [registerCore, registerProducts, registerOrders, registerShop, registerMoney, registerTeam, registerReviews, registerStorefront]) {
+  for (const register of [registerCore, registerCollections, registerProducts, registerOrders, registerShop, registerMoney, registerTeam, registerReviews, registerStorefront, registerMcp]) {
     register(r, h);
   }
   return new OpenApiGeneratorV31(r.definitions).generateDocument({
     openapi: "3.1.0",
-    info: { title: "Mahhali API", version: "0.2.0", description: "Shop Link: orders for Instagram and WhatsApp shops." },
+    info: { title: "StoreLift API", version: "0.2.0", description: "Shop Link: orders for Instagram and WhatsApp shops." },
   });
 }

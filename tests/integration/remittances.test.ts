@@ -22,6 +22,11 @@ describe("remittances", () => {
     const { owner, courier, deliveredOrder } = await shopWithCourier({ usdLbpRate: "89500" });
     const a = await deliveredOrder();
     const b = await deliveredOrder();
+    // This mixed-currency collection was already reported at delivery.
+    await prisma.order.update({
+      where: { id: b.id },
+      data: { reportedUsdCents: 2000n, reportedLbp: 447500n },
+    });
     const res = await post(owner.cookie, {
       courierId: courier.id,
       receivedAt: "2026-10-20",
@@ -42,8 +47,8 @@ describe("remittances", () => {
       recordedByUserId: owner.user.id,
     });
     expect(res.body.lines).toEqual([
-      expect.objectContaining({ orderId: a.id, order: { number: a.number }, collectedUsdCents: 2500, collectedLbp: 0, feeMinor: 0 }),
-      expect.objectContaining({ orderId: b.id, order: { number: b.number }, collectedUsdCents: 2000, collectedLbp: 447500, feeMinor: 300 }),
+      expect.objectContaining({ orderId: a.id, order: expect.objectContaining({ number: a.number }), collectedUsdCents: 2500, collectedLbp: 0, feeMinor: 0 }),
+      expect.objectContaining({ orderId: b.id, order: expect.objectContaining({ number: b.number }), collectedUsdCents: 2000, collectedLbp: 447500, feeMinor: 300 }),
     ]);
     expect(await prisma.remittanceLine.count({ where: { shopId: owner.shop.id } })).toBe(2);
   });

@@ -19,7 +19,7 @@ export default async function NewProductPage() {
     <>
       <BackLink href="/dashboard/products">{m.backToProducts}</BackLink>
       <PageHeader title={m.addProductTitle} subtitle={m.addProductSub} />
-      <CreateProductForm currency={me.shop.currency} categories={categories.map(({ id, name }) => ({ id, name }))} m={m} t={common[locale]} />
+      <CreateProductForm currency={me.shop.currency} categories={categories} m={m} t={common[locale]} />
     </>
   );
 }

@@ -16,7 +16,7 @@ import { TestimonialActions } from "./TestimonialActions";
 
 export const metadata = { title: "Reviews" };
 
-const REVIEW_FILTERS = ["", "PUBLISHED", "HIDDEN"] as const;
+const REVIEW_FILTERS = ["PENDING", "PUBLISHED", "HIDDEN", ""] as const;
 const TESTIMONIAL_FILTERS = ["PENDING", "APPROVED", "REJECTED"] as const;
 const TESTIMONIAL_TONES = { PENDING: "amber", APPROVED: "green", REJECTED: "gray" } as const;
 
@@ -53,16 +53,16 @@ function Stars({ rating, label }: { rating: number; label: string }) {
 
 async function ProductReviews({ actor, status: raw, locale }: { actor: Actor; status?: string; locale: Locale }) {
   const m = reviewMessages[locale];
-  const status = raw === "PUBLISHED" || raw === "HIDDEN" ? raw : undefined;
+  const status = raw === "PUBLISHED" || raw === "HIDDEN" ? raw : raw === "" ? undefined : "PENDING";
   const reviews = await reviewService.list(actor, status);
   const moderate = can(actor.role, "review.moderate");
-  const filterLabel = { "": m.all, PUBLISHED: m.published, HIDDEN: m.hidden };
+  const filterLabel = { "": m.all, PENDING: m.pending, PUBLISHED: m.published, HIDDEN: m.hidden };
 
   return (
     <>
       <nav aria-label={m.statusLabel} className="pills mb-[15px]">
         {REVIEW_FILTERS.map((f) => (
-          <Link key={f} href={f ? `/dashboard/reviews?status=${f}` : "/dashboard/reviews"} className="pill" aria-current={(status ?? "") === f ? "page" : undefined}>
+          <Link key={f} href={f ? `/dashboard/reviews?status=${f}` : "/dashboard/reviews?status="} className="pill" aria-current={(status ?? "") === f ? "page" : undefined}>
             {filterLabel[f]}
           </Link>
         ))}
@@ -77,6 +77,7 @@ async function ProductReviews({ actor, status: raw, locale }: { actor: Actor; st
         <div className="split">
           {reviews.map((r) => {
             const hidden = r.status === "HIDDEN";
+            const pending = r.status === "PENDING";
             return (
               <article key={r.id} className="card">
                 <div className="between">
@@ -84,7 +85,7 @@ async function ProductReviews({ actor, status: raw, locale }: { actor: Actor; st
                     <Stars rating={r.rating} label={fill(m.stars, { n: r.rating })} />
                     <b>{r.product.name}</b>
                   </div>
-                  <span className={`mini-badge ${hidden ? "gray" : "green"}`}>{hidden ? m.hidden : m.published}</span>
+                  <span className={`mini-badge ${pending ? "amber" : hidden ? "gray" : "green"}`}>{pending ? m.pending : hidden ? m.hidden : m.published}</span>
                 </div>
                 <p className="my-3.5 whitespace-pre-line break-words">{r.comment ?? <em className="hint">{m.noComment}</em>}</p>
                 <p className="hint">
@@ -93,7 +94,7 @@ async function ProductReviews({ actor, status: raw, locale }: { actor: Actor; st
                     {fill(m.order, { n: r.order.number })}
                   </Link>
                 </p>
-                {moderate && <ModerateButton id={r.id} hidden={hidden} labels={m} />}
+                {moderate && <ModerateButton id={r.id} status={r.status} labels={m} />}
               </article>
             );
           })}

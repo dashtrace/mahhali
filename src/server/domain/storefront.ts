@@ -53,6 +53,8 @@ export type BrowsableProduct = {
   name: string;
   description: string | null;
   categoryId: string | null;
+  collectionId?: string | null;
+  sectionId?: string | null;
   categoryName: string | null;
   featured: boolean;
   soldCount: number;
@@ -63,6 +65,8 @@ export type BrowsableProduct = {
 export type BrowseOptions = {
   q?: string;
   categoryId?: string;
+  collectionId?: string;
+  sectionId?: string;
   /** Inclusive price range in the shop currency's minor unit. */
   min?: bigint;
   max?: bigint;
@@ -95,6 +99,8 @@ export function browseProducts<P extends BrowsableProduct>(products: P[], o: Bro
   const matched: (P & { matchPriceMinor: bigint | null })[] = [];
   for (const p of products) {
     if (o.categoryId && p.categoryId !== o.categoryId) continue;
+    if (o.collectionId && p.collectionId !== o.collectionId) continue;
+    if (o.sectionId && p.sectionId !== o.sectionId) continue;
     if (o.sort === "bestsellers" && p.soldCount <= 0) continue;
     if (o.sort === "featured" && !p.featured) continue;
     if (q && ![p.name, p.description, p.categoryName].some((t) => t?.toLocaleLowerCase().includes(q))) continue;

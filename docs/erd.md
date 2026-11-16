@@ -23,6 +23,9 @@ erDiagram
   COURIER |o--o{ INVITATION : "courierId"
   SHOP ||--o{ PRODUCT : "shopId"
   CATEGORY |o--o{ PRODUCT : "categoryId"
+  PRODUCT_COLLECTION |o--o{ PRODUCT : "collectionId"
+  PRODUCT_SECTION |o--o{ PRODUCT : "sectionId"
+  PRODUCT_IMPORT |o--o{ PRODUCT : "importId"
   SHOP ||--o{ CATEGORY : "shopId"
   SHOP ||--o{ HERO_SLIDE : "shopId"
   SHOP ||--o{ TESTIMONIAL : "shopId"
@@ -49,12 +52,40 @@ erDiagram
   SHOP ||--o{ REMITTANCE_LINE : "shopId"
   REMITTANCE ||--o{ REMITTANCE_LINE : "remittanceId"
   ORDER ||--o| REMITTANCE_LINE : "orderId"
+  SHOP ||--o{ REMITTANCE_SUPPLEMENT : "shopId"
+  REMITTANCE ||--o{ REMITTANCE_SUPPLEMENT : "remittanceId"
+  SHOP ||--o{ REMITTANCE_RESOLUTION : "shopId"
+  REMITTANCE ||--o| REMITTANCE_RESOLUTION : "remittanceId"
+  SHOP ||--o{ ORDER_CASH_RESOLUTION : "shopId"
+  ORDER ||--o| ORDER_CASH_RESOLUTION : "orderId"
   SHOP ||--o{ REVIEW_INVITE : "shopId"
   ORDER ||--o| REVIEW_INVITE : "orderId"
   SHOP ||--o{ REVIEW : "shopId"
   PRODUCT ||--o{ REVIEW : "productId"
   ORDER_ITEM ||--o| REVIEW : "orderItemId"
   USER ||--o{ ADMIN_AUDIT_LOG : "adminUserId"
+  USER |o--o{ OAUTH_CLIENT : "userId"
+  OAUTH_CLIENT ||--o{ OAUTH_CLIENT_RESOURCE : "clientId"
+  OAUTH_RESOURCE ||--o{ OAUTH_CLIENT_RESOURCE : "resourceId"
+  OAUTH_CLIENT ||--o{ OAUTH_REFRESH_TOKEN : "clientId"
+  SESSION |o--o{ OAUTH_REFRESH_TOKEN : "sessionId"
+  USER ||--o{ OAUTH_REFRESH_TOKEN : "userId"
+  OAUTH_CLIENT ||--o{ OAUTH_ACCESS_TOKEN : "clientId"
+  SESSION |o--o{ OAUTH_ACCESS_TOKEN : "sessionId"
+  USER |o--o{ OAUTH_ACCESS_TOKEN : "userId"
+  OAUTH_REFRESH_TOKEN |o--o{ OAUTH_ACCESS_TOKEN : "refreshId"
+  OAUTH_CLIENT ||--o{ OAUTH_CONSENT : "clientId"
+  USER |o--o{ OAUTH_CONSENT : "userId"
+  SHOP ||--o{ PRODUCT_IMPORT : "shopId"
+  USER ||--o{ PRODUCT_IMPORT : "userId"
+  SHOP ||--o{ IMPORT_PHOTO_LINK : "shopId"
+  PRODUCT_IMPORT ||--o| IMPORT_PHOTO_LINK : "importId"
+  USER ||--o{ IMPORT_PHOTO_LINK : "createdById"
+  SHOP ||--o{ MCP_TOOL_CALL : "shopId"
+  SHOP ||--o{ PRODUCT_COLLECTION : "shopId"
+  CATEGORY ||--o{ PRODUCT_COLLECTION : "categoryId"
+  SHOP ||--o{ PRODUCT_SECTION : "shopId"
+  PRODUCT_COLLECTION ||--o{ PRODUCT_SECTION : "collectionId"
   USER {
     string id PK
     string name
@@ -78,6 +109,7 @@ erDiagram
     string userAgent
     string userId FK
     string activeShopId
+    string connectShopId
     string impersonatedBy
   }
   ACCOUNT {
@@ -163,6 +195,8 @@ erDiagram
     decimal ratingAvg
     int ratingCount
     string categoryId FK
+    string collectionId FK
+    string sectionId FK
     boolean featured
     json specs
     string customLabel
@@ -170,6 +204,7 @@ erDiagram
     boolean customRequired
     int customMaxLength
     string options
+    string importId FK
     datetime createdAt
     datetime updatedAt
   }
@@ -184,9 +219,14 @@ erDiagram
     string id PK
     string shopId FK
     string imageUrl
+    string mobileImageUrl
     string kicker
     string title
     string body
+    string ctaLabel
+    string ctaCategoryId
+    string ctaCollectionId
+    string ctaSectionId
     int position
     datetime createdAt
   }
@@ -324,6 +364,33 @@ erDiagram
     bigint collectedLbp
     bigint feeMinor
   }
+  REMITTANCE_SUPPLEMENT {
+    string id PK
+    string shopId FK
+    string remittanceId FK
+    bigint amountUsdCents
+    bigint amountLbp
+    string reason
+    string recordedByUserId
+    string requestKey
+    datetime createdAt
+  }
+  REMITTANCE_RESOLUTION {
+    string id PK
+    string shopId FK
+    string remittanceId FK, UK
+    string reason
+    string recordedByUserId
+    datetime createdAt
+  }
+  ORDER_CASH_RESOLUTION {
+    string id PK
+    string shopId FK
+    string orderId FK, UK
+    string reason
+    string recordedByUserId
+    datetime createdAt
+  }
   REVIEW_INVITE {
     string id PK
     string shopId FK
@@ -353,5 +420,168 @@ erDiagram
     string shopId
     string action
     datetime at
+  }
+  OAUTH_CLIENT {
+    string id PK
+    string clientId UK
+    string clientSecret
+    string clientDiscoveryId
+    boolean disabled
+    boolean skipConsent
+    boolean enableEndSession
+    string subjectType
+    string scopes
+    string clientCredentialsScopes
+    string userId FK
+    datetime createdAt
+    datetime updatedAt
+    string name
+    string uri
+    string icon
+    string contacts
+    string tos
+    string policy
+    string softwareId
+    string softwareVersion
+    string softwareStatement
+    string redirectUris
+    string postLogoutRedirectUris
+    string backchannelLogoutUri
+    boolean backchannelLogoutSessionRequired
+    string tokenEndpointAuthMethod
+    string applicationType
+    string jwks
+    string jwksUri
+    string grantTypes
+    string responseTypes
+    boolean requirePKCE
+    boolean dpopBoundAccessTokens
+    string referenceId
+    json metadata
+  }
+  OAUTH_RESOURCE {
+    string id PK
+    string identifier UK
+    string name
+    int accessTokenTtl
+    int refreshTokenTtl
+    string signingAlgorithm
+    string signingKeyId
+    string allowedScopes
+    json customClaims
+    boolean dpopBoundAccessTokensRequired
+    boolean disabled
+    datetime createdAt
+    datetime updatedAt
+    int policyVersion
+    json metadata
+  }
+  OAUTH_CLIENT_RESOURCE {
+    string id PK
+    string clientId FK
+    string resourceId FK
+    json metadata
+    datetime createdAt
+  }
+  OAUTH_REFRESH_TOKEN {
+    string id PK
+    string token UK
+    string clientId FK
+    string sessionId FK
+    string userId FK
+    string referenceId
+    string authorizationCodeId
+    string resources
+    string requestedUserInfoClaims
+    datetime expiresAt
+    datetime createdAt
+    datetime revoked
+    datetime rotatedAt
+    string rotationReplayResponse
+    datetime rotationReplayExpiresAt
+    datetime authTime
+    json confirmation
+    string scopes
+  }
+  OAUTH_ACCESS_TOKEN {
+    string id PK
+    string token UK
+    string clientId FK
+    string sessionId FK
+    string userId FK
+    string referenceId
+    string authorizationCodeId
+    string resources
+    string requestedUserInfoClaims
+    string refreshId FK
+    datetime expiresAt
+    datetime createdAt
+    datetime revoked
+    json confirmation
+    string scopes
+  }
+  OAUTH_CONSENT {
+    string id PK
+    string clientId FK
+    string userId FK
+    string referenceId
+    string resources
+    string requestedUserInfoClaims
+    string scopes
+    datetime createdAt
+    datetime updatedAt
+  }
+  OAUTH_CLIENT_ASSERTION {
+    string id PK
+    datetime expiresAt
+  }
+  PRODUCT_IMPORT {
+    string id PK
+    string shopId FK
+    string userId FK
+    enum source
+    enum status
+    json rows
+    json report
+    int productCount
+    int variantCount
+    datetime expiresAt
+    datetime confirmedAt
+    datetime undoneAt
+    datetime createdAt
+  }
+  IMPORT_PHOTO_LINK {
+    string id PK
+    string shopId FK
+    string importId FK, UK
+    string createdById FK
+    string tokenHash UK
+    datetime expiresAt
+    datetime createdAt
+  }
+  MCP_TOOL_CALL {
+    string id PK
+    string shopId FK
+    string userId
+    string clientId
+    string tool
+    enum outcome
+    string errorCode
+    int durationMs
+    datetime createdAt
+  }
+  PRODUCT_COLLECTION {
+    string id PK
+    string shopId FK
+    string categoryId FK
+    string name
+    int position
+  }
+  PRODUCT_SECTION {
+    string id PK
+    string shopId FK
+    string collectionId FK
+    string name
+    int position
   }
 ```

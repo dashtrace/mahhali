@@ -64,6 +64,17 @@ What V1 must do, and how well. Pilot shops are in Lebanon and price in US dollar
 - **FR-32** A customer can send feedback about the shop for public display without an account, giving a name, a message of 10 to 1000 characters and explicit consent to publication. Owners, managers and staff can read it; the owner or a manager approves or rejects it, and only approved feedback appears on the storefront (the latest 12), unless the owner turns testimonials off.
 - **FR-33** Customers can keep a wishlist of products on their device without an account.
 
+**AI assistants (MCP)**
+
+- **FR-34** Any shop member can connect an AI assistant (Claude, ChatGPT or another MCP client) to one shop by signing in with their Mahhali account and approving the permissions it asks for. Members of several shops choose the shop; one connection works with one shop.
+- **FR-35** A connected assistant can only do what the member's role allows and the permissions they approved (see orders, see the catalogue, add products, see finance). A delivery member's assistant sees only the orders assigned to them.
+- **FR-36** Through an assistant, members can ask about orders, deliveries, products and stock, customer reviews, sales and cash on delivery, in English or Arabic, typed or spoken in the assistant's app.
+- **FR-37** The owner or a manager can add up to 100 products at a time through an assistant, from a CSV file or a typed or spoken description. The assistant first shows a preview of every product with its variants, prices and stock, and any duplicates or problems; nothing is created until the user confirms that preview. The user can ask for changes and get a new preview. Confirmed products appear in the dashboard and the catalogue at once, and a confirmed import can be undone within 24 hours.
+- **FR-38** Assistants see customer names, phone numbers and addresses only partly (first name and initial, country code and last digits, area), never emails, and contact details inside notes and reviews are hidden.
+- **FR-39** Every member can see and disconnect the assistants they connected; the owner can see and disconnect every member's, or all at once. Removing a member from the shop disconnects their assistants.
+- **FR-40** When adding products through an assistant, the user can give photo links (an images column in a CSV, or links in the chat), optionally one per colour. The preview says which links could not be used; the photos are added when the import is confirmed. A product has at most 5 photos added this way.
+- **FR-41** After an import is confirmed, the assistant gives the user an "Add photos" link that works for 24 hours without signing in. On it, the user adds photos from their phone (several at a time or from the camera) to that import's products, optionally per colour, and they show in the shop at once. The link only adds photos, only to those products, and stops working when the import is undone.
+
 ## Non-functional requirements
 
 - **NFR-1 Correctness under load.** Every operation that changes stock, order numbers or money runs in a single ACID database transaction, so it happens completely or not at all. When many customers order the last item at the same moment, exactly one order succeeds.
@@ -74,7 +85,8 @@ What V1 must do, and how well. Pilot shops are in Lebanon and price in US dollar
 - **NFR-6 Reliability.** A double tap or a retry on a bad connection never creates a duplicate order; money is stored as whole cents or whole pounds in 64-bit integers, never as decimals, and each order keeps the exchange rate that applied when it was placed.
 - **NFR-7 Auditability.** Every order status change, stock change and admin action is recorded with who did it and when.
 - **NFR-8 Languages.** The interface supports English and Arabic, including right-to-left layout.
-- **NFR-9 Accessibility.** Theme colours chosen by shops keep readable text contrast (WCAG AA); forms have labels and work with a screen reader.
+- **NFR-9 Accessibility.** Theme contrast checks provide advisory readability warnings; owners can save any valid colour values without a contrast restriction. Explicit colour roles are preserved. Forms have labels and work with a screen reader.
 - **NFR-10 Maintainability.** Next.js route handlers in TypeScript with Prisma on plain PostgreSQL; the repository layer is separate from the service layer; validation on every route; README, ERD and OpenAPI contract kept in the repo.
 - **NFR-11 Testing and delivery.** Unit tests on business logic, integration tests on the main endpoints, all run by CI on every pull request; merges to main deploy automatically to a public URL.
 - **NFR-12 Email delivery.** Emails are sent only after the order change is saved, through an email provider with retries; a failed email never blocks or undoes an order or a delivery.
+- **NFR-13 AI assistant access.** Assistants authenticate with OAuth 2.1 (PKCE, dynamic client registration); access tokens are bound to one shop and one API, last 1 hour (refresh tokens 30 days) and are stored only as hashes. Every call checks the token, the member's current role and the shop's status again, so a disconnection, removal, role change or suspension applies to the next call. Assistant tool calls are rate limited and each one is logged without its content. A product import is created completely or not at all, and at most once. Photo links are downloaded only over HTTPS from public addresses, with size and time limits; photo upload links are stored only as hashes.

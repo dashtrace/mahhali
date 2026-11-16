@@ -140,8 +140,12 @@ export const reviewService = {
     return (await reviewRepo.listForShop(actor.shopId, status)).map(toDashboard);
   },
 
+  pendingCount(actor: Actor) {
+    return reviewRepo.pendingCount(actor.shopId);
+  },
+
   /** Hide or publish again. The text is never editable; hiding records who and when. */
-  moderate(actor: Actor, id: string, status: ReviewStatusValue) {
+  moderate(actor: Actor, id: string, status: Exclude<ReviewStatusValue, "PENDING">) {
     return transaction(async (tx) => {
       const review = await reviewRepo.findById(actor.shopId, id, tx);
       if (!review) throw notFound("Review");

@@ -74,7 +74,7 @@ describe("staff management", () => {
 
   it("still creates the invite when the email fails, and says so", async () => {
     const owner = await signUpOwner();
-    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("BREVO_API_KEY", "xkeysib-test");
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await inviteAs(owner.cookie, { email: "offline@example.com", role: "staff" });

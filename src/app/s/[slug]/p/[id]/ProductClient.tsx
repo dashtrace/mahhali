@@ -1,15 +1,14 @@
 "use client";
-
+import { ArrowOut, Icon } from "@/components/Icon";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
-import { MAX_QTY, addToCart, leftAfterCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
-import { ArrowOut, Icon } from "@/components/Icon";
 import { Button, ProductPhoto, QtyStepper, Textarea, cx } from "@/components/ui";
 import { fill, type Locale } from "@/i18n/locale";
 import { storeMessages, type StoreMessages } from "@/i18n/messages/store";
 import { formatMoney } from "@/lib/format";
 import type { StoreProduct } from "../../_components/load";
+import { addToCart, qtyOf, sameLine, setQty as setLineQty, useCart } from "@/app/_storefront/cart";
 
 // The product page's interactive parts: gallery, price, option pills, quantity,
 // customization note and the Add to bag / Buy now buttons. The page lays them out
@@ -23,13 +22,10 @@ const SWIPE_PX = 38;
 const MAX_NOTE = 500;
 
 const variantName = (v: Variant, m: StoreMessages) => v.optionValues.filter(Boolean).join(" · ") || m.standard;
-/** "In stock" while at least MAX_QTY are left (the count is capped there), else how many are left. */
-const stockText = (v: Variant, m: StoreMessages) => (!v.inStock ? m.soldOut : v.left < MAX_QTY ? fill(m.onlyLeft, { n: v.left }) : m.inStock);
+const stockText = (v: Variant, m: StoreMessages) =>
+  v.inStock ? m.inStock : m.soldOut;
 /** The line under the quantity: what can still be added after the cart (the full count once it's all in the cart). */
-const stockLine = (v: Variant, inCart: number, m: StoreMessages) => {
-  const n = leftAfterCart(v.left, inCart);
-  return n === null ? m.inStock : fill(m.onlyLeft, { n: n || v.left });
-};
+
 
 function useProductState(product: Product, slug: string, locale: Locale) {
   const m = storeMessages[locale];
@@ -76,9 +72,12 @@ function useProductState(product: Product, slug: string, locale: Locale) {
       return true;
     }
     if (room < 1) {
-      setNotice({ tone: "warn", text: variant.left < MAX_QTY ? fill(m.allLeftInCart, { n: variant.left }) : m.maxInCart });
-      return false;
-    }
+  setNotice({
+    tone: "warn",
+    text: m.maxInCart
+  });
+  return false;
+}
     const added = addToCart(slug, { variantId: variant.id, qty: Math.min(qty, room), note: lineNote });
     setNotice(
       added === 0
@@ -211,10 +210,12 @@ export function ProductOptions({ currency }: { currency: "USD" | "LBP" }) {
         <QtyStepper className="sl-qty" value={Math.min(qty, Math.max(1, room))} onChange={setQty} max={Math.max(1, room)} locale={locale} label={product.name} />
       </div>
       {variant && inCart > 0 && (
-        <p className="sl-in-bag">
-          {room > 0 ? `${stockLine(variant, inCart, m)} · ${fill(m.inCartAlready, { n: inCart })}` : variant.left < MAX_QTY ? fill(m.allLeftInCart, { n: variant.left }) : m.maxInCart}
-        </p>
-      )}
+  <p className="sl-in-bag">
+    {room > 0
+      ? `${m.inStock} · ${fill(m.inCartAlready, { n: inCart })}`
+      : m.maxInCart}
+  </p>
+)}
 
       {custom && (
         <section aria-labelledby="customize-title" className="sl-custom-note">
