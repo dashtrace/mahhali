@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-const TEAM = ["Mohammad Ali Alaawar", "Zahraa Salman", "Ali ALhadi mansour"];
+const TEAM = [
+  { name: "Mohammad Ali Alaawar", url: "https://www.linkedin.com/in/mohammad-ali-alaawar/" },
+  { name: "Zahraa Salman", url: "https://www.linkedin.com/in/zahraaa-salman" },
+  { name: "Ali ALhadi mansour", url: "https://www.linkedin.com/in/alialhadimansour/" },
+];
 
 export function Countdown({ remainingMs }: { remainingMs: number }) {
   const [left, setLeft] = useState(remainingMs);
@@ -24,10 +28,10 @@ export function Countdown({ remainingMs }: { remainingMs: number }) {
     <div className="max-w-md space-y-6">
       <p className="text-2xl font-semibold">Here is our LinkedIn pages, make sure to follow:</p>
       <ul className="space-y-3">
-        {TEAM.map((name) => (
+        {TEAM.map(({ name, url }) => (
           <li key={name}>
             <a
-              href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(name)}`}
+              href={url}
               target="_blank"
               rel="noopener noreferrer"
               className="block rounded-xl bg-white/10 px-5 py-4 text-lg font-medium hover:bg-white/20"
